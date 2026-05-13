@@ -1,0 +1,135 @@
+package com.example.Rental.service;
+
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
+
+import com.example.Rental.dto.request.LoginRequest;
+import com.example.Rental.dto.request.RegisterRequest;
+import com.example.Rental.dto.response.LoginResponse;
+import com.example.Rental.dto.response.UserResponse;
+import com.example.Rental.entity.User;
+import com.example.Rental.enums.UserRole;
+import com.example.Rental.enums.UserStatus;
+import com.example.Rental.repository.UserRepository;
+import com.example.Rental.util.JwtUtil;
+import com.example.Rental.service.TokenBlacklistService;
+
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+public class AuthService {
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
+    private final TokenBlacklistService tokenBlacklistService;
+
+    @Value("${jwt.expiration}")
+    private long jwtExpiration;
+
+    public UserResponse register(RegisterRequest request) {
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new RuntimeException("Email already exists");
+        }
+
+        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
+            throw new RuntimeException("Username already exists");
+        }
+
+        UserRole userRole = UserRole.valueOf(request.getRole().toUpperCase());
+
+        if (userRole == UserRole.OWNER) {
+            if (request.getCitizenId() == null || request.getCitizenId().isBlank()) {
+                throw new RuntimeException("Citizen ID is required for owner");
+            }
+
+            if (request.getPermanentAddress() == null || request.getPermanentAddress().isBlank()) {
+                throw new RuntimeException("Address is required for owner");
+            }
+        }
+
+        User user = User.builder()
+                .email(request.getEmail())
+                .username(request.getUsername())
+                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .fullName(request.getFullName())
+                .phone(request.getPhone())
+                .citizenId(request.getCitizenId())
+                .permanentAddress(request.getPermanentAddress())
+                .role(userRole)
+                // Owner → PENDING chờ admin duyệt
+                // Renter → ACTIVE dùng ngay
+                .status(userRole == UserRole.OWNER
+                        ? UserStatus.PENDING
+                        : UserStatus.ACTIVE)
+                .build();
+
+        // 5. Lưu vào DB
+        User saved = userRepository.save(user);
+
+        // 6. Trả về DTO (không trả Entity trực tiếp)
+        return mapToResponse(saved);
+
+    }
+
+    public UserResponse mapToResponse(User user) {
+        return UserResponse.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .username(user.getUsername())
+                .fullName(user.getFullName())
+                .phone(user.getPhone())
+                .citizenId(user.getCitizenId())
+                .permanentAddress(user.getPermanentAddress())
+                .avatarUrl(user.getAvatarUrl())
+                .role(user.getRole().name())
+                .status(user.getStatus().name())
+                .build();
+    }
+
+    public LoginResponse login(LoginRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("Email or password is not correct"));
+
+        boolean passwordMatch = passwordEncoder.matches(
+                request.getPassword(),
+                user.getPasswordHash());
+
+        if (!passwordMatch) {
+            throw new RuntimeException("Email or password is not correct");
+        }
+
+        if (user.getStatus() == UserStatus.BANNED) {
+            throw new RuntimeException("Your account has been banned." + "Please contact admin for more information");
+        }
+
+        if (user.getStatus() == UserStatus.PENDING) {
+            throw new RuntimeException(
+                    "Your account is pending approval." + "Please contact admin for more information");
+        }
+
+        String token = jwtUtil.generateToken(user.getEmail(), user.getId(), user.getRole().name());
+
+        return LoginResponse.builder()
+                .token(token)
+                .tokenType("Bearer")
+                .expiresIn(jwtExpiration)
+                .user(mapToResponse(user))
+                .build();
+    }
+
+    public void logout(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new RuntimeException("Invalid authorization header");
+        }
+
+        String token = authHeader.substring(7);
+
+        if (tokenBlacklistService.isTokenBlacklisted(token)) {
+            throw new RuntimeException("Token is already logout");
+        }
+
+        tokenBlacklistService.addToBlacklist(token);
+    }
+}

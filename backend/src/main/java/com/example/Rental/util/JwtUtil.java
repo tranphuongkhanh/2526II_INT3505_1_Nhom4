@@ -21,13 +21,13 @@ public class JwtUtil {
 
     public String generateToken(String email, Long userId, String role) {
         return Jwts.builder()
-            .subject(email)
-            .claim("userId", userId)
-            .claim("role", role)
-            .issuedAt(new Date())
-            .expiration(new Date(System.currentTimeMillis() + expiration))
-            .signWith(getSigningKey())
-            .compact();
+                .subject(email)
+                .claim("userId", userId)
+                .claim("role", role)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + expiration))
+                .signWith(getSigningKey())
+                .compact();
     }
 
     public String extractEmail(String token) {
@@ -60,13 +60,24 @@ public class JwtUtil {
 
     private Claims extractAllClaims(String token) {
         return Jwts.parser()
-            .verifyWith(getSigningKey())
-            .build()
-            .parseSignedClaims(token)
-            .getPayload();
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(secret.getBytes());
+    }
+
+    public long getRemainingExpiration(String token) {
+        try {
+            Date expiration = extractAllClaims(token).getExpiration();
+            long remaining = expiration.getTime() - System.currentTimeMillis();
+            return Math.max(0, remaining);
+        } catch (Exception e) {
+            return 0;
+        }
+
     }
 }
