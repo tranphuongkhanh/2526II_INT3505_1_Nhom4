@@ -36,4 +36,4 @@ build/
 .claude/
 
 # Ignore application properties containing secrets
-application.properties
+/src/main/resources/application.properties

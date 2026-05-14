@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.Rental.dto.request.ForgotPasswordRequest;
 import com.example.Rental.dto.request.LoginRequest;
 import com.example.Rental.dto.request.RegisterRequest;
+import com.example.Rental.dto.request.ResetPasswordRequest;
 import com.example.Rental.dto.response.ApiResponse;
 import com.example.Rental.dto.response.LoginResponse;
 import com.example.Rental.dto.response.UserResponse;
@@ -64,4 +65,13 @@ public class AuthController {
                                                                 + "receive instructions within a few minutes.",
                                                 null));
         }
+
+        @PostMapping("/reset-password")
+        public ResponseEntity<ApiResponse<Void>> resetPassword(
+                        @Valid @RequestBody ResetPasswordRequest request) {
+                authService.resetPassword(request);
+                return ResponseEntity.ok(
+                                ApiResponse.ok("Password reset successfully.", null));
+        }
+
 }

@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import com.example.Rental.dto.request.LoginRequest;
 import com.example.Rental.dto.request.RegisterRequest;
 import com.example.Rental.dto.request.ForgotPasswordRequest;
+import com.example.Rental.dto.request.ResetPasswordRequest;
 import com.example.Rental.dto.response.LoginResponse;
 import com.example.Rental.dto.response.UserResponse;
 import com.example.Rental.entity.User;
@@ -174,5 +175,25 @@ public class AuthService {
 
         log.info("Reset password token generated for user: {}",
                 user.getEmail());
+    }
+
+    public void resetPassword(ResetPasswordRequest request) {
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new RuntimeException("New password and confirm password do not match.");
+        }
+
+        User user = userRepository.findByResetToken(request.getToken())
+                .orElseThrow(() -> new RuntimeException("Invalid or expired reset token"));
+
+        if (user.getResetTokenExpires() == null || user.getResetTokenExpires().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Invalid or expired reset token");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        user.setResetToken(null);
+        user.setResetTokenExpires(null);
+        userRepository.save(user);
+
+        log.info("Password reset successfully for user: {}", user.getEmail());
     }
 }
