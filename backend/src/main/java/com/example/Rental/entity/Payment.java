@@ -12,7 +12,13 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "payments")
+@Table(
+    name = "payments",
+    indexes = {
+        @Index(name = "idx_payments_owner_created_at", columnList = "owner_id, created_at"),
+        @Index(name = "idx_payments_owner_status_created_at", columnList = "owner_id, status, created_at")
+    }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -39,6 +45,7 @@ public class Payment {
     private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private PaymentStatus status = PaymentStatus.PENDING;
 
     @Column(columnDefinition = "TEXT")
@@ -50,4 +57,11 @@ public class Payment {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @PrePersist
+    public void prePersist() {
+        if (status == null) {
+            status = PaymentStatus.PENDING;
+        }
+    }
 }
