@@ -34,3 +34,6 @@ build/
 
 ### Claude Code ###
 .claude/
+
+# Ignore application properties containing secrets
+application.properties
