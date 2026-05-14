@@ -2,10 +2,14 @@ package com.example.Rental.service;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+
 import org.springframework.beans.factory.annotation.Value;
 
 import com.example.Rental.dto.request.LoginRequest;
 import com.example.Rental.dto.request.RegisterRequest;
+import com.example.Rental.dto.request.ForgotPasswordRequest;
 import com.example.Rental.dto.response.LoginResponse;
 import com.example.Rental.dto.response.UserResponse;
 import com.example.Rental.entity.User;
@@ -14,19 +18,28 @@ import com.example.Rental.enums.UserStatus;
 import com.example.Rental.repository.UserRepository;
 import com.example.Rental.util.JwtUtil;
 import com.example.Rental.service.TokenBlacklistService;
+import com.example.Rental.service.EmailService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+import java.util.UUID;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final TokenBlacklistService tokenBlacklistService;
+    private final EmailService emailService;
 
     @Value("${jwt.expiration}")
     private long jwtExpiration;
+
+    @Value("${app.reset-token.expiration-minutes:30}")
+    private int resetTokenExpirationMinutes;
 
     public UserResponse register(RegisterRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
@@ -131,5 +144,35 @@ public class AuthService {
         }
 
         tokenBlacklistService.addToBlacklist(token);
+    }
+
+    public void forgotPassword(ForgotPasswordRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElse(null);
+
+        if (user == null) {
+            // Giả vờ thành công để tránh email enumeration attack
+            log.warn("Forgot password requested for unknown email: {}",
+                    request.getEmail());
+            return;
+        }
+
+        // 2. Tạo reset token ngẫu nhiên
+        String resetToken = UUID.randomUUID().toString().replace("-", "");
+
+        // 3. Lưu token + thời gian hết hạn vào DB
+        user.setResetToken(resetToken);
+        user.setResetTokenExpires(
+                LocalDateTime.now().plusMinutes(resetTokenExpirationMinutes));
+        userRepository.save(user);
+
+        // 4. Gửi email bất đồng bộ (không block request)
+        emailService.sendResetPasswordEmail(
+                user.getEmail(),
+                user.getFullName(),
+                resetToken);
+
+        log.info("Reset password token generated for user: {}",
+                user.getEmail());
     }
 }

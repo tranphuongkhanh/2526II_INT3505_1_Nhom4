@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.Rental.dto.request.ForgotPasswordRequest;
 import com.example.Rental.dto.request.LoginRequest;
 import com.example.Rental.dto.request.RegisterRequest;
 import com.example.Rental.dto.response.ApiResponse;
@@ -22,32 +23,45 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AuthController {
-    private final AuthService authService;
+        private final AuthService authService;
 
-    @PostMapping("/register")
-    public ResponseEntity<ApiResponse<UserResponse>> register(
-            @Valid @RequestBody RegisterRequest request) {
+        @PostMapping("/register")
+        public ResponseEntity<ApiResponse<UserResponse>> register(
+                        @Valid @RequestBody RegisterRequest request) {
 
-        UserResponse data = authService.register(request);
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(ApiResponse.ok("Register successfully", data));
-    }
+                UserResponse data = authService.register(request);
+                return ResponseEntity
+                                .status(HttpStatus.CREATED)
+                                .body(ApiResponse.ok("Register successfully", data));
+        }
 
-    @PostMapping("/login")
-    public ResponseEntity<ApiResponse<LoginResponse>> login(
-            @Valid @RequestBody LoginRequest request) {
+        @PostMapping("/login")
+        public ResponseEntity<ApiResponse<LoginResponse>> login(
+                        @Valid @RequestBody LoginRequest request) {
 
-        LoginResponse data = authService.login(request);
-        return ResponseEntity.ok(
-                ApiResponse.ok("Login successfully", data));
-    }
+                LoginResponse data = authService.login(request);
+                return ResponseEntity.ok(
+                                ApiResponse.ok("Login successfully", data));
+        }
 
-    @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<Void>> logout(
-            @RequestHeader("Authorization") String authHeader) {
-        authService.logout(authHeader);
-        return ResponseEntity.ok(
-                ApiResponse.ok("Logout successfully", null));
-    }
+        @PostMapping("/logout")
+        public ResponseEntity<ApiResponse<Void>> logout(
+                        @RequestHeader("Authorization") String authHeader) {
+                authService.logout(authHeader);
+                return ResponseEntity.ok(
+                                ApiResponse.ok("Logout successfully", null));
+        }
+
+        @PostMapping("/forgot-password")
+        public ResponseEntity<ApiResponse<Void>> forgotPassword(
+                        @Valid @RequestBody ForgotPasswordRequest request) {
+
+                authService.forgotPassword(request);
+
+                return ResponseEntity.ok(
+                                ApiResponse.ok(
+                                                "If your email exists in the system, you will "
+                                                                + "receive instructions within a few minutes.",
+                                                null));
+        }
 }
