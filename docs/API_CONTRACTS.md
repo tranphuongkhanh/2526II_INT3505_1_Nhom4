@@ -398,6 +398,58 @@ Tài liệu này tập hợp **66 endpoints** của hệ thống Tìm kiếm & Q
 - **Actor:** Owner
 - **DB:** posts, payments
 - **Mục đích:** Tạo bài đăng mới cho một phòng.
+
+---
+
+## Contracts (2 endpoints)
+
+### POST /rooms/:roomId/contracts
+
+- **Actor:** Owner
+- **DB:** rental_contracts, rooms
+- **Mục đích:** Owner xác nhận/khởi tạo hợp đồng thuê cho một phòng khi có renter thuê.
+- **Body:**
+
+```json
+{
+  "renterId": 11,
+  "startDate": "2026-06-01",
+  "endDate": "2026-12-01",
+  "monthlyRent": "5000000",
+  "electricityPrice": "2000",
+  "waterPrice": "1000"
+}
+```
+
+- **Side effects:**
+  - Tạo bản ghi `rental_contracts` với `status=active`.
+  - Cập nhật `rooms.rental_status` = `rented`.
+
+- **Validation / Errors:**
+  - Nếu người gọi không phải owner của phòng → 403 Forbidden.
+  - Nếu `renterId`, `startDate` hoặc `monthlyRent` không hợp lệ → 400 Bad Request.
+
+- **Response 201:**
+
+```json
+{
+  "success": true,
+  "message": "Contract created",
+  "data": {
+    "id": 300,
+    "room_id": 20,
+    "renter_id": 11,
+    "status": "active",
+    "start_date": "2026-06-01",
+    "end_date": "2026-12-01",
+    "monthly_rent": "5000000",
+    "electricity_price": "2000",
+    "water_price": "1000",
+    "created_at": "2026-05-01T09:30:00"
+  }
+}
+```
+
 - **Body:**
 
 ```json
