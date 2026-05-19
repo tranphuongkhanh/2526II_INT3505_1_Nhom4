@@ -36,3 +36,5 @@ build/
 .claude/
 
 .env
+# Ignore application properties containing secrets
+application.properties

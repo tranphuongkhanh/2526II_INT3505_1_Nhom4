@@ -98,4 +98,14 @@ public class JwtUtil {
         }
         return Keys.hmacShaKeyFor(secret.getBytes());
     }
+
+    public long getRemainingExpiration(String token) {
+        try {
+            Date expiration = extractAllClaims(token).getExpiration();
+            long remaining = expiration.getTime() - System.currentTimeMillis();
+            return Math.max(0, remaining);
+        } catch (Exception e) {
+            return 0;
+        }
+    }
 }
