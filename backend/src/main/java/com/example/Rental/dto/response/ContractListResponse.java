@@ -1,5 +1,6 @@
 package com.example.Rental.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,8 +12,11 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class PaymentListResponse {
-    private List<PaymentResponse> items;
+public class ContractListResponse {
+
+    @JsonProperty("items")
+    private List<ContractResponse> items;
+
+    @JsonProperty("meta")
     private PaginationMetaResponse meta;
 }
-

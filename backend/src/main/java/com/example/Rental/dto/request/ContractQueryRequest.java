@@ -9,9 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class PaymentQueryRequest {
-    private String status;
-    private Integer page;
-    private Integer limit;
+public class ContractQueryRequest {
+    private Integer page = 1;
+    private Integer limit = 20;
 }
-

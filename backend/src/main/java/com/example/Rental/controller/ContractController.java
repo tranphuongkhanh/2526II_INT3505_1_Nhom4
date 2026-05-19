@@ -1,14 +1,16 @@
 package com.example.Rental.controller;
 
+import com.example.Rental.dto.request.ContractQueryRequest;
 import com.example.Rental.dto.request.CreateContractRequest;
 import com.example.Rental.dto.response.ApiResponse;
+import com.example.Rental.dto.response.ContractListResponse;
 import com.example.Rental.dto.response.ContractResponse;
 import com.example.Rental.service.ContractService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import jakarta.validation.Valid;
 import java.security.Principal;
 
 @RestController
@@ -16,19 +18,32 @@ import java.security.Principal;
 @RequiredArgsConstructor
 public class ContractController {
 
-    private final ContractService contractService;
+	private final ContractService contractService;
 
-    @PostMapping
-    public ResponseEntity<ApiResponse<ContractResponse>> createContract(
-        @PathVariable Long roomId,
-        @RequestBody CreateContractRequest request,
-        Principal principal
-    ) {
-        if (principal == null) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error("Unauthenticated"));
-        }
+	@GetMapping
+	public ResponseEntity<ApiResponse<ContractListResponse>> listContracts(
+		@PathVariable Long roomId,
+		@RequestParam(required = false, defaultValue = "1") Integer page,
+		@RequestParam(required = false, defaultValue = "20") Integer limit,
+		Principal principal
+	) {
+		String email = principal.getName();
 
-        ContractResponse response = contractService.createContract(roomId, principal.getName(), request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Contract created", response));
-    }
+		ContractQueryRequest query = ContractQueryRequest.builder().page(page).limit(limit).build();
+		ContractListResponse response = contractService.listContracts(roomId, email, query);
+		return ResponseEntity.ok(ApiResponse.ok("Contracts retrieved", response));
+	}
+
+	@PostMapping
+	public ResponseEntity<ApiResponse<ContractResponse>> createContract(
+		@PathVariable Long roomId,
+		@Valid @RequestBody CreateContractRequest req,
+		Principal principal
+	) {
+		String email = principal.getName();
+
+		ContractResponse resp = contractService.createContract(roomId, email, req);
+		return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Contract created", resp));
+	}
+
 }

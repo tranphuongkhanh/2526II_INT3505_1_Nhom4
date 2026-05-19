@@ -25,7 +25,8 @@ Tài liệu này tập hợp **66 endpoints** của hệ thống Tìm kiếm & Q
 - **Note:** role=`renter` → status=`active` ngay; role=`owner` → status=`pending` (chờ duyệt)
 - **Response 201:**
 
-```json
+```jsonme/payments
+
 {
   "success": true,
   "message": "User registered successfully",
@@ -398,58 +399,6 @@ Tài liệu này tập hợp **66 endpoints** của hệ thống Tìm kiếm & Q
 - **Actor:** Owner
 - **DB:** posts, payments
 - **Mục đích:** Tạo bài đăng mới cho một phòng.
-
----
-
-## Contracts (2 endpoints)
-
-### POST /rooms/:roomId/contracts
-
-- **Actor:** Owner
-- **DB:** rental_contracts, rooms
-- **Mục đích:** Owner xác nhận/khởi tạo hợp đồng thuê cho một phòng khi có renter thuê.
-- **Body:**
-
-```json
-{
-  "renterId": 11,
-  "startDate": "2026-06-01",
-  "endDate": "2026-12-01",
-  "monthlyRent": "5000000",
-  "electricityPrice": "2000",
-  "waterPrice": "1000"
-}
-```
-
-- **Side effects:**
-  - Tạo bản ghi `rental_contracts` với `status=active`.
-  - Cập nhật `rooms.rental_status` = `rented`.
-
-- **Validation / Errors:**
-  - Nếu người gọi không phải owner của phòng → 403 Forbidden.
-  - Nếu `renterId`, `startDate` hoặc `monthlyRent` không hợp lệ → 400 Bad Request.
-
-- **Response 201:**
-
-```json
-{
-  "success": true,
-  "message": "Contract created",
-  "data": {
-    "id": 300,
-    "room_id": 20,
-    "renter_id": 11,
-    "status": "active",
-    "start_date": "2026-06-01",
-    "end_date": "2026-12-01",
-    "monthly_rent": "5000000",
-    "electricity_price": "2000",
-    "water_price": "1000",
-    "created_at": "2026-05-01T09:30:00"
-  }
-}
-```
-
 - **Body:**
 
 ```json
@@ -1009,9 +958,6 @@ Tài liệu này tập hợp **66 endpoints** của hệ thống Tìm kiếm & Q
 - **DB:** payments
 - **Mục đích:** Lịch sử phí đăng bài và gia hạn của owner.
 - **Query params:** `status=pending|paid`, `page, limit`
-- **Validation:** `page >= 1`; `limit >= 1` và backend giới hạn tối đa `100`.
-- **Validation:** `status` chỉ chấp nhận `pending` hoặc `paid` (không phân biệt hoa/thường).
-- **Invalid status response (400):** `{ "success": false, "message": "Invalid status. Supported values: pending, paid", "data": null }`
 - **Response 200:**
 
 ```json
@@ -1040,7 +986,7 @@ Tài liệu này tập hợp **66 endpoints** của hệ thống Tìm kiếm & Q
 
 ---
 
-## 11. Contracts (5 endpoints)
+## 11. Contracts (4 endpoints)
 
 ### POST /rooms/:roomId/contracts
 
@@ -1066,7 +1012,7 @@ Tài liệu này tập hợp **66 endpoints** của hệ thống Tìm kiếm & Q
 ```json
 {
   "success": true,
-  "message": "Contract created successfully",
+  "message": "Contract created",
   "data": { "id": 501, "room_id": 10, "renter_id": 23, "status": "active" }
 }
 ```
@@ -1076,7 +1022,7 @@ Tài liệu này tập hợp **66 endpoints** của hệ thống Tìm kiếm & Q
 - **Actor:** Owner
 - **DB:** rental_contracts
 - **Mục đích:** Lịch sử tất cả hợp đồng của một phòng.
-- **Query params:** `status=active|ended`, `page, limit`
+- **Query params:** `page, limit`
 - **Response 200:**
 
 ```json
@@ -1095,7 +1041,7 @@ Tài liệu này tập hợp **66 endpoints** của hệ thống Tìm kiếm & Q
 - **Actor:** Renter
 - **DB:** rental_contracts, rooms
 - **Mục đích:** Danh sách hợp đồng thuê của renter.
-- **Query params:** `status=active|ended`, `page, limit`
+- **Query params:** `page, limit`
 - **Response 200:**
 
 ```json
@@ -1114,20 +1060,15 @@ Tài liệu này tập hợp **66 endpoints** của hệ thống Tìm kiếm & Q
 - **Actor:** Owner
 - **DB:** rental_contracts, rooms
 - **Mục đích:** Kết thúc hợp đồng, tự động set `rooms.rental_status = available`.
-- **Body:**
-
-```json
-{ "end_date": "2026-12-31" }
-```
-
-- **Side effect:** update contract.status = ended, update contract.end_date, update rooms.rental_status = available
+- **Actor:** Owner or Renter
+- **Side effect:** update contract.status = ended, update rooms.rental_status = available
 - **Response 200:**
 
 ```json
 {
   "success": true,
-  "message": "Contract ended successfully",
-  "data": { "id": 501, "status": "ended", "end_date": "2026-12-31T00:00:00Z" }
+  "message": "Contract ended",
+  "data": { "id": 501, "status": "ended" }
 }
 ```
 

@@ -3,6 +3,7 @@ package com.example.Rental.config;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -30,16 +31,16 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
             .authorizeHttpRequests(authz -> authz
-                .requestMatchers(
-                    "POST", "/api/v1/auth/register",
-                    "POST", "/api/v1/auth/login",
-                    "POST", "/api/v1/auth/forgot-password",
-                    "POST", "/api/v1/auth/reset-password"
+                .requestMatchers(HttpMethod.POST,
+                    "/api/v1/auth/register",
+                    "/api/v1/auth/login",
+                    "/api/v1/auth/forgot-password",
+                    "/api/v1/auth/reset-password"
                 ).permitAll()
-                .requestMatchers(
-                    "GET", "/api/v1/posts",
-                    "GET", "/api/v1/posts/**",
-                    "GET", "/api/v1/rooms/*/reviews"
+                .requestMatchers(HttpMethod.GET,
+                    "/api/v1/posts",
+                    "/api/v1/posts/**",
+                    "/api/v1/rooms/*/reviews"
                 ).permitAll()
                 .anyRequest().authenticated()
             );
