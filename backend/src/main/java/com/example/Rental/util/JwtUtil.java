@@ -35,7 +35,21 @@ public class JwtUtil {
     }
 
     public Long extractUserId(String token) {
-        return extractAllClaims(token).get("userId", Long.class);
+        Object userIdObj = extractAllClaims(token).get("userId");
+        if (userIdObj == null)
+            return null;
+        if (userIdObj instanceof Number) {
+            return ((Number) userIdObj).longValue();
+        }
+        if (userIdObj instanceof String) {
+            try {
+                return Long.parseLong((String) userIdObj);
+            } catch (NumberFormatException e) {
+                log.warn("Unable to parse userId from token: {}", userIdObj);
+                return null;
+            }
+        }
+        return null;
     }
 
     public String extractRole(String token) {
@@ -59,14 +73,29 @@ public class JwtUtil {
     }
 
     private Claims extractAllClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+        try {
+            return Jwts.parser()
+                    .verifyWith(getSigningKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            log.warn("Expired JWT token: {}", e.getMessage());
+            throw e;
+        } catch (io.jsonwebtoken.JwtException e) {
+            log.error("Invalid JWT token: {}", e.getMessage());
+            throw e;
+        }
     }
 
     private SecretKey getSigningKey() {
+        if (secret == null) {
+            log.error("JWT secret is not configured");
+            throw new IllegalStateException("JWT secret is not configured");
+        }
+        if (secret.getBytes().length < 32) {
+            log.warn("JWT secret is too short; recommended at least 32 bytes");
+        }
         return Keys.hmacShaKeyFor(secret.getBytes());
     }
 
@@ -78,6 +107,5 @@ public class JwtUtil {
         } catch (Exception e) {
             return 0;
         }
-
     }
 }
