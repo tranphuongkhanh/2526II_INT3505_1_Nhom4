@@ -34,6 +34,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 
 @WebMvcTest(
     controllers = MePostController.class,
@@ -153,5 +154,25 @@ public class MePostControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.id").value(888))
                 .andExpect(jsonPath("$.data.amount").value(100000));
+    }
+
+    @Test
+    public void testDeletePost_Success() throws Exception {
+        // 1. Chuẩn bị mock Principal
+        Principal mockPrincipal = Mockito.mock(Principal.class);
+        String mockEmail = "owner@gmail.com";
+        Mockito.when(mockPrincipal.getName()).thenReturn(mockEmail);
+
+        Long postId = 1L;
+
+        // 2. Dặn Mockito: Khi hàm deletePost được gọi thì không làm gì cả (vì hàm này kiểu void)
+        Mockito.doNothing().when(postService).deletePost(mockEmail, postId);
+
+        // 3. Thực hiện gọi API DELETE và kiểm tra
+        mockMvc.perform(delete("/api/v1/me/posts/" + postId)
+                .principal(mockPrincipal))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Xóa (ẩn) bài đăng thành công"));
     }
 }

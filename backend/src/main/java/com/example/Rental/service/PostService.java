@@ -292,4 +292,28 @@ public class PostService {
                 return fromDate;
         }
     }
+
+    @Transactional
+    public void deletePost(String email, Long postId) {
+        // 1. Tìm User
+        User owner = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        // 2. Tìm bài đăng
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy bài đăng ID: " + postId));
+
+        // 3. Kiểm tra quyền sở hữu (Chỉ chủ bài mới được quyền xóa)
+        if (!post.getCreatedBy().getId().equals(owner.getId())) {
+            throw new AccessDeniedException("Bạn không có quyền xóa bài đăng này");
+        }
+
+        // 4. Thực hiện xóa mềm (Đổi trạng thái)
+        post.setStatus(PostStatus.HIDDEN);
+        
+        // Cập nhật ngày kết thúc về hiện tại để bài viết lập tức hết hạn
+        post.setEndDate(LocalDateTime.now());
+        
+        postRepository.save(post);
+    }
 }

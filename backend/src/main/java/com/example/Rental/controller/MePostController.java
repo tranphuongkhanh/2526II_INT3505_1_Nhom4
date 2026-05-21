@@ -4,6 +4,7 @@ import java.security.Principal;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -74,6 +75,24 @@ public class MePostController {
         response.setSuccess(true);
         response.setMessage("Tạo yêu cầu gia hạn thành công. Vui lòng thanh toán.");
         response.setData(payment);
+        
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{postId}")
+    public ResponseEntity<ApiResponse<Object>> deletePost(
+            @PathVariable Long postId,
+            Principal principal) {
+            
+        String email = principal.getName();
+        
+        // Gọi service xử lý
+        postService.deletePost(email, postId);
+        
+        ApiResponse<Object> response = new ApiResponse<>();
+        response.setSuccess(true);
+        response.setMessage("Xóa (ẩn) bài đăng thành công");
+        response.setData(null); // Không cần trả về data khi xóa thành công
         
         return ResponseEntity.ok(response);
     }
