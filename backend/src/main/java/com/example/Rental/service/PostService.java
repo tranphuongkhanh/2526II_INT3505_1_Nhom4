@@ -12,15 +12,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.Rental.dto.request.PostSearchRequest;
+import com.example.Rental.dto.response.OwnerPostResponse;
 import com.example.Rental.dto.response.PostDetailResponse;
 import com.example.Rental.dto.response.PostSummaryResponse;
 import com.example.Rental.entity.Post;
 import com.example.Rental.entity.PostView;
 import com.example.Rental.entity.Room;
 import com.example.Rental.entity.RoomImage;
+import com.example.Rental.entity.User;
 import com.example.Rental.exception.EntityNotFoundException;
 import com.example.Rental.repository.PostRepository;
 import com.example.Rental.repository.PostViewRepository;
+import com.example.Rental.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -30,6 +33,7 @@ public class PostService {
 
     private final PostRepository postRepository;
     private final PostViewRepository postViewRepository;
+    private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
     public Page<PostSummaryResponse> searchPosts(PostSearchRequest request) {
@@ -127,5 +131,30 @@ public class PostService {
                 .hasSecurity(room.getHasSecurity())
                 .imageUrls(images)
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public List<OwnerPostResponse> getMyPosts(String email) {
+        // 1. Tìm User bằng email
+        User owner = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy user với email: " + email));
+
+        // 2. Lấy danh sách bài đăng của user này
+        List<Post> posts = postRepository.findByCreatedByIdOrderByCreatedAtDesc(owner.getId());
+
+        // 3. Map sang DTO
+        return posts.stream().map(post -> OwnerPostResponse.builder()
+                .id(post.getId())
+                .roomTitle(post.getRoom().getTitle())
+                .status(post.getStatus())
+                .rejectReason(post.getRejectReason())
+                .listingFee(post.getListingFee())
+                .startDate(post.getStartDate())
+                .endDate(post.getEndDate())
+                .viewCount(post.getViewCount())
+                .favoriteCount(post.getFavoriteCount())
+                .createdAt(post.getCreatedAt())
+                .build()
+        ).collect(Collectors.toList());
     }
 }
