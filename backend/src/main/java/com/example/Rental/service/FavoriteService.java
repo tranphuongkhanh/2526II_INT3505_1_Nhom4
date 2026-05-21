@@ -31,21 +31,25 @@ public class FavoriteService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("Post not found"));
 
-        if (!favoriteRepository.existsByUserIdAndPostId(user.getId(), postId)) {
-            Favorite favorite = Favorite.builder()
-                    .id(new FavoriteId(user.getId(), postId))
-                    .user(user)
-                    .post(post)
-                    .build();
-            favoriteRepository.save(favorite);
-            
-            // Optionally update favorite count on post
-            if (post.getFavoriteCount() == null) {
-                post.setFavoriteCount(0);
-            }
-            post.setFavoriteCount(post.getFavoriteCount() + 1);
-            postRepository.save(post);
+        // 1. Kiểm tra nếu đã lưu rồi thì ném lỗi ngay lập tức
+        if (favoriteRepository.existsByUserIdAndPostId(user.getId(), postId)) {
+            throw new RuntimeException("Bài đăng này đã có trong danh sách yêu thích"); 
         }
+
+        // 2. Nếu chưa lưu thì tiến hành lưu mới
+        Favorite favorite = Favorite.builder()
+                .id(new FavoriteId(user.getId(), postId))
+                .user(user)
+                .post(post)
+                .build();
+        favoriteRepository.save(favorite);
+            
+        // Optionally update favorite count on post
+        if (post.getFavoriteCount() == null) {
+            post.setFavoriteCount(0);
+        }
+        post.setFavoriteCount(post.getFavoriteCount() + 1);
+        postRepository.save(post);
     }
 
     @Transactional
