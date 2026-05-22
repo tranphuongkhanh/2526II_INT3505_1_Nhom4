@@ -16,6 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.Rental.dto.request.CreatePostRequest;
 import com.example.Rental.dto.request.ExtendPostRequest;
 import com.example.Rental.dto.request.PostSearchRequest;
+import com.example.Rental.dto.request.PostStatusUpdateRequest;
+import com.example.Rental.dto.response.AdminPostResponse;
 import com.example.Rental.dto.response.OwnerPostResponse;
 import com.example.Rental.dto.response.PostDetailResponse;
 import com.example.Rental.dto.response.PostSummaryResponse;
@@ -315,5 +317,74 @@ public class PostService {
         post.setEndDate(LocalDateTime.now());
         
         postRepository.save(post);
+    }
+
+    // --- API DÀNH CHO ADMIN ---
+
+    @Transactional(readOnly = true)
+    public Page<AdminPostResponse> getAdminPosts(String statusStr, Integer page, Integer size) {
+        // Chuyển page 1-index (từ Client) sang 0-index (của Spring)
+        int pageNumber = (page != null && page > 0) ? page - 1 : 0;
+        int pageSize = (size != null && size > 0) ? size : 20;
+        
+        Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by("createdAt").descending());
+        Page<Post> posts;
+
+        if (statusStr != null && !statusStr.isEmpty()) {
+            PostStatus status = PostStatus.valueOf(statusStr.toUpperCase());
+            posts = postRepository.findByStatus(status, pageable);
+        } else {
+            posts = postRepository.findAll(pageable);
+        }
+
+        return posts.map(this::mapToAdminPostResponse);
+    }
+
+    @Transactional
+    public AdminPostResponse updatePostStatus(Long postId, PostStatusUpdateRequest request, String adminEmail) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy bài đăng ID: " + postId));
+                
+        User admin = userRepository.findByEmail(adminEmail)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Admin"));
+
+        // Cập nhật thông tin người duyệt
+        post.setStatus(request.getStatus());
+        post.setApprovedBy(admin);
+        post.setApprovedAt(LocalDateTime.now());
+
+        if (request.getStatus() == PostStatus.APPROVED) {
+            // Khi duyệt bài: Bắt đầu tính ngày đăng và ngày hết hạn
+            post.setStartDate(LocalDateTime.now());
+            post.setEndDate(calculateNewEndDate(LocalDateTime.now(), post.getDurationType(), post.getDurationValue()));
+            post.setRejectReason(null); // Xóa lý do từ chối cũ (nếu có)
+            
+        } else if (request.getStatus() == PostStatus.REJECTED) {
+            // Khi từ chối: Bắt buộc phải có lý do
+            if (request.getRejectReason() == null || request.getRejectReason().trim().isEmpty()) {
+                throw new IllegalArgumentException("Vui lòng nhập lý do từ chối bài đăng!");
+            }
+            post.setRejectReason(request.getRejectReason());
+        }
+
+        postRepository.save(post);
+        return mapToAdminPostResponse(post);
+    }
+
+    // --- Helper Method ---
+    private AdminPostResponse mapToAdminPostResponse(Post post) {
+        return AdminPostResponse.builder()
+                .id(post.getId())
+                .roomTitle(post.getRoom().getTitle())
+                .ownerName(post.getCreatedBy().getFullName())
+                .ownerEmail(post.getCreatedBy().getEmail())
+                .status(post.getStatus())
+                .createdAt(post.getCreatedAt())
+                .startDate(post.getStartDate())
+                .endDate(post.getEndDate())
+                .rejectReason(post.getRejectReason())
+                .approvedByEmail(post.getApprovedBy() != null ? post.getApprovedBy().getEmail() : null)
+                .approvedAt(post.getApprovedAt())
+                .build();
     }
 }
