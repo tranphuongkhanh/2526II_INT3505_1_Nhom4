@@ -44,6 +44,7 @@ public class SecurityConfig {
                     "/api/v1/rooms/*/reviews",
                     "/api/v1/users/*/renter-reviews"
                 ).permitAll()
+                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             );
 
