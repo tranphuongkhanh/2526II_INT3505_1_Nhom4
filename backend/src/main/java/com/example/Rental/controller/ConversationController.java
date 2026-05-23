@@ -34,9 +34,12 @@ public class ConversationController {
 
     // 1. Danh sách hội thoại
     @GetMapping
-    public ResponseEntity<ApiResponse<List<ConversationResponse>>> getMyConversations(Principal principal) {
+    public ResponseEntity<ApiResponse<org.springframework.data.domain.Page<ConversationResponse>>> getMyConversations(
+            @RequestParam(required = false, defaultValue = "1") Integer page,
+            @RequestParam(required = false, defaultValue = "20") Integer size,
+            Principal principal) {
         String email = principal.getName();
-        List<ConversationResponse> result = conversationService.getUserConversations(email);
+        org.springframework.data.domain.Page<ConversationResponse> result = conversationService.getUserConversations(email, page, size);
         return ResponseEntity.ok(ApiResponse.ok("Lấy danh sách hội thoại thành công", result));
     }
 

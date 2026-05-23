@@ -44,7 +44,7 @@ public class AdminPostController {
     }
 
     // 2. Admin Duyệt hoặc Từ chối bài đăng
-    @PutMapping("/{postId}/status") // Dùng PUT hoặc PATCH đều được
+    @org.springframework.web.bind.annotation.PatchMapping("/{postId}/status")
     public ResponseEntity<ApiResponse<AdminPostResponse>> updatePostStatus(
             @PathVariable Long postId,
             @RequestBody PostStatusUpdateRequest request,

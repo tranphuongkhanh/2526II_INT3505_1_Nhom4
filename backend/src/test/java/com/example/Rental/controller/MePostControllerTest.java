@@ -71,13 +71,14 @@ public class MePostControllerTest {
                 .status(PostStatus.APPROVED)
                 .build();
         
-        Mockito.when(postService.getMyPosts(mockEmail)).thenReturn(List.of(mockPost));
+        org.springframework.data.domain.Page<OwnerPostResponse> mockPage = new org.springframework.data.domain.PageImpl<>(List.of(mockPost));
+        Mockito.when(postService.getMyPosts(eq(mockEmail), any(), any())).thenReturn(mockPage);
 
         mockMvc.perform(get("/api/v1/me/posts").principal(mockPrincipal))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data[0].roomTitle").value("Phòng trọ cao cấp Cầu Giấy"))
-                .andExpect(jsonPath("$.data[0].status").value("APPROVED"));
+                .andExpect(jsonPath("$.data.content[0].roomTitle").value("Phòng trọ cao cấp Cầu Giấy"))
+                .andExpect(jsonPath("$.data.content[0].status").value("APPROVED"));
     }
 
     // 2. Test API Tạo bài đăng mới (Mới)

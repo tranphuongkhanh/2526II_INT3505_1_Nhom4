@@ -28,16 +28,18 @@ public class ConversationService {
 
     // 1. Lấy danh sách hội thoại
     @Transactional(readOnly = true)
-    public List<ConversationResponse> getUserConversations(String email) {
+    public org.springframework.data.domain.Page<ConversationResponse> getUserConversations(String email, Integer page, Integer size) {
+        int pageNumber = (page != null && page > 0) ? page - 1 : 0;
+        int pageSize = (size != null && size > 0) ? size : 20;
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(pageNumber, pageSize);
+
         User currentUser = userRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
-        List<Conversation> conversations = conversationRepository
-                .findByUser1IdOrUser2IdOrderByLastMessageAtDesc(currentUser.getId(), currentUser.getId());
+        org.springframework.data.domain.Page<Conversation> conversations = conversationRepository
+                .findByUser1IdOrUser2IdOrderByLastMessageAtDesc(currentUser.getId(), currentUser.getId(), pageable);
 
-        return conversations.stream()
-                .map(conv -> mapToResponse(conv, currentUser))
-                .collect(Collectors.toList());
+        return conversations.map(conv -> mapToResponse(conv, currentUser));
     }
 
     // 2. Tạo mới hoặc lấy hội thoại đã có

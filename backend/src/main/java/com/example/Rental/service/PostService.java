@@ -150,16 +150,20 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
-    public List<OwnerPostResponse> getMyPosts(String email) {
+    public Page<OwnerPostResponse> getMyPosts(String email, Integer page, Integer size) {
+        int pageNumber = (page != null && page > 0) ? page - 1 : 0;
+        int pageSize = (size != null && size > 0) ? size : 10;
+        Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by("createdAt").descending());
+
         // 1. Tìm User bằng email
         User owner = userRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy user với email: " + email));
 
         // 2. Lấy danh sách bài đăng của user này
-        List<Post> posts = postRepository.findByCreatedByIdOrderByCreatedAtDesc(owner.getId());
+        Page<Post> posts = postRepository.findByCreatedById(owner.getId(), pageable);
 
         // 3. Map sang DTO
-        return posts.stream().map(post -> OwnerPostResponse.builder()
+        return posts.map(post -> OwnerPostResponse.builder()
                 .id(post.getId())
                 .roomTitle(post.getRoom().getTitle())
                 .status(post.getStatus())
@@ -171,7 +175,7 @@ public class PostService {
                 .favoriteCount(post.getFavoriteCount())
                 .createdAt(post.getCreatedAt())
                 .build()
-        ).collect(Collectors.toList());
+        );
     }
 
     @Transactional

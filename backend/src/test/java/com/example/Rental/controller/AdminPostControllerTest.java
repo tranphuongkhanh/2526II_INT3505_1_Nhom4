@@ -106,8 +106,8 @@ public class AdminPostControllerTest {
         Mockito.when(postService.updatePostStatus(eq(postId), any(PostStatusUpdateRequest.class), eq(adminEmail)))
                .thenReturn(mockResponse);
 
-        // Gọi API PUT và kiểm chứng
-        mockMvc.perform(put("/api/v1/admin/posts/" + postId + "/status")
+        // Gọi API PATCH và kiểm chứng
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/v1/admin/posts/" + postId + "/status")
                 .principal(mockPrincipal)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))

@@ -29,16 +29,19 @@ public class MePostController {
     private final PostService postService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<OwnerPostResponse>>> getMyPosts(Principal principal) {
+    public ResponseEntity<ApiResponse<org.springframework.data.domain.Page<OwnerPostResponse>>> getMyPosts(
+            @org.springframework.web.bind.annotation.RequestParam(required = false, defaultValue = "1") Integer page,
+            @org.springframework.web.bind.annotation.RequestParam(required = false, defaultValue = "10") Integer size,
+            Principal principal) {
         
         // 1. Lấy email từ token của người đang đăng nhập
         String email = principal.getName();
         
         // 2. Gọi service lấy dữ liệu
-        List<OwnerPostResponse> result = postService.getMyPosts(email);
+        org.springframework.data.domain.Page<OwnerPostResponse> result = postService.getMyPosts(email, page, size);
         
         // 3. Trả về response theo chuẩn chung
-        ApiResponse<List<OwnerPostResponse>> response = new ApiResponse<>();
+        ApiResponse<org.springframework.data.domain.Page<OwnerPostResponse>> response = new ApiResponse<>();
         response.setSuccess(true);
         response.setMessage("Lấy danh sách bài đăng của tôi thành công");
         response.setData(result);
@@ -54,10 +57,15 @@ public class MePostController {
         String email = principal.getName();
         Payment payment = postService.createPost(email, request);
         
+        java.util.Map<String, Object> paymentData = new java.util.HashMap<>();
+        paymentData.put("id", payment.getId());
+        paymentData.put("amount", payment.getAmount());
+        paymentData.put("status", payment.getStatus());
+        
         ApiResponse<Object> response = new ApiResponse<>();
         response.setSuccess(true);
         response.setMessage("Tạo yêu cầu đăng bài thành công. Vui lòng thanh toán.");
-        response.setData(payment); // Trả về thông tin payment để FE gọi API thanh toán
+        response.setData(paymentData); // Trả về thông tin payment để FE gọi API thanh toán
         
         return ResponseEntity.ok(response);
     }
@@ -71,10 +79,15 @@ public class MePostController {
         String email = principal.getName();
         Payment payment = postService.extendPost(email, postId, request);
         
+        java.util.Map<String, Object> paymentData = new java.util.HashMap<>();
+        paymentData.put("id", payment.getId());
+        paymentData.put("amount", payment.getAmount());
+        paymentData.put("status", payment.getStatus());
+        
         ApiResponse<Object> response = new ApiResponse<>();
         response.setSuccess(true);
         response.setMessage("Tạo yêu cầu gia hạn thành công. Vui lòng thanh toán.");
-        response.setData(payment);
+        response.setData(paymentData);
         
         return ResponseEntity.ok(response);
     }

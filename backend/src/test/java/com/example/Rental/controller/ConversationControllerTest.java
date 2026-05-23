@@ -73,13 +73,14 @@ public class ConversationControllerTest {
                 .lastMessagePreview("Xin chào, phòng còn không ạ?")
                 .build();
 
-        Mockito.when(conversationService.getUserConversations(mockEmail)).thenReturn(List.of(mockConv));
+        org.springframework.data.domain.Page<ConversationResponse> mockPage = new org.springframework.data.domain.PageImpl<>(List.of(mockConv));
+        Mockito.when(conversationService.getUserConversations(eq(mockEmail), any(), any())).thenReturn(mockPage);
 
         mockMvc.perform(get("/api/v1/conversations").principal(mockPrincipal))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data[0].partnerName").value("Nguyễn Văn A"))
-                .andExpect(jsonPath("$.data[0].lastMessagePreview").value("Xin chào, phòng còn không ạ?"));
+                .andExpect(jsonPath("$.data.content[0].partnerName").value("Nguyễn Văn A"))
+                .andExpect(jsonPath("$.data.content[0].lastMessagePreview").value("Xin chào, phòng còn không ạ?"));
     }
 
     // 2. Test API Tạo hoặc lấy hội thoại
