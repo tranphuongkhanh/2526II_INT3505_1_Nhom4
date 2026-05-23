@@ -49,10 +49,11 @@ public class RoomController {
     }
 
     @PostMapping
-    public ResponseEntity<Room> createRoom(@RequestBody RoomRequest request) {
+    public ResponseEntity<RoomResponse> createRoom(@RequestBody RoomRequest request) {
         Long ownerId = getCurrentOwnerId();
         Room createdRoom = roomService.createRoom(ownerId, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdRoom);
+        RoomResponse createdRoomResponse = RoomService.fromEntity(createdRoom);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdRoomResponse);
     }
 
     @GetMapping("/{roomId}")
