@@ -12,4 +12,6 @@ public interface RoomRepository extends JpaRepository<Room, Long> {
     Optional<Room> findByIdAndDeletedAtIsNull(Long id);
 
     Optional<Room> findByIdAndOwnerIdAndDeletedAtIsNull(Long roomId, Long ownerId);
+
+    long countByDeletedAtIsNull();
 }

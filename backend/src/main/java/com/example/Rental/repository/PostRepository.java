@@ -13,4 +13,6 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     @Query("SELECT p FROM Post p JOIN FETCH p.room r WHERE p.status = 'APPROVED' AND p.endDate > CURRENT_TIMESTAMP AND r.rentalStatus = 'AVAILABLE'")
     List<Post> findAllActivePosts();
+
+    long countByStatus(PostStatus status);
 }
