@@ -14,4 +14,6 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
     Page<Report> findByStatus(ReportStatus status, Pageable pageable);
     Page<Report> findByReporterId(Long reporterId, Pageable pageable);
     boolean existsByReporterIdAndPostIdAndStatus(Long reporterId, Long postId, ReportStatus status);
+
+    long countByStatus(ReportStatus status);
 }

@@ -5,13 +5,14 @@ import com.example.Rental.dto.request.RoomStatusUpdateRequest;
 import com.example.Rental.dto.response.RoomResponse;
 import com.example.Rental.entity.Room;
 import com.example.Rental.entity.User;
+import com.example.Rental.exception.EntityNotFoundException;
+import com.example.Rental.exception.UnauthorizedException;
 import com.example.Rental.repository.UserRepository;
 import com.example.Rental.service.RoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.security.Principal;
 import java.util.List;
@@ -26,10 +27,10 @@ public class RoomController {
 
     private Long getCurrentOwnerId(Principal principal) {
         if (principal == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập!");
+            throw new UnauthorizedException("Vui lòng đăng nhập!");
         }
         User owner = userRepository.findByEmail(principal.getName())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User không tồn tại"));
+                .orElseThrow(() -> new EntityNotFoundException("User không tồn tại"));
         return owner.getId();
     }
 
