@@ -39,6 +39,7 @@ public class Payment {
     private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
+    @lombok.Builder.Default
     private PaymentStatus status = PaymentStatus.PENDING;
 
     @Column(columnDefinition = "TEXT")
