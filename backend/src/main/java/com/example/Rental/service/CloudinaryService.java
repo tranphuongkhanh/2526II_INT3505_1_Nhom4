@@ -16,7 +16,7 @@ public class CloudinaryService {
 
     public String uploadImage(MultipartFile file) {
         try {
-            Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
+            Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
 
             // Trả về đường link URL an toàn (https) của bức ảnh
             return uploadResult.get("secure_url").toString();
