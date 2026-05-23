@@ -1,0 +1,228 @@
+{
+  "info": {
+    "_postman_id": "d7f8f6b0-collection-full",
+    "name": "Rental Backend - Available API Tests",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Postman collection chỉ bao gồm các chức năng hiện có trong dự án: Auth, Rooms, Contracts, Utility Bills và Vehicles."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "JWT",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"owner@example.com\",\n  \"password\": \"P@ssw0rd\",\n  \"role\": \"owner\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"owner@example.com\",\n  \"password\": \"P@ssw0rd\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Rooms",
+      "item": [
+        {
+          "name": "POST /rooms",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{JWT}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/rooms",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Phòng trọ cao cấp\",\n  \"description\": \"Đầy đủ tiện nghi\",\n  \"price\": 2000000,\n  \"area_m2\": 25.5,\n  \"room_type\": \"PHONG_TRO\",\n  \"address\": \"123 Nguyễn Văn Linh\",\n  \"ward\": \"Phường 1\",\n  \"district\": \"Quận 1\",\n  \"city\": \"HCM\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Contracts",
+      "item": [
+        {
+          "name": "POST /rooms/:roomId/contracts",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{JWT}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/rooms/1/contracts",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"renter_id\": 2,\n  \"start_date\": \"2026-05-01\",\n  \"end_date\": \"2027-05-01\",\n  \"monthly_rent\": 2500000,\n  \"electricity_price\": 3500,\n  \"water_price\": 10000\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Utility Bills",
+      "item": [
+        {
+          "name": "POST /contracts/:contractId/bills",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{JWT}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/contracts/1/bills",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"billing_month\": \"2026-05-01\",\n  \"elec_curr\": 1200,\n  \"water_curr\": 30,\n  \"extra_fee\": 50000,\n  \"extra_note\": \"Phí rác\"\n}"
+            }
+          }
+        },
+        {
+          "name": "GET /contracts/:contractId/bills",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{JWT}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/contracts/1/bills?page=1&limit=20"
+          }
+        },
+        {
+          "name": "GET /bills/:billId",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{JWT}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/bills/1"
+          }
+        },
+        {
+          "name": "PATCH /bills/:billId/paid",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{JWT}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/bills/1/paid"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Vehicles",
+      "item": [
+        {
+          "name": "POST /rooms/:roomId/vehicles",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{JWT}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/rooms/1/vehicles",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"license_plate\": \"59A1-12345\",\n  \"vehicle_type\": \"xe_may\",\n  \"renter_id\": 2,\n  \"image_url\": \"https://example.com/veh.jpg\"\n}"
+            }
+          }
+        },
+        {
+          "name": "GET /rooms/:roomId/vehicles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{JWT}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/rooms/1/vehicles?page=1&limit=20"
+          }
+        },
+        {
+          "name": "DELETE /vehicles/:vehicleId",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{JWT}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/vehicles/1"
+          }
+        }
+      ]
+    }
+  ]
+}
