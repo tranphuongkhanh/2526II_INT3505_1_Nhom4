@@ -9,6 +9,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -88,9 +89,7 @@ public class ReviewController {
             @RequestParam(required = false, defaultValue = "1") Integer page,
             @RequestParam(required = false, defaultValue = "10") Integer limit) {
             
-        page = (page == null || page < 1) ? 1 : page;
-        limit = (limit == null || limit < 1) ? 10 : limit;
-        limit = Math.min(limit, 100);
+
         
         Pageable pageable = PageRequest.of(page - 1, limit);
         Page<Review> reviewPage = reviewService.getApprovedRenterReviews(userId, pageable);
@@ -111,5 +110,14 @@ public class ReviewController {
                 .build();
                 
         return ResponseEntity.ok(ApiResponse.ok("Renter reviews retrieved", response));
+    }
+
+    @PatchMapping("/reviews/{reviewId}")
+    public ResponseEntity<ApiResponse<Void>> updateReview(
+            @PathVariable Long reviewId,
+            @Valid @RequestBody com.example.Rental.dto.request.ReviewUpdateRequest request,
+            Principal principal) {
+        reviewService.updateReview(reviewId, request, principal.getName());
+        return ResponseEntity.ok(ApiResponse.ok("Review updated and is pending approval", null));
     }
 }
