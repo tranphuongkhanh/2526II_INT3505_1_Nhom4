@@ -18,6 +18,8 @@ import com.example.Rental.dto.response.ApiResponse;
 import com.example.Rental.dto.response.OwnerPostResponse;
 import com.example.Rental.entity.Payment;
 import com.example.Rental.service.PostService;
+import com.example.Rental.service.VNPayService;
+import jakarta.servlet.http.HttpServletRequest;
 
 import lombok.RequiredArgsConstructor;
 
@@ -27,6 +29,7 @@ import lombok.RequiredArgsConstructor;
 public class MePostController {
 
     private final PostService postService;
+    private final VNPayService vnPayService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<org.springframework.data.domain.Page<OwnerPostResponse>>> getMyPosts(
@@ -52,15 +55,23 @@ public class MePostController {
     @PostMapping
     public ResponseEntity<ApiResponse<Object>> createPost(
             @RequestBody CreatePostRequest request,
-            Principal principal) {
+            Principal principal,
+            HttpServletRequest httpRequest) {
         
         String email = principal.getName();
         Payment payment = postService.createPost(email, request);
         
+        String ipAddress = httpRequest.getHeader("X-FORWARDED-FOR");
+        if (ipAddress == null) {
+            ipAddress = httpRequest.getRemoteAddr();
+        }
+        String paymentUrl = vnPayService.createPaymentUrl(payment, ipAddress);
+
         java.util.Map<String, Object> paymentData = new java.util.HashMap<>();
         paymentData.put("id", payment.getId());
         paymentData.put("amount", payment.getAmount());
         paymentData.put("status", payment.getStatus());
+        paymentData.put("paymentUrl", paymentUrl);
         
         ApiResponse<Object> response = new ApiResponse<>();
         response.setSuccess(true);
@@ -74,15 +85,23 @@ public class MePostController {
     public ResponseEntity<ApiResponse<Object>> extendPost(
             @PathVariable Long postId,
             @RequestBody ExtendPostRequest request,
-            Principal principal) {
+            Principal principal,
+            HttpServletRequest httpRequest) {
         
         String email = principal.getName();
         Payment payment = postService.extendPost(email, postId, request);
         
+        String ipAddress = httpRequest.getHeader("X-FORWARDED-FOR");
+        if (ipAddress == null) {
+            ipAddress = httpRequest.getRemoteAddr();
+        }
+        String paymentUrl = vnPayService.createPaymentUrl(payment, ipAddress);
+
         java.util.Map<String, Object> paymentData = new java.util.HashMap<>();
         paymentData.put("id", payment.getId());
         paymentData.put("amount", payment.getAmount());
         paymentData.put("status", payment.getStatus());
+        paymentData.put("paymentUrl", paymentUrl);
         
         ApiResponse<Object> response = new ApiResponse<>();
         response.setSuccess(true);

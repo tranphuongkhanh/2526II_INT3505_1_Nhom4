@@ -11,6 +11,7 @@ import com.example.Rental.enums.DurationType;
 import com.example.Rental.enums.PaymentStatus;
 import com.example.Rental.enums.PostStatus;
 import com.example.Rental.service.PostService;
+import com.example.Rental.service.VNPayService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -57,6 +58,9 @@ public class MePostControllerTest {
 
     @MockBean
     private PostService postService;
+
+    @MockBean
+    private VNPayService vnPayService;
 
     // 1. Test API Lấy danh sách bài đăng (Cũ)
     @Test
@@ -106,6 +110,7 @@ public class MePostControllerTest {
         // Dặn Mockito: Khi service.createPost được gọi với bất kỳ request nào, hãy trả về mockPayment
         Mockito.when(postService.createPost(eq(mockEmail), any(CreatePostRequest.class)))
                .thenReturn(mockPayment);
+        Mockito.when(vnPayService.createPaymentUrl(any(), any())).thenReturn("http://mock-vnpay-url");
 
         // Thực hiện POST request và kiểm tra
         mockMvc.perform(post("/api/v1/me/posts")
@@ -116,7 +121,8 @@ public class MePostControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.id").value(999))
                 .andExpect(jsonPath("$.data.amount").value(600000))
-                .andExpect(jsonPath("$.data.status").value("PENDING"));
+                .andExpect(jsonPath("$.data.status").value("PENDING"))
+                .andExpect(jsonPath("$.data.paymentUrl").value("http://mock-vnpay-url"));
     }
 
     // 3. Test API Gia hạn bài đăng (Mới)
@@ -145,6 +151,7 @@ public class MePostControllerTest {
         // Dặn Mockito
         Mockito.when(postService.extendPost(eq(mockEmail), eq(postId), any(ExtendPostRequest.class)))
                .thenReturn(mockPayment);
+        Mockito.when(vnPayService.createPaymentUrl(any(), any())).thenReturn("http://mock-vnpay-url");
 
         // Thực hiện POST request và kiểm tra
         mockMvc.perform(post("/api/v1/me/posts/" + postId + "/extend")
@@ -154,7 +161,8 @@ public class MePostControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.id").value(888))
-                .andExpect(jsonPath("$.data.amount").value(100000));
+                .andExpect(jsonPath("$.data.amount").value(100000))
+                .andExpect(jsonPath("$.data.paymentUrl").value("http://mock-vnpay-url"));
     }
 
     @Test
