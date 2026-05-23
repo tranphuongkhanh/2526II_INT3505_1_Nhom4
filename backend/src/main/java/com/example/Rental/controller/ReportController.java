@@ -49,6 +49,8 @@ public class ReportController {
             @RequestParam(required = false, defaultValue = "10") Integer limit,
             Principal principal) {
         
+
+        
         Pageable pageable = PageRequest.of(page - 1, limit);
         Page<Report> reportPage = reportService.getUserReports(principal.getName(), pageable);
         

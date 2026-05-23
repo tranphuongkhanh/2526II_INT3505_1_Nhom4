@@ -4,15 +4,21 @@ import java.security.Principal;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.Rental.dto.response.ApiResponse;
+import com.example.Rental.dto.response.FavoriteListResponse;
+import com.example.Rental.dto.response.PaginationMetaResponse;
 import com.example.Rental.dto.response.PostSummaryResponse;
 import com.example.Rental.entity.Post;
 import com.example.Rental.service.FavoriteService;
@@ -39,11 +45,30 @@ public class FavoriteController {
     }
 
     @GetMapping("/users/me/favorites")
-    public ResponseEntity<ApiResponse<List<PostSummaryResponse>>> getUserFavorites(Principal principal) {
-        List<Post> favorites = favoriteService.getUserFavorites(principal.getName());
-        List<PostSummaryResponse> response = favorites.stream()
+    public ResponseEntity<ApiResponse<FavoriteListResponse>> getUserFavorites(
+            Principal principal,
+            @RequestParam(required = false, defaultValue = "1") Integer page,
+            @RequestParam(required = false, defaultValue = "10") Integer limit) {
+        
+
+        
+        Pageable pageable = PageRequest.of(page - 1, limit);
+        Page<Post> favoritePage = favoriteService.getUserFavorites(principal.getName(), pageable);
+        
+        List<PostSummaryResponse> items = favoritePage.getContent().stream()
                 .map(this::mapToSummaryResponse)
                 .collect(Collectors.toList());
+                
+        PaginationMetaResponse meta = PaginationMetaResponse.builder()
+                .total(favoritePage.getTotalElements())
+                .page(page)
+                .limit(limit)
+                .build();
+                
+        FavoriteListResponse response = FavoriteListResponse.builder()
+                .items(items)
+                .meta(meta)
+                .build();
                 
         return ResponseEntity.ok(ApiResponse.ok("Favorites retrieved", response));
     }

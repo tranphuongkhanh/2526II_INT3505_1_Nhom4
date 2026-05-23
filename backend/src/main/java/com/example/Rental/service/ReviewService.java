@@ -3,6 +3,8 @@ package com.example.Rental.service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -106,18 +108,18 @@ public class ReviewService {
     }
 
     @Transactional(readOnly = true)
-    public List<Review> getApprovedRoomReviews(Long roomId) {
-        return reviewRepository.findByTargetRoomIdAndStatus(roomId, ReviewStatus.APPROVED);
+    public Page<Review> getApprovedRoomReviews(Long roomId, Pageable pageable) {
+        return reviewRepository.findByTargetRoomIdAndStatus(roomId, ReviewStatus.APPROVED, pageable);
     }
 
     @Transactional(readOnly = true)
-    public List<Review> getApprovedRenterReviews(Long userId) {
-        return reviewRepository.findByTargetUserIdAndStatus(userId, ReviewStatus.APPROVED);
+    public Page<Review> getApprovedRenterReviews(Long userId, Pageable pageable) {
+        return reviewRepository.findByTargetUserIdAndStatus(userId, ReviewStatus.APPROVED, pageable);
     }
 
     @Transactional(readOnly = true)
-    public List<Review> getPendingReviews() {
-        return reviewRepository.findByStatus(ReviewStatus.PENDING);
+    public Page<Review> getPendingReviews(Pageable pageable) {
+        return reviewRepository.findByStatus(ReviewStatus.PENDING, pageable);
     }
 
     @Transactional
@@ -135,17 +137,45 @@ public class ReviewService {
         reviewRepository.saveAndFlush(review);
 
         if (review.getReviewType() == ReviewType.RENTER_TO_ROOM) {
-            Room room = review.getTargetRoom();
-            List<Review> approvedReviews = reviewRepository.findByTargetRoomIdAndStatus(room.getId(), ReviewStatus.APPROVED);
-            
-            double avg = approvedReviews.stream()
-                    .mapToInt(Review::getRating)
-                    .average()
-                    .orElse(0.0);
-            
-            room.setAvgRating(avg);
-            room.setReviewCount(approvedReviews.size());
-            roomRepository.save(room);
+            updateRoomAverageRating(review.getTargetRoom());
         }
+    }
+
+    @Transactional
+    public void updateReview(Long reviewId, com.example.Rental.dto.request.ReviewUpdateRequest request, String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new RuntimeException("Review not found"));
+
+        if (!review.getReviewer().getId().equals(user.getId())) {
+            throw new RuntimeException("You can only edit your own review");
+        }
+
+        review.setRating(request.getRating());
+        review.setComment(request.getComment());
+        review.setStatus(ReviewStatus.PENDING);
+        review.setModeratedBy(null);
+        review.setModeratedAt(null);
+
+        reviewRepository.saveAndFlush(review);
+
+        if (review.getReviewType() == ReviewType.RENTER_TO_ROOM) {
+            updateRoomAverageRating(review.getTargetRoom());
+        }
+    }
+
+    private void updateRoomAverageRating(Room room) {
+        List<Review> approvedReviews = reviewRepository.findByTargetRoomIdAndStatus(room.getId(), ReviewStatus.APPROVED);
+        
+        double avg = approvedReviews.stream()
+                .mapToInt(Review::getRating)
+                .average()
+                .orElse(0.0);
+        
+        room.setAvgRating(avg);
+        room.setReviewCount(approvedReviews.size());
+        roomRepository.save(room);
     }
 }
