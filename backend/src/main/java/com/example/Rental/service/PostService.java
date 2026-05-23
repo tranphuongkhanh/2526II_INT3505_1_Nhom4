@@ -224,6 +224,10 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy bài đăng"));
 
+        if (post.getStatus() != PostStatus.APPROVED) {
+            throw new IllegalStateException("Chỉ được gia hạn bài đăng đã được duyệt (APPROVED)");
+        }
+
         // Kiểm tra quyền sở hữu bài đăng
         if (!post.getCreatedBy().getId().equals(owner.getId())) {
             throw new AccessDeniedException("Bạn không có quyền gia hạn bài đăng này");
@@ -358,9 +362,12 @@ public class PostService {
         post.setApprovedAt(LocalDateTime.now());
 
         if (request.getStatus() == PostStatus.APPROVED) {
-            // Khi duyệt bài: Bắt đầu tính ngày đăng và ngày hết hạn
-            post.setStartDate(LocalDateTime.now());
-            post.setEndDate(calculateNewEndDate(LocalDateTime.now(), post.getDurationType(), post.getDurationValue()));
+            // Check payment status before setting start/endDate
+            Payment payment = paymentRepository.findByPostIdAndExtensionIsNull(post.getId()).orElse(null);
+            if (payment != null && payment.getStatus() == com.example.Rental.enums.PaymentStatus.PAID) {
+                post.setStartDate(LocalDateTime.now());
+                post.setEndDate(calculateNewEndDate(LocalDateTime.now(), post.getDurationType(), post.getDurationValue()));
+            }
             post.setRejectReason(null); // Xóa lý do từ chối cũ (nếu có)
             
         } else if (request.getStatus() == PostStatus.REJECTED) {

@@ -11,4 +11,5 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     List<Payment> findByOwnerIdOrderByCreatedAtDesc(Long ownerId);
     Page<Payment> findByOwnerId(Long ownerId, Pageable pageable);
     Page<Payment> findByOwnerIdAndStatus(Long ownerId, com.example.Rental.enums.PaymentStatus status, Pageable pageable);
+    java.util.Optional<Payment> findByPostIdAndExtensionIsNull(Long postId);
 }
