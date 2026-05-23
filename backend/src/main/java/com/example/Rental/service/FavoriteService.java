@@ -3,6 +3,8 @@ package com.example.Rental.service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -72,12 +74,10 @@ public class FavoriteService {
     }
 
     @Transactional(readOnly = true)
-    public List<Post> getUserFavorites(String email) {
+    public Page<Post> getUserFavorites(String email, Pageable pageable) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        return favoriteRepository.findByUserId(user.getId())
-                .stream()
-                .map(Favorite::getPost)
-                .collect(Collectors.toList());
+        return favoriteRepository.findByUserId(user.getId(), pageable)
+                .map(Favorite::getPost);
     }
 }
