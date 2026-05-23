@@ -3,6 +3,8 @@ package com.example.Rental.service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -106,18 +108,18 @@ public class ReviewService {
     }
 
     @Transactional(readOnly = true)
-    public List<Review> getApprovedRoomReviews(Long roomId) {
-        return reviewRepository.findByTargetRoomIdAndStatus(roomId, ReviewStatus.APPROVED);
+    public Page<Review> getApprovedRoomReviews(Long roomId, Pageable pageable) {
+        return reviewRepository.findByTargetRoomIdAndStatus(roomId, ReviewStatus.APPROVED, pageable);
     }
 
     @Transactional(readOnly = true)
-    public List<Review> getApprovedRenterReviews(Long userId) {
-        return reviewRepository.findByTargetUserIdAndStatus(userId, ReviewStatus.APPROVED);
+    public Page<Review> getApprovedRenterReviews(Long userId, Pageable pageable) {
+        return reviewRepository.findByTargetUserIdAndStatus(userId, ReviewStatus.APPROVED, pageable);
     }
 
     @Transactional(readOnly = true)
-    public List<Review> getPendingReviews() {
-        return reviewRepository.findByStatus(ReviewStatus.PENDING);
+    public Page<Review> getPendingReviews(Pageable pageable) {
+        return reviewRepository.findByStatus(ReviewStatus.PENDING, pageable);
     }
 
     @Transactional
