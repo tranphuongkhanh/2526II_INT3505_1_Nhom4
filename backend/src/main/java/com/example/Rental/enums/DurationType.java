@@ -4,5 +4,5 @@ public enum DurationType {
     WEEK,
     MONTH,
     QUARTER,
-    YEAR
+    YEAR, DAY
 }

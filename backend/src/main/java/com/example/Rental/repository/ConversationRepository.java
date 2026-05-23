@@ -8,5 +8,5 @@ import java.util.Optional;
 
 public interface ConversationRepository extends JpaRepository<Conversation, Long> {
     Optional<Conversation> findByUser1IdAndUser2Id(Long user1Id, Long user2Id);
-    List<Conversation> findByUser1IdOrUser2IdOrderByLastMessageAtDesc(Long user1Id, Long user2Id);
+    org.springframework.data.domain.Page<Conversation> findByUser1IdOrUser2IdOrderByLastMessageAtDesc(Long user1Id, Long user2Id, org.springframework.data.domain.Pageable pageable);
 }
