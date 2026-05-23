@@ -5,9 +5,12 @@ import com.example.Rental.dto.response.RoomResponse;
 import com.example.Rental.entity.Room;
 import com.example.Rental.entity.User;
 import com.example.Rental.enums.RentalStatus;
+import com.example.Rental.exception.EntityNotFoundException;
 import com.example.Rental.repository.RoomRepository;
 import com.example.Rental.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,7 +26,8 @@ public class RoomService {
     private final UserRepository userRepository;
 
     public static RoomResponse fromEntity(Room room) {
-        if (room == null) return null;
+        if (room == null)
+            return null;
 
         return RoomResponse.builder()
                 .id(room.getId())
@@ -61,7 +65,7 @@ public class RoomService {
     @Transactional
     public Room createRoom(Long ownerId, RoomRequest request) {
         User owner = userRepository.findById(ownerId)
-                .orElseThrow(() -> new RuntimeException("Owner not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Owner not found"));
 
         Room room = Room.builder()
                 .owner(owner)
@@ -90,10 +94,10 @@ public class RoomService {
 
     private Room getRoomEntity(Long roomId, Long ownerId) {
         Room room = roomRepository.findByIdAndDeletedAtIsNull(roomId)
-                .orElseThrow(() -> new RuntimeException("Phòng không tồn tại hoặc đã bị xóa"));
+                .orElseThrow(() -> new EntityNotFoundException("Phòng không tồn tại hoặc đã bị xóa"));
 
         if (!room.getOwner().getId().equals(ownerId)) {
-            throw new RuntimeException("Bạn không có quyền chỉnh sửa/xóa phòng của người khác");
+            throw new AccessDeniedException("Bạn không có quyền chỉnh sửa/xóa phòng của người khác");
         }
 
         return room;

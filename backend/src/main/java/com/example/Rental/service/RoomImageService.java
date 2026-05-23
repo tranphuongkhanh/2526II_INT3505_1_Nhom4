@@ -2,10 +2,12 @@ package com.example.Rental.service;
 
 import com.example.Rental.entity.Room;
 import com.example.Rental.entity.RoomImage;
+import com.example.Rental.exception.EntityNotFoundException;
 import com.example.Rental.repository.RoomImageRepository;
 import com.example.Rental.repository.RoomRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,8 +24,7 @@ public class RoomImageService {
 
     private Room validateRoomOwner(Long roomId, Long ownerId) {
         return roomRepository.findByIdAndOwnerIdAndDeletedAtIsNull(roomId, ownerId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN,
-                        "Phòng không tồn tại hoặc bạn không có quyền thao tác!"));
+                .orElseThrow(() -> new AccessDeniedException("Phòng không tồn tại hoặc bạn không có quyền thao tác!"));
     }
 
     @Transactional
@@ -52,7 +53,7 @@ public class RoomImageService {
         validateRoomOwner(roomId, ownerId);
 
         RoomImage image = roomImageRepository.findByIdAndRoomId(imageId, roomId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy hình ảnh này!"));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy hình ảnh này!"));
 
         boolean wasThumbnail = image.getIsThumbnail();
 
@@ -78,7 +79,7 @@ public class RoomImageService {
         validateRoomOwner(roomId, ownerId);
 
         RoomImage targetImage = roomImageRepository.findByIdAndRoomId(imageId, roomId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy hình ảnh này!"));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy hình ảnh này!"));
 
         roomImageRepository.resetThumbnailForRoom(roomId);
 

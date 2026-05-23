@@ -2,6 +2,8 @@ package com.example.Rental.controller;
 
 import com.example.Rental.entity.RoomImage;
 import com.example.Rental.entity.User;
+import com.example.Rental.exception.EntityNotFoundException;
+import com.example.Rental.exception.UnauthorizedException;
 import com.example.Rental.repository.UserRepository;
 import com.example.Rental.service.RoomImageService;
 import lombok.RequiredArgsConstructor;
@@ -9,7 +11,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.security.Principal;
 
@@ -22,10 +23,10 @@ public class RoomImageController {
 
     private Long getCurrentOwnerId(Principal principal) {
         if (principal == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập!");
+            throw new UnauthorizedException("Vui lòng đăng nhập!");
         }
         User owner = userRepository.findByEmail(principal.getName())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User không tồn tại"));
+                .orElseThrow(() -> new EntityNotFoundException("User không tồn tại"));
         return owner.getId();
     }
 
@@ -38,7 +39,7 @@ public class RoomImageController {
         Long ownerId = getCurrentOwnerId(principal);
 
         if (file.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "File ảnh không được để trống!");
+            throw new RuntimeException("File ảnh không được để trống!");
         }
 
         RoomImage savedImage = roomImageService.uploadImage(roomId, ownerId, file);
