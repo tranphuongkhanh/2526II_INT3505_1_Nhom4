@@ -39,9 +39,7 @@ public class AdminReviewController {
             @RequestParam(required = false, defaultValue = "1") Integer page,
             @RequestParam(required = false, defaultValue = "10") Integer limit) {
             
-        page = (page == null || page < 1) ? 1 : page;
-        limit = (limit == null || limit < 1) ? 10 : limit;
-        limit = Math.min(limit, 100);
+
         
         Pageable pageable = PageRequest.of(page - 1, limit);
         Page<Review> reviewPage = reviewService.getPendingReviews(pageable);
