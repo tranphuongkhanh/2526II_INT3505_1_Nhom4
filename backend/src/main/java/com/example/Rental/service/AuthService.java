@@ -11,15 +11,23 @@ import com.example.Rental.dto.request.LoginRequest;
 import com.example.Rental.dto.request.RegisterRequest;
 import com.example.Rental.dto.request.ForgotPasswordRequest;
 import com.example.Rental.dto.request.ResetPasswordRequest;
+import com.example.Rental.dto.request.ChangePasswordRequest;
+
 import com.example.Rental.dto.response.LoginResponse;
 import com.example.Rental.dto.response.UserResponse;
+
 import com.example.Rental.entity.User;
+
 import com.example.Rental.enums.UserRole;
 import com.example.Rental.enums.UserStatus;
+
 import com.example.Rental.repository.UserRepository;
+
 import com.example.Rental.util.JwtUtil;
+
 import com.example.Rental.service.TokenBlacklistService;
 import com.example.Rental.service.EmailService;
+import com.example.Rental.service.UserService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +43,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final TokenBlacklistService tokenBlacklistService;
     private final EmailService emailService;
+    private final UserService userService;
 
     @Value("${jwt.expiration}")
     private long jwtExpiration;
@@ -195,5 +204,26 @@ public class AuthService {
         userRepository.save(user);
 
         log.info("Password reset successfully for user: {}", user.getEmail());
+    }
+
+    public void changePassword(ChangePasswordRequest request) {
+        User user = userService.getCurrentUser();
+
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
+            throw new RuntimeException("Incorrect current password");
+        }
+
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
+            throw new RuntimeException("New password cannot be the same as old password");
+        }
+
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new RuntimeException("New password and confirm password do not match.");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        log.info("Password changed successfully for user: {}", user.getEmail());
     }
 }

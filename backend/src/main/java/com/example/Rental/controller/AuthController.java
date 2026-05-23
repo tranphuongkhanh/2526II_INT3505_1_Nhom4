@@ -2,6 +2,7 @@ package com.example.Rental.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -12,9 +13,12 @@ import com.example.Rental.dto.request.ForgotPasswordRequest;
 import com.example.Rental.dto.request.LoginRequest;
 import com.example.Rental.dto.request.RegisterRequest;
 import com.example.Rental.dto.request.ResetPasswordRequest;
+import com.example.Rental.dto.request.ChangePasswordRequest;
+
 import com.example.Rental.dto.response.ApiResponse;
 import com.example.Rental.dto.response.LoginResponse;
 import com.example.Rental.dto.response.UserResponse;
+
 import com.example.Rental.service.AuthService;
 
 import jakarta.validation.Valid;
@@ -72,6 +76,14 @@ public class AuthController {
                 authService.resetPassword(request);
                 return ResponseEntity.ok(
                                 ApiResponse.ok("Password reset successfully.", null));
+        }
+
+        @PostMapping("/change-password")
+        public ResponseEntity<ApiResponse<Void>> changePassword(
+                        @Valid @RequestBody ChangePasswordRequest request) {
+                authService.changePassword(request);
+                return ResponseEntity.ok(
+                                ApiResponse.ok("Password changed successfully.", null));
         }
 
 }
