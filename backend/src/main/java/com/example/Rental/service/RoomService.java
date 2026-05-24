@@ -9,6 +9,10 @@ import com.example.Rental.exception.EntityNotFoundException;
 import com.example.Rental.repository.RoomRepository;
 import com.example.Rental.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.lang.NonNull;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -55,11 +59,15 @@ public class RoomService {
                 .build();
     }
 
-    public List<RoomResponse> getAllRoomsByOwner(Long ownerId) {
-        return roomRepository.findByOwnerIdAndDeletedAtIsNull(ownerId)
-                .stream()
-                .map(RoomService::fromEntity)
-                .collect(Collectors.toList());
+    public Page<RoomResponse> getAllRoomsByOwner(Long ownerId, int page, int size) {
+        // Chuyển trang từ 1-index sang 0-index, mặc định sắp xếp phòng mới nhất lên đầu
+        int pageNumber = page - 1;
+
+        Pageable pageable = PageRequest.of(pageNumber, size, Sort.by("createdAt").descending());
+
+        Page<Room> rooms = roomRepository.findByOwnerIdAndDeletedAtIsNull(ownerId, pageable);
+
+        return rooms.map(RoomService::fromEntity);
     }
 
     @Transactional
