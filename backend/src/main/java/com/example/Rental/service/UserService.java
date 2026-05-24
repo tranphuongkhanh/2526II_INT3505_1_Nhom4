@@ -1,16 +1,24 @@
 package com.example.Rental.service;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import com.example.Rental.dto.request.UpdateProfileRequest;
+import com.example.Rental.dto.response.UserListResponse;
 import com.example.Rental.dto.response.UserResponse;
 import com.example.Rental.entity.User;
 import com.example.Rental.enums.UserRole;
+import com.example.Rental.enums.UserStatus;
 import com.example.Rental.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -73,5 +81,41 @@ public class UserService {
                 .role(user.getRole().name())
                 .status(user.getStatus().name())
                 .build();
+    }
+
+    // New: list users with optional filters role and status, pageable
+    public UserListResponse listUsers(UserRole role, UserStatus status, int page, int limit) {
+        if (page < 1) page = 1;
+        if (limit < 1) limit = 10;
+        Pageable pageable = PageRequest.of(page - 1, limit);
+        Page<User> result;
+
+        if (role != null && status != null) {
+            result = userRepository.findByRoleAndStatus(role, status, pageable);
+        } else if (role != null) {
+            result = userRepository.findByRole(role, pageable);
+        } else if (status != null) {
+            result = userRepository.findByStatus(status, pageable);
+        } else {
+            result = userRepository.findAll(pageable);
+        }
+
+        List<UserResponse> items = result.getContent().stream().map(this::mapToResponse).collect(Collectors.toList());
+
+        return UserListResponse.builder()
+                .total(result.getTotalElements())
+                .page(page)
+                .limit(limit)
+                .items(items)
+                .build();
+    }
+
+    // New: update user status (approve/ban/unban)
+    public UserResponse updateUserStatus(Long userId, UserStatus status) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        user.setStatus(status);
+        User saved = userRepository.save(user);
+        log.info("User {} status updated to {}", user.getEmail(), status);
+        return mapToResponse(saved);
     }
 }

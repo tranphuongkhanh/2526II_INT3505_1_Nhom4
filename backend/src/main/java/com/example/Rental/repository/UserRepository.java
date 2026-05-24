@@ -2,6 +2,9 @@ package com.example.Rental.repository;
 
 import com.example.Rental.entity.User;
 import com.example.Rental.enums.UserRole;
+import com.example.Rental.enums.UserStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -14,4 +17,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByUsername(String username);
     Optional<User> findByResetToken(String resetToken);
     List<User> findByRole(UserRole role);
+
+    // Pageable queries for listing with filters
+    Page<User> findByRole(UserRole role, Pageable pageable);
+    Page<User> findByStatus(UserStatus status, Pageable pageable);
+    Page<User> findByRoleAndStatus(UserRole role, UserStatus status, Pageable pageable);
 }

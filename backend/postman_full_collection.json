@@ -3,7 +3,7 @@
     "_postman_id": "d7f8f6b0-collection-full",
     "name": "Rental Backend - Available API Tests",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Postman collection chỉ bao gồm các chức năng hiện có trong dự án: Auth, Rooms, Contracts, Utility Bills và Vehicles."
+    "description": "Postman collection chỉ bao gồm các chức năng hiện có trong dự án: Auth, Rooms, Contracts, Utility Bills và Vehicles. Mỗi request có test script kiểm tra status và định dạng trả về; Login sẽ lưu JWT vào environment variable 'JWT'."
   },
   "variable": [
     {
@@ -34,7 +34,23 @@
               "mode": "raw",
               "raw": "{\n  \"email\": \"owner@example.com\",\n  \"password\": \"P@ssw0rd\",\n  \"role\": \"owner\"\n}"
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "    pm.response.to.be.successful;",
+                  "});",
+                  "pm.test('Response is JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Login",
@@ -51,7 +67,39 @@
               "mode": "raw",
               "raw": "{\n  \"email\": \"owner@example.com\",\n  \"password\": \"P@ssw0rd\"\n}"
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "    pm.response.to.be.successful;",
+                  "});",
+                  "pm.test('Response is JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "try {",
+                  "    var json = pm.response.json();",
+                  "    var token = json.token || json.accessToken || json.access_token || json.jwt || (json.data && json.data.token);",
+                  "    if (token) {",
+                  "        pm.environment.set('JWT', token);",
+                  "        pm.test('JWT saved to environment', function () {",
+                  "            pm.expect(pm.environment.get('JWT')).to.be.a('string');",
+                  "        });",
+                  "    } else {",
+                  "        pm.test('No JWT found in response', function () {",
+                  "            pm.expect(typeof token).to.not.eql('undefined');",
+                  "        });",
+                  "    }",
+                  "} catch (e) {",
+                  "    // response not JSON or other error",
+                  "}"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -77,7 +125,23 @@
               "mode": "raw",
               "raw": "{\n  \"title\": \"Phòng trọ cao cấp\",\n  \"description\": \"Đầy đủ tiện nghi\",\n  \"price\": 2000000,\n  \"area_m2\": 25.5,\n  \"room_type\": \"PHONG_TRO\",\n  \"address\": \"123 Nguyễn Văn Linh\",\n  \"ward\": \"Phường 1\",\n  \"district\": \"Quận 1\",\n  \"city\": \"HCM\"\n}"
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "    pm.response.to.be.successful;",
+                  "});",
+                  "pm.test('Response is JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -103,7 +167,23 @@
               "mode": "raw",
               "raw": "{\n  \"renter_id\": 2,\n  \"start_date\": \"2026-05-01\",\n  \"end_date\": \"2027-05-01\",\n  \"monthly_rent\": 2500000,\n  \"electricity_price\": 3500,\n  \"water_price\": 10000\n}"
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "    pm.response.to.be.successful;",
+                  "});",
+                  "pm.test('Response is JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -129,7 +209,23 @@
               "mode": "raw",
               "raw": "{\n  \"billing_month\": \"2026-05-01\",\n  \"elec_curr\": 1200,\n  \"water_curr\": 30,\n  \"extra_fee\": 50000,\n  \"extra_note\": \"Phí rác\"\n}"
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "    pm.response.to.be.successful;",
+                  "});",
+                  "pm.test('Response is JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "GET /contracts/:contractId/bills",
@@ -142,7 +238,29 @@
               }
             ],
             "url": "{{baseUrl}}/api/v1/contracts/1/bills?page=1&limit=20"
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "    pm.response.to.be.successful;",
+                  "});",
+                  "pm.test('Response is JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "try {",
+                  "    var json = pm.response.json();",
+                  "    pm.test('Response is an array or paginated object', function () {",
+                  "        pm.expect(Array.isArray(json) || Array.isArray(json.data) || typeof json.total !== 'undefined').to.be.true;",
+                  "    });",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "GET /bills/:billId",
@@ -155,7 +273,23 @@
               }
             ],
             "url": "{{baseUrl}}/api/v1/bills/1"
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "    pm.response.to.be.successful;",
+                  "});",
+                  "pm.test('Response is JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "PATCH /bills/:billId/paid",
@@ -168,7 +302,23 @@
               }
             ],
             "url": "{{baseUrl}}/api/v1/bills/1/paid"
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "    pm.response.to.be.successful;",
+                  "});",
+                  "pm.test('Response is JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -194,7 +344,23 @@
               "mode": "raw",
               "raw": "{\n  \"license_plate\": \"59A1-12345\",\n  \"vehicle_type\": \"xe_may\",\n  \"renter_id\": 2,\n  \"image_url\": \"https://example.com/veh.jpg\"\n}"
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "    pm.response.to.be.successful;",
+                  "});",
+                  "pm.test('Response is JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "GET /rooms/:roomId/vehicles",
@@ -207,7 +373,29 @@
               }
             ],
             "url": "{{baseUrl}}/api/v1/rooms/1/vehicles?page=1&limit=20"
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "    pm.response.to.be.successful;",
+                  "});",
+                  "pm.test('Response is JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "try {",
+                  "    var json = pm.response.json();",
+                  "    pm.test('Response is an array or paginated object', function () {",
+                  "        pm.expect(Array.isArray(json) || Array.isArray(json.data) || typeof json.total !== 'undefined').to.be.true;",
+                  "    });",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "DELETE /vehicles/:vehicleId",
@@ -220,7 +408,419 @@
               }
             ],
             "url": "{{baseUrl}}/api/v1/vehicles/1"
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "    pm.response.to.be.successful;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Users",
+      "item": [
+        {
+          "name": "GET /users (Admin List)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{JWT}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/users?page=1&limit=10"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "    pm.response.to.be.successful;",
+                  "});",
+                  "pm.test('Response is JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "try {",
+                  "    var json = pm.response.json();",
+                  "    pm.test('Response contains items', function () {",
+                  "        pm.expect(Array.isArray(json.data.items)).to.be.true;",
+                  "    });",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /users/:userId/status (Admin Update Status)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{JWT}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/users/1/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"BANNED\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "    pm.response.to.be.successful;",
+                  "});",
+                  "pm.test('Response is JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. Admin Posts",
+      "item": [
+        {
+          "name": "GET /admin/posts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{JWT}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/admin/posts?page=1&limit=10"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "    pm.response.to.be.successful;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "8. Favorites",
+      "item": [
+        {
+          "name": "POST /favorites",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{JWT}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/favorites",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"post_id\": 1\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "    pm.response.to.be.successful;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /favorites",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{JWT}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/favorites?page=1&limit=10"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "    pm.response.to.be.successful;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "9. Conversations & Messages",
+      "item": [
+        {
+          "name": "GET /conversations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{JWT}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/conversations"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "    pm.response.to.be.successful;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /conversations",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{JWT}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/conversations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"partner_id\": 2\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "    pm.response.to.be.successful;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /conversations/:id/messages",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{JWT}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/conversations/1/messages"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "    pm.response.to.be.successful;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "10. Notifications",
+      "item": [
+        {
+          "name": "GET /notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{JWT}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/notifications"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "    pm.response.to.be.successful;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /notifications/read-all",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{JWT}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/notifications/read-all"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "    pm.response.to.be.successful;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "11. Reports",
+      "item": [
+        {
+          "name": "POST /reports",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{JWT}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reports",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target_type\": \"POST\",\n  \"target_id\": 1,\n  \"reason\": \"Scam\",\n  \"description\": \"Fake post content\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "    pm.response.to.be.successful;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "12. Reviews",
+      "item": [
+        {
+          "name": "POST /rooms/:roomId/reviews",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{JWT}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/rooms/1/reviews",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Great\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 2xx', function () {",
+                  "    pm.response.to.be.successful;",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     }
