@@ -1,5 +1,6 @@
 package com.example.Rental.controller;
 
+import com.example.Rental.dto.request.RoomFilterRequest;
 import com.example.Rental.dto.request.RoomRequest;
 import com.example.Rental.dto.request.RoomStatusUpdateRequest;
 import com.example.Rental.dto.response.ApiResponse;
@@ -18,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.security.Principal;
 import java.util.List;
 
@@ -42,10 +44,11 @@ public class RoomController {
     public ResponseEntity<ApiResponse<Page<RoomResponse>>> getAllRooms(
             @RequestParam(defaultValue = "1") @Min(1) int page,
             @RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit,
+            RoomFilterRequest filter,
             Principal principal) {
 
         Long ownerId = getCurrentOwnerId(principal);
-        Page<RoomResponse> result = roomService.getAllRoomsByOwner(ownerId, page, limit);
+        Page<RoomResponse> result = roomService.getAllRoomsByOwner(ownerId, filter, page, limit);
 
         ApiResponse<Page<RoomResponse>> response = new ApiResponse<>();
         response.setSuccess(true);
