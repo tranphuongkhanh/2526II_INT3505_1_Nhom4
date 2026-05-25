@@ -13,19 +13,20 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
-    @Value("${jwt.secret}")
+    // Read jwt.secret from application properties; if missing, fall back to env JWT_SECRET
+    @Value("${jwt.secret:}")
     private String secret;
 
-    @Value("${jwt.expiration}")
+    @Value("${jwt.expiration:86400000}")
     private long expiration;
 
     public String generateToken(String email, Long userId, String role) {
         return Jwts.builder()
-                .subject(email)
+                .setSubject(email)
                 .claim("userId", userId)
                 .claim("role", role)
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + expiration))
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSigningKey())
                 .compact();
     }
@@ -74,6 +75,7 @@ public class JwtUtil {
 
     private Claims extractAllClaims(String token) {
         try {
+            // Use the parser style compatible with the project's jjwt version/setup
             return Jwts.parser()
                     .verifyWith(getSigningKey())
                     .build()
@@ -89,8 +91,8 @@ public class JwtUtil {
     }
 
     private SecretKey getSigningKey() {
-        if (secret == null) {
-            log.error("JWT secret is not configured");
+        if (secret == null || secret.isBlank()) {
+            log.error("JWT secret is not configured. Please set 'jwt.secret' property or environment variable JWT_SECRET");
             throw new IllegalStateException("JWT secret is not configured");
         }
         if (secret.getBytes().length < 32) {
