@@ -1,122 +1,177 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { ToastProvider } from './components/ui/Toast';
+import ProtectedRoute from './routes/ProtectedRoute';
+import RoleRoute from './routes/RoleRoute';
 
-function App() {
-  const [count, setCount] = useState(0)
+import PublicLayout from './layouts/PublicLayout';
+import AuthLayout from './layouts/AuthLayout';
+import DashboardLayout from './layouts/DashboardLayout';
+import ChatLayout from './layouts/ChatLayout';
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+import LandingPage from './pages/LandingPage';
+import SearchPage from './pages/SearchPage';
+import LoginPage from './pages/auth/LoginPage';
+import RegisterPage from './pages/auth/RegisterPage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+import PostDetailPage from './pages/PostDetailPage';
+import ProfilePage from './pages/ProfilePage';
+import ChatPage from './pages/ChatPage';
+import NotificationsPage from './pages/NotificationsPage';
+import FavoritesPage from './pages/renter/FavoritesPage';
+import MyReportsPage from './pages/renter/MyReportsPage';
+import MyContractsPage from './pages/renter/MyContractsPage';
+import MyReviewsPage from './pages/renter/MyReviewsPage';
+import OwnerDashboardPage from './pages/owner/OwnerDashboardPage';
+import RoomManagementPage from './pages/owner/RoomManagementPage';
+import PostManagementPage from './pages/owner/PostManagementPage';
+import ContractManagementPage from './pages/owner/ContractManagementPage';
+import BillManagementPage from './pages/owner/BillManagementPage';
+import VehicleManagementPage from './pages/owner/VehicleManagementPage';
+import PaymentHistoryPage from './pages/owner/PaymentHistoryPage';
+import {
+  AdminDashboardPage,
+  UserManagementPage,
+  PostModerationPage,
+  ReviewModerationPage,
+  ReportManagementPage,
+  NotFoundPage,
+} from './pages/_placeholders';
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+function ProtectedShell({ children }) {
+  return <ProtectedRoute>{children}</ProtectedRoute>;
 }
 
-export default App
+export default function App() {
+  return (
+    <ThemeProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <ToastProvider>
+            <Routes>
+              {/* Public + shared shell */}
+              <Route element={<PublicLayout />}>
+                <Route index element={<LandingPage />} />
+                <Route path="posts" element={<SearchPage />} />
+                <Route path="posts/:postId" element={<PostDetailPage />} />
+
+                {/* Protected — any authenticated user */}
+                <Route
+                  path="profile"
+                  element={
+                    <ProtectedShell>
+                      <ProfilePage />
+                    </ProtectedShell>
+                  }
+                />
+                <Route
+                  path="notifications"
+                  element={
+                    <ProtectedShell>
+                      <NotificationsPage />
+                    </ProtectedShell>
+                  }
+                />
+                <Route
+                  path="favorites"
+                  element={
+                    <ProtectedShell>
+                      <FavoritesPage />
+                    </ProtectedShell>
+                  }
+                />
+                <Route
+                  path="my-reports"
+                  element={
+                    <ProtectedShell>
+                      <MyReportsPage />
+                    </ProtectedShell>
+                  }
+                />
+                <Route
+                  path="my-contracts"
+                  element={
+                    <ProtectedShell>
+                      <MyContractsPage />
+                    </ProtectedShell>
+                  }
+                />
+                <Route
+                  path="my-reviews"
+                  element={
+                    <ProtectedShell>
+                      <MyReviewsPage />
+                    </ProtectedShell>
+                  }
+                />
+              </Route>
+
+              {/* Auth shell */}
+              <Route element={<AuthLayout />}>
+                <Route path="login" element={<LoginPage />} />
+                <Route path="register" element={<RegisterPage />} />
+                <Route path="forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="reset-password" element={<ResetPasswordPage />} />
+              </Route>
+
+              {/* Chat shell — protected */}
+              <Route
+                element={
+                  <ProtectedShell>
+                    <ChatLayout />
+                  </ProtectedShell>
+                }
+              >
+                <Route path="chat" element={<ChatPage />} />
+                <Route path="chat/:conversationId" element={<ChatPage />} />
+              </Route>
+
+              {/* Owner dashboard */}
+              <Route
+                path="owner"
+                element={
+                  <ProtectedShell>
+                    <RoleRoute role="OWNER">
+                      <DashboardLayout />
+                    </RoleRoute>
+                  </ProtectedShell>
+                }
+              >
+                <Route index element={<OwnerDashboardPage />} />
+                <Route path="rooms" element={<RoomManagementPage />} />
+                <Route path="posts" element={<PostManagementPage />} />
+                <Route path="contracts" element={<ContractManagementPage />} />
+                <Route path="bills" element={<BillManagementPage />} />
+                <Route path="vehicles" element={<VehicleManagementPage />} />
+                <Route path="payments" element={<PaymentHistoryPage />} />
+              </Route>
+
+              {/* Admin dashboard */}
+              <Route
+                path="admin"
+                element={
+                  <ProtectedShell>
+                    <RoleRoute role="ADMIN">
+                      <DashboardLayout />
+                    </RoleRoute>
+                  </ProtectedShell>
+                }
+              >
+                <Route index element={<AdminDashboardPage />} />
+                <Route path="users" element={<UserManagementPage />} />
+                <Route path="posts" element={<PostModerationPage />} />
+                <Route path="reviews" element={<ReviewModerationPage />} />
+                <Route path="reports" element={<ReportManagementPage />} />
+              </Route>
+
+              {/* 404 */}
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </ToastProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </ThemeProvider>
+  );
+}
