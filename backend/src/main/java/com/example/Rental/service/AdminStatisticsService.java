@@ -35,8 +35,9 @@ public class AdminStatisticsService {
         }
 
         Map<String, Long> usersByRole = new HashMap<>();
-        usersByRole.put(UserRole.RENTER.name(), userRepository.countByRole(UserRole.RENTER));
-        usersByRole.put(UserRole.OWNER.name(), userRepository.countByRole(UserRole.OWNER));
+        for (UserRole role : UserRole.values()) {
+            usersByRole.put(role.name(), userRepository.countByRole(role));
+        }
 
         Map<String, Long> usersByStatus = new HashMap<>();
         for (UserStatus status : UserStatus.values()) {
