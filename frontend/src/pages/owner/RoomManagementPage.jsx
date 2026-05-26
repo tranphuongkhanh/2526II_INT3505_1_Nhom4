@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import {
   Plus, Search, LayoutGrid, List, Edit2, Trash2, Star, Upload,
-  Wifi, Car, Wind, Flame, Shirt, Refrigerator, GripVertical,
+  Wind, Flame, Shirt, Refrigerator, GripVertical,
   Home, X, AlertCircle, ToggleLeft,
 } from 'lucide-react';
 import { roomApi } from '../../lib/api';
@@ -22,8 +22,6 @@ const ROOM_TYPES = [
 ];
 
 const AMENITY_DEFS = [
-  { key: 'hasWifi',      label: 'Wifi',          icon: Wifi },
-  { key: 'hasParking',   label: 'Bãi xe',        icon: Car },
   { key: 'hasAc',        label: 'Điều hoà',      icon: Wind },
   { key: 'hasPrivateWc', label: 'WC riêng',      icon: Flame },
   { key: 'hasSecurity',  label: 'Bảo vệ',        icon: Shirt },
@@ -39,8 +37,9 @@ const STATUS_MAP = {
 const EMPTY_FORM = {
   title: '', description: '', roomType: 'PHONG_TRO', areaMq: '',
   price: '', address: '', ward: '', district: '', city: '',
-  hasWifi: false, hasParking: false, hasAc: false,
-  hasPrivateWc: false, hasSecurity: false, hasFridge: false,
+  hasAc: false, hasPrivateWc: false, hasSecurity: false, hasFridge: false,
+  wifiFee: '', waterPricePerUnit: '', electricityPricePerUnit: '',
+  serviceFee: '', bikeParkingFee: '', deposit: '',
 };
 
 // ── Confetti ───────────────────────────────────────────────
@@ -321,10 +320,12 @@ function RoomModal({ isOpen, onClose, editRoom, onSaved }) {
       const {
         title = '', description = '', roomType = 'PHONG_TRO', areaMq = '', price = '',
         address = '', ward = '', district = '', city = '',
-        hasWifi = false, hasParking = false, hasAc = false,
-        hasPrivateWc = false, hasSecurity = false, hasFridge = false,
+        hasAc = false, hasPrivateWc = false, hasSecurity = false, hasFridge = false,
+        wifiFee = null, waterPricePerUnit = null, electricityPricePerUnit = null,
+        serviceFee = null, bikeParkingFee = null, deposit = null,
       } = editRoom;
-      setForm({ title, description, roomType, areaMq: String(areaMq), price: String(price), address, ward, district, city, hasWifi, hasParking, hasAc, hasPrivateWc, hasSecurity, hasFridge });
+      const n = (v) => v != null ? String(v) : '';
+      setForm({ title, description, roomType, areaMq: String(areaMq), price: String(price), address, ward, district, city, hasAc, hasPrivateWc, hasSecurity, hasFridge, wifiFee: n(wifiFee), waterPricePerUnit: n(waterPricePerUnit), electricityPricePerUnit: n(electricityPricePerUnit), serviceFee: n(serviceFee), bikeParkingFee: n(bikeParkingFee), deposit: n(deposit) });
       setImages(editRoom.images ?? []);
       setSavedRoomId(editRoom.id);
     } else {
@@ -345,6 +346,12 @@ function RoomModal({ isOpen, onClose, editRoom, onSaved }) {
         ...form,
         areaMq: Number(form.areaMq) || 0,
         price: Number(form.price) || 0,
+        wifiFee: form.wifiFee !== '' ? Number(form.wifiFee) : null,
+        waterPricePerUnit: form.waterPricePerUnit !== '' ? Number(form.waterPricePerUnit) : null,
+        electricityPricePerUnit: form.electricityPricePerUnit !== '' ? Number(form.electricityPricePerUnit) : null,
+        serviceFee: form.serviceFee !== '' ? Number(form.serviceFee) : null,
+        bikeParkingFee: form.bikeParkingFee !== '' ? Number(form.bikeParkingFee) : null,
+        deposit: form.deposit !== '' ? Number(form.deposit) : null,
       };
       let room;
       if (editRoom) {
@@ -405,10 +412,31 @@ function RoomModal({ isOpen, onClose, editRoom, onSaved }) {
                 {ROOM_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
             </div>
-            <Input label="Diện tích (m²)" type="number" value={form.areaMq} onChange={(e) => set('areaMq', e.target.value)} />
+            <div>
+              <label className="block text-sm font-medium text-ink-700 dark:text-ink-200 mb-1.5">Diện tích (m²)</label>
+              <input
+                type="number"
+                value={form.areaMq}
+                onChange={(e) => set('areaMq', e.target.value)}
+                className="w-full h-12 rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-900 text-ink-900 dark:text-ink-50 px-4 text-sm outline-none focus:border-primary-500 transition-colors"
+              />
+            </div>
           </div>
 
           <Input label="Giá thuê (VNĐ/tháng)" required type="number" value={form.price} onChange={(e) => set('price', e.target.value)} />
+          <Input label="Tiền đặt cọc (VNĐ)" type="number" value={form.deposit} onChange={(e) => set('deposit', e.target.value)} />
+        </div>
+
+        {/* Service pricing */}
+        <div>
+          <p className="text-sm font-medium text-ink-700 dark:text-ink-200 mb-3">Chi phí dịch vụ</p>
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Phí Wifi (VNĐ/tháng)" type="number" value={form.wifiFee} onChange={(e) => set('wifiFee', e.target.value)} />
+            <Input label="Giá điện (VNĐ/số)" type="number" value={form.electricityPricePerUnit} onChange={(e) => set('electricityPricePerUnit', e.target.value)} />
+            <Input label="Giá nước (VNĐ/m³)" type="number" value={form.waterPricePerUnit} onChange={(e) => set('waterPricePerUnit', e.target.value)} />
+            <Input label="Phí dịch vụ chung (VNĐ/tháng)" type="number" value={form.serviceFee} onChange={(e) => set('serviceFee', e.target.value)} />
+            <Input label="Phí gửi xe máy (VNĐ/tháng)" type="number" value={form.bikeParkingFee} onChange={(e) => set('bikeParkingFee', e.target.value)} />
+          </div>
         </div>
 
         {/* Amenities */}

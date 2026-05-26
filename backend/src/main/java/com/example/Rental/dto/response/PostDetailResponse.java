@@ -31,12 +31,18 @@ public class PostDetailResponse {
     private String city;
     
     // Tiện ích
-    private Boolean hasWifi;
     private Boolean hasAc;
     private Boolean hasFridge;
-    private Boolean hasParking;
     private Boolean hasPrivateWc;
     private Boolean hasSecurity;
+
+    // Chi phí dịch vụ
+    private BigDecimal wifiFee;
+    private BigDecimal waterPricePerUnit;
+    private BigDecimal electricityPricePerUnit;
+    private BigDecimal serviceFee;
+    private BigDecimal bikeParkingFee;
+    private BigDecimal deposit;
 
     // Ảnh
     private List<String> imageUrls;

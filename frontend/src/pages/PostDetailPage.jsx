@@ -5,7 +5,7 @@ import {
   MapPin, Star, Heart, Phone, MessageCircle, Flag,
   ChevronLeft, ChevronRight, X, Images as ImagesIcon,
   Wifi, AirVent, Refrigerator, Bike, Bath, ShieldCheck,
-  Home, Ruler, Tag, ChevronDown, Users,
+  Home, Ruler, Tag, ChevronDown, Users, Zap, Droplets, Wrench,
 } from 'lucide-react';
 
 import { RoomCard } from '../components/RoomCard';
@@ -21,10 +21,8 @@ import { springs, easings } from '../lib/animations';
 // ─── constants ───────────────────────────────────────────────────────────────
 
 const AMENITY_ICONS = {
-  wifi:     { Icon: Wifi,         label: 'Wifi' },
   ac:       { Icon: AirVent,      label: 'Máy lạnh' },
   fridge:   { Icon: Refrigerator, label: 'Tủ lạnh' },
-  parking:  { Icon: Bike,         label: 'Chỗ để xe' },
   wc:       { Icon: Bath,         label: 'WC riêng' },
   security: { Icon: ShieldCheck,  label: 'Bảo vệ' },
 };
@@ -982,20 +980,30 @@ export default function PostDetailPage() {
 
   // Derive amenity keys from backend boolean flags
   const amenities = [
-    post.hasWifi      && 'wifi',
     post.hasAc        && 'ac',
     post.hasFridge    && 'fridge',
-    post.hasParking   && 'parking',
     post.hasPrivateWc && 'wc',
     post.hasSecurity  && 'security',
   ].filter(Boolean);
 
+  const fmt = (n) => n != null
+    ? new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(n) + 'đ'
+    : '—';
+
   const infoGrid = [
     { Icon: Home,  label: 'Loại phòng',   value: ROOM_TYPES[post.roomType] ?? post.roomType ?? '—' },
-    { Icon: Ruler, label: 'Diện tích',     value: post.areaMq   ? `${post.areaMq} m²`           : '—' },
-    { Icon: Users, label: 'Số người ở',    value: '—' },
-    { Icon: Tag,   label: 'Tiền đặt cọc', value: '—' },
+    { Icon: Ruler, label: 'Diện tích',     value: post.areaMq ? `${post.areaMq} m²` : '—' },
+    { Icon: Tag,   label: 'Tiền đặt cọc', value: fmt(post.deposit) },
+    { Icon: Users, label: 'Số người ở',   value: '—' },
   ];
+
+  const servicePricing = [
+    { Icon: Wifi,     label: 'Phí Wifi',            value: post.wifiFee != null ? fmt(post.wifiFee) + '/tháng' : null },
+    { Icon: Zap,      label: 'Giá điện',            value: post.electricityPricePerUnit != null ? fmt(post.electricityPricePerUnit) + '/số' : null },
+    { Icon: Droplets, label: 'Giá nước',            value: post.waterPricePerUnit != null ? fmt(post.waterPricePerUnit) + '/m³' : null },
+    { Icon: Wrench,   label: 'Phí dịch vụ',        value: post.serviceFee != null ? fmt(post.serviceFee) + '/tháng' : null },
+    { Icon: Bike,     label: 'Phí gửi xe máy',     value: post.bikeParkingFee != null ? fmt(post.bikeParkingFee) + '/tháng' : null },
+  ].filter((item) => item.value !== null);
 
   return (
     <motion.div
@@ -1067,6 +1075,29 @@ export default function PostDetailPage() {
                   Tiện ích
                 </h2>
                 <AmenityBadges amenities={amenities} />
+              </div>
+            )}
+
+            {/* service pricing */}
+            {servicePricing.length > 0 && (
+              <div>
+                <h2 className="text-base font-semibold text-ink-900 dark:text-ink-50 mb-3">
+                  Chi phí dịch vụ
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {servicePricing.map(({ Icon, label, value }) => (
+                    <div
+                      key={label}
+                      className="flex flex-col gap-1 p-3 rounded-xl bg-ink-50 dark:bg-ink-800/60 border border-ink-100 dark:border-ink-700"
+                    >
+                      <div className="flex items-center gap-1.5 text-ink-400">
+                        <Icon className="h-3.5 w-3.5" />
+                        <span className="text-[11px] font-medium">{label}</span>
+                      </div>
+                      <span className="font-semibold text-ink-900 dark:text-ink-50 text-sm">{value}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

@@ -15,10 +15,14 @@ public class RoomRequest {
     private String ward;
     private String district;
     private String city;
-    private Boolean hasWifi = false;
     private Boolean hasAc = false;
     private Boolean hasFridge = false;
-    private Boolean hasParking = false;
     private Boolean hasPrivateWc = false;
     private Boolean hasSecurity = false;
+    private BigDecimal wifiFee;
+    private BigDecimal waterPricePerUnit;
+    private BigDecimal electricityPricePerUnit;
+    private BigDecimal serviceFee;
+    private BigDecimal bikeParkingFee;
+    private BigDecimal deposit;
 }

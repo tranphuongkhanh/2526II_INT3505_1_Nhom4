@@ -8,7 +8,6 @@ import {
   ArrowRight,
   Ruler,
   Tag,
-  Wifi,
   AirVent,
   Refrigerator,
   Bike,
@@ -22,10 +21,8 @@ import { favoriteApi } from '../lib/api';
 import { springs } from '../lib/animations';
 
 const AMENITY_ICONS = {
-  wifi: { Icon: Wifi, label: 'Wifi' },
   ac: { Icon: AirVent, label: 'Máy lạnh' },
   fridge: { Icon: Refrigerator, label: 'Tủ lạnh' },
-  parking: { Icon: Bike, label: 'Chỗ để xe' },
   wc: { Icon: Bath, label: 'WC riêng' },
   security: { Icon: ShieldCheck, label: 'Bảo vệ' },
 };
