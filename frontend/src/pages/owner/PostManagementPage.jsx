@@ -753,8 +753,8 @@ export default function PostManagementPage() {
         </motion.div>
       )}
 
-      {/* Stats drawer */}
-      <StatsDrawer postId={statsPostId} onClose={() => setStatsPostId(null)} />
+      {/* Stats modal */}
+      <StatsModal postId={statsPostId} onClose={() => setStatsPostId(null)} />
 
       {/* Extend modal */}
       <ExtendModal post={extendPost} onClose={() => setExtendPost(null)} onExtended={handleExtended} />
