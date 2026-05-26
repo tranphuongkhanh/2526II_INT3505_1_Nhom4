@@ -1,5 +1,6 @@
 package com.example.Rental.service;
 
+import com.example.Rental.dto.request.RoomFilterRequest;
 import com.example.Rental.dto.request.RoomRequest;
 import com.example.Rental.dto.response.RoomResponse;
 import com.example.Rental.entity.Room;
@@ -7,16 +8,19 @@ import com.example.Rental.entity.User;
 import com.example.Rental.enums.RentalStatus;
 import com.example.Rental.exception.EntityNotFoundException;
 import com.example.Rental.repository.RoomRepository;
+import com.example.Rental.repository.RoomSpecification;
 import com.example.Rental.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.lang.NonNull;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -59,11 +63,19 @@ public class RoomService {
                 .build();
     }
 
-    public List<RoomResponse> getAllRoomsByOwner(Long ownerId) {
-        return roomRepository.findByOwnerIdAndDeletedAtIsNull(ownerId)
-                .stream()
-                .map(RoomService::fromEntity)
-                .collect(Collectors.toList());
+    public Page<RoomResponse> getAllRoomsByOwner(Long ownerId, RoomFilterRequest filter, int page, int size) {
+        // Chuyển trang từ 1-index sang 0-index, mặc định sắp xếp phòng mới nhất lên đầu
+        int pageNumber = page - 1;
+
+        Pageable pageable = PageRequest.of(pageNumber, size, Sort.by("createdAt").descending());
+
+        // Truyền filter object vào Specification
+        Specification<Room> spec = RoomSpecification.filterRooms(ownerId, filter);
+
+        // Gọi hàm findAll(Specification, Pageable) được cung cấp bởi JpaSpecificationExecutor
+        Page<Room> rooms = roomRepository.findAll(spec, pageable);
+
+        return rooms.map(RoomService::fromEntity);
     }
 
     @Transactional

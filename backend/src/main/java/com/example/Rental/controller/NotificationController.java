@@ -1,7 +1,9 @@
 package com.example.Rental.controller;
 
+import com.example.Rental.dto.response.CursorPageResponse;
 import com.example.Rental.dto.response.NotificationResponse;
 import com.example.Rental.entity.User;
+import com.example.Rental.enums.NotificationType;
 import com.example.Rental.exception.EntityNotFoundException;
 import com.example.Rental.exception.UnauthorizedException;
 import com.example.Rental.repository.UserRepository;
@@ -31,9 +33,13 @@ public class NotificationController {
     }
 
     @GetMapping
-    public ResponseEntity<List<NotificationResponse>> getNotifications(Principal principal) {
+    public ResponseEntity<CursorPageResponse<NotificationResponse>> getNotifications(
+            @RequestParam(required = false) Long cursor,
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(required = false) List<NotificationType> types,
+            Principal principal) {
         Long userId = getCurrentUserId(principal);
-        List<NotificationResponse> notifications = notificationService.getUserNotifications(userId);
+        CursorPageResponse<NotificationResponse> notifications = notificationService.getUserNotifications(userId, cursor, limit, types);
         return ResponseEntity.ok(notifications);
     }
 
