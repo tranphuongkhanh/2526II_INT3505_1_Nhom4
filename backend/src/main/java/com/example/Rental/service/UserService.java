@@ -96,10 +96,15 @@ public class UserService {
         user.setStatus(UserStatus.valueOf(statusStr.toUpperCase()));
         User saved = userRepository.save(user);
         log.info("Admin updated status of user {} to {}", id, statusStr);
+        return mapToResponse(saved);
+    }
+
     // New: list users with optional filters role and status, pageable
     public UserListResponse listUsers(UserRole role, UserStatus status, int page, int limit) {
-        if (page < 1) page = 1;
-        if (limit < 1) limit = 10;
+        if (page < 1)
+            page = 1;
+        if (limit < 1)
+            limit = 10;
         Pageable pageable = PageRequest.of(page - 1, limit);
         Page<User> result;
 

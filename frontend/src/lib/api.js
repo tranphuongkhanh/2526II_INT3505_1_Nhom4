@@ -248,3 +248,7 @@ export const ocrApi = {
 export const paymentApi = {
   getMyPayments: (params) => unwrap(api.get('/me/payments', { params })),
 };
+
+export const publicApi = {
+  getStatistics: () => unwrap(api.get('/public/statistics')),
+};

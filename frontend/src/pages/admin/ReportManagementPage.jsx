@@ -56,6 +56,12 @@ function StampOverlay() {
 function ReportItem({ report, expanded, onToggle, onResolve, onReject, stampActive, busy }) {
   const [note, setNote] = useState('');
 
+  const reporterName = report.reporter_name ?? report.reporterName ?? '—';
+  const reporterEmail = report.reporter_email ?? report.reporterEmail;
+  const postTitle = report.post_title ?? report.postTitle ?? `#${report.post_id ?? report.postId ?? '?'}`;
+  const postId = report.post_id ?? report.postId;
+  const createdAt = report.created_at ?? report.createdAt;
+
   return (
     <motion.div layout className="relative">
       {stampActive && <StampOverlay />}
@@ -72,17 +78,20 @@ function ReportItem({ report, expanded, onToggle, onResolve, onReject, stampActi
 
           <div className="flex-1 min-w-0 space-y-0.5">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-medium text-ink-900 dark:text-ink-50 truncate">
-                <span className="text-ink-400 font-normal">{report.reporterName}</span>
-                {' → '}
-                <span>{report.postTitle}</span>
+              <span className="text-sm font-medium text-ink-900 dark:text-ink-50">
+                <span className="text-ink-500 font-normal">{reporterName}</span>
+                {reporterEmail && (
+                  <span className="text-ink-400 font-normal text-xs ml-1">({reporterEmail})</span>
+                )}
+                <span className="text-ink-400 mx-1.5">→</span>
+                <span className="text-ink-800 dark:text-ink-100">{postTitle}</span>
               </span>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs text-ink-400 bg-ink-100 dark:bg-ink-700 px-2 py-0.5 rounded-full">
-                {REASON_LABELS[report.reason] ?? report.reason}
+                {REASON_LABELS[report.reason] ?? report.reason ?? '—'}
               </span>
-              <span className="text-xs text-ink-400">{fmt(report.createdAt)}</span>
+              <span className="text-xs text-ink-400">{fmt(createdAt)}</span>
               <Badge variant={STATUS_META[report.status]?.variant ?? 'info'}>
                 {STATUS_META[report.status]?.label ?? report.status}
               </Badge>
@@ -109,19 +118,44 @@ function ReportItem({ report, expanded, onToggle, onResolve, onReject, stampActi
               className="overflow-hidden"
             >
               <div className="px-5 pb-5 pt-1 border-t border-ink-100 dark:border-ink-700 space-y-4">
+
+                {/* Reporter details */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-ink-50 dark:bg-ink-800 rounded-xl px-4 py-3">
+                    <p className="text-xs font-medium text-ink-400 uppercase tracking-wide mb-1">Người báo cáo</p>
+                    <p className="text-sm font-semibold text-ink-800 dark:text-ink-100">{reporterName}</p>
+                    {reporterEmail && <p className="text-xs text-ink-400 mt-0.5">{reporterEmail}</p>}
+                  </div>
+                  <div className="bg-ink-50 dark:bg-ink-800 rounded-xl px-4 py-3">
+                    <p className="text-xs font-medium text-ink-400 uppercase tracking-wide mb-1">Bài đăng bị báo cáo</p>
+                    <p className="text-sm font-semibold text-ink-800 dark:text-ink-100 truncate">{postTitle}</p>
+                    <p className="text-xs text-ink-400 mt-0.5">{fmt(createdAt)}</p>
+                  </div>
+                </div>
+
                 {/* Full reason */}
                 <div>
                   <p className="text-xs font-medium text-ink-400 uppercase tracking-wide mb-1">Nội dung báo cáo</p>
                   <p className="text-sm text-ink-700 dark:text-ink-200 leading-relaxed bg-ink-50 dark:bg-ink-700/50 rounded-xl px-4 py-3">
-                    {report.fullReason || '—'}
+                    {report.reason || '—'}
                   </p>
                 </div>
 
+                {/* Resolution info (resolved/rejected) */}
+                {report.resolution && (
+                  <div>
+                    <p className="text-xs font-medium text-ink-400 uppercase tracking-wide mb-1">Ghi chú xử lý</p>
+                    <p className="text-sm text-ink-700 dark:text-ink-200 leading-relaxed bg-amber-50 dark:bg-amber-900/20 rounded-xl px-4 py-3">
+                      {report.resolution}
+                    </p>
+                  </div>
+                )}
+
                 {/* Post link */}
-                {report.postId && (
+                {postId && (
                   <div>
                     <a
-                      href={`/posts/${report.postId}`}
+                      href={`/posts/${postId}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 text-sm text-primary-500 hover:text-primary-700 transition-colors font-medium"
@@ -131,7 +165,7 @@ function ReportItem({ report, expanded, onToggle, onResolve, onReject, stampActi
                   </div>
                 )}
 
-                {/* Resolution note */}
+                {/* Action buttons */}
                 {report.status === 'PENDING' && (
                   <>
                     <div>
@@ -301,8 +335,8 @@ export default function ReportManagementPage() {
         title={confirmDialog?.type === 'resolve' ? 'Xác nhận xử lý báo cáo' : 'Từ chối báo cáo'}
         message={
           confirmDialog?.type === 'resolve'
-            ? `Xác nhận đánh dấu báo cáo về "${confirmDialog?.report?.postTitle}" là đã xử lý?`
-            : `Từ chối báo cáo về "${confirmDialog?.report?.postTitle}"?`
+            ? `Xác nhận đánh dấu báo cáo về "${confirmDialog?.report?.post_title ?? confirmDialog?.report?.postTitle}" là đã xử lý?`
+            : `Từ chối báo cáo về "${confirmDialog?.report?.post_title ?? confirmDialog?.report?.postTitle}"?`
         }
         confirmLabel={confirmDialog?.type === 'resolve' ? 'Đã xử lý' : 'Từ chối'}
         confirmVariant={confirmDialog?.type === 'resolve' ? 'primary' : 'danger'}
