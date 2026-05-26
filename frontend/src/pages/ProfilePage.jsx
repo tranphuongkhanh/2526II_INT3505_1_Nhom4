@@ -191,8 +191,9 @@ function SecurityTab() {
     setLoading(true);
     try {
       await authApi.changePassword({
-        currentPassword: form.currentPassword,
+        oldPassword: form.currentPassword,
         newPassword: form.newPassword,
+        confirmPassword: form.confirmPassword,
       });
       toast.success('Đã đổi mật khẩu thành công');
       setForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
@@ -265,24 +266,24 @@ function SecurityTab() {
 
 const PROFILE_FIELDS = [
   { key: 'fullName', label: 'Họ và tên' },
-  { key: 'phoneNumber', label: 'Số điện thoại' },
+  { key: 'phone', label: 'Số điện thoại' },
 ];
 
 function ProfileTab({ user, onUpdate }) {
   const toast = useToast();
   const [form, setForm] = useState({
     fullName: user?.fullName || '',
-    phoneNumber: user?.phoneNumber || '',
+    phone: user?.phone || '',
   });
   const [saveState, setSaveState] = useState('idle'); // idle | loading | success
 
   useEffect(() => {
-    setForm({ fullName: user?.fullName || '', phoneNumber: user?.phoneNumber || '' });
-  }, [user?.fullName, user?.phoneNumber]);
+    setForm({ fullName: user?.fullName || '', phone: user?.phone || '' });
+  }, [user?.fullName, user?.phone]);
 
   const changed =
     form.fullName !== (user?.fullName || '') ||
-    form.phoneNumber !== (user?.phoneNumber || '');
+    form.phone !== (user?.phone || '');
 
   const handleChange = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
