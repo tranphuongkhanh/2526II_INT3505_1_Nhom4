@@ -87,7 +87,8 @@ public class PostService {
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy bài đăng ID: " + postId));
 
         // 4. Map dữ liệu trả về (Cộng 1 view cho logic hiển thị realtime)
-        post.setViewCount(post.getViewCount() + 1); 
+        int currentViewCount = post.getViewCount() != null ? post.getViewCount() : 0;
+        post.setViewCount(currentViewCount + 1); 
         return mapToDetailResponse(post);
     }
 
