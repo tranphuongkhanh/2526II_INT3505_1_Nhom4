@@ -92,50 +92,6 @@ function useMagneticButton(maxOffset = 6) {
 // SECTION 1 — Hero
 // ═══════════════════════════════════════════════════════════
 
-function SpotlightCursor() {
-  const ref = useRef(null);
-  const targetRef = useRef({ x: 0, y: 0 });
-  const currentRef = useRef({ x: 0, y: 0 });
-  const rafRef = useRef(null);
-  const reduceMotion = useReducedMotion();
-
-  useEffect(() => {
-    if (reduceMotion) return undefined;
-    targetRef.current = { x: window.innerWidth / 2, y: window.innerHeight / 3 };
-    currentRef.current = { ...targetRef.current };
-
-    const onMove = (e) => {
-      targetRef.current = { x: e.clientX, y: e.clientY };
-    };
-    window.addEventListener('mousemove', onMove);
-
-    const tick = () => {
-      const t = targetRef.current;
-      const c = currentRef.current;
-      c.x += (t.x - c.x) * 0.08; // lerp factor 0.08
-      c.y += (t.y - c.y) * 0.08;
-      if (ref.current) {
-        ref.current.style.background = `radial-gradient(circle 400px at ${c.x}px ${c.y}px, rgba(20,145,155,0.15), transparent 70%)`;
-      }
-      rafRef.current = requestAnimationFrame(tick);
-    };
-    rafRef.current = requestAnimationFrame(tick);
-
-    return () => {
-      window.removeEventListener('mousemove', onMove);
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, [reduceMotion]);
-
-  return (
-    <div
-      ref={ref}
-      aria-hidden="true"
-      className="pointer-events-none fixed inset-0 z-0 hidden md:block"
-    />
-  );
-}
-
 function MeshBackground() {
   return (
     <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
@@ -352,7 +308,6 @@ function HeroSection() {
     <section className="relative min-h-screen flex flex-col text-white overflow-hidden">
       <MeshBackground />
       <FloatingShapes />
-      <SpotlightCursor />
 
       <div className="relative z-10 flex-1 flex items-center">
         <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-20 lg:py-24 text-center">
@@ -468,8 +423,8 @@ function StatsSection() {
   ];
 
   return (
-    <section className="relative bg-white dark:bg-ink-900 pt-24 pb-12">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+    <section className="relative bg-white dark:bg-ink-900 pb-12">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 -mt-20 relative z-10">
         <div
           ref={ref}
           className="rounded-3xl bg-white dark:bg-ink-800 border border-ink-100 dark:border-ink-700 shadow-soft py-8 md:py-10 px-4 md:px-8 flex items-stretch divide-x divide-ink-100 dark:divide-ink-700"

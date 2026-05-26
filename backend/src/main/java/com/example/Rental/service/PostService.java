@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +32,7 @@ import com.example.Rental.entity.User;
 import com.example.Rental.enums.PaymentStatus;
 import com.example.Rental.enums.PostStatus;
 import com.example.Rental.exception.EntityNotFoundException;
+import com.example.Rental.repository.FavoriteRepository;
 import com.example.Rental.repository.PaymentRepository;
 import com.example.Rental.repository.PostExtensionRepository;
 import com.example.Rental.repository.PostRepository;
@@ -50,6 +52,7 @@ public class PostService {
     private final RoomRepository roomRepository;
     private final PaymentRepository paymentRepository;
     private final PostExtensionRepository postExtensionRepository;
+    private final FavoriteRepository favoriteRepository;
 
     @Transactional(readOnly = true)
     public Page<PostSummaryResponse> searchPosts(PostSearchRequest request) {
@@ -63,32 +66,49 @@ public class PostService {
                 request.getRoomType(),
                 request.getCity(),
                 request.getDistrict(),
+                request.getMaxElectricityPrice(),
+                request.getMaxWaterPrice(),
+                request.getMaxServiceFee(),
+                request.getMaxWifiFee(),
                 pageable
         );
 
         return posts.map(this::mapToSummaryResponse);
     }
 
-    @Transactional
-    public PostDetailResponse getPostDetailAndIncrementView(Long postId) {
-        // 1. Tăng view count trong bảng posts
-        postRepository.incrementViewCount(postId);
-
-        // 2. Ghi log vào bảng post_views (Dành cho Guest nên viewer_id = null)
-        Post postRef = postRepository.getReferenceById(postId);
-        PostView viewLog = PostView.builder()
-                .post(postRef)
-                .viewedAt(LocalDateTime.now())
-                .build();
-        postViewRepository.save(viewLog);
-
-        // 3. Lấy thông tin bài đăng
-        Post post = postRepository.findById(postId)
+    @Transactional(readOnly = true)
+    public PostDetailResponse getPostDetail(Long postId, String viewerEmail) {
+        Post post = postRepository.findByIdWithDetails(postId)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy bài đăng ID: " + postId));
 
-        // 4. Map dữ liệu trả về (Cộng 1 view cho logic hiển thị realtime)
-        post.setViewCount(post.getViewCount() + 1); 
-        return mapToDetailResponse(post);
+        // Cộng 1 view cho logic hiển thị realtime (việc ghi DB chạy async ở recordPostView)
+        post.setViewCount((post.getViewCount() == null ? 0 : post.getViewCount()) + 1);
+
+        Boolean isFavorited = null;
+        if (viewerEmail != null) {
+            isFavorited = userRepository.findByEmail(viewerEmail)
+                    .map(u -> favoriteRepository.existsByUserIdAndPostId(u.getId(), postId))
+                    .orElse(false);
+        }
+
+        return mapToDetailResponse(post, isFavorited);
+    }
+
+    @Async
+    @Transactional
+    public void recordPostView(Long postId) {
+        try {
+            postRepository.incrementViewCount(postId);
+
+            Post postRef = postRepository.getReferenceById(postId);
+            PostView viewLog = PostView.builder()
+                    .post(postRef)
+                    .viewedAt(LocalDateTime.now())
+                    .build();
+            postViewRepository.save(viewLog);
+        } catch (Exception ignored) {
+            // Không chặn user nếu tracking lỗi
+        }
     }
 
     // --- Helper methods để map Entity -> DTO ---
@@ -116,9 +136,10 @@ public class PostService {
                 .build();
     }
 
-    private PostDetailResponse mapToDetailResponse(Post post) {
+    private PostDetailResponse mapToDetailResponse(Post post, Boolean isFavorited) {
         Room room = post.getRoom();
-        
+        User owner = post.getCreatedBy();
+
         List<String> images = room.getImages().stream()
                 .map(RoomImage::getImageUrl)
                 .collect(Collectors.toList());
@@ -150,6 +171,11 @@ public class PostService {
                 .bikeParkingFee(room.getBikeParkingFee())
                 .deposit(room.getDeposit())
                 .imageUrls(images)
+                .ownerId(owner != null ? owner.getId() : null)
+                .ownerName(owner != null ? owner.getFullName() : null)
+                .ownerPhone(owner != null ? owner.getPhone() : null)
+                .ownerAvatar(owner != null ? owner.getAvatarUrl() : null)
+                .isFavorited(isFavorited)
                 .build();
     }
 

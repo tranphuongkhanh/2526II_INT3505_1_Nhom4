@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileText, Eye, Heart, Calendar, AlertCircle, BarChart2, Plus,
@@ -521,7 +522,7 @@ function CreatePostModal({ isOpen, onClose, onCreated }) {
 }
 
 // ── Post card ──────────────────────────────────────────────
-function PostCard({ post, onDelete, onExtend, onStats }) {
+function PostCard({ post, onDelete, onExtend, onStats, onView }) {
   const id = post.id ?? post.postId;
   const status = post.status;
   const badge = STATUS_BADGE[status] ?? STATUS_BADGE.HIDDEN;
@@ -585,6 +586,11 @@ function PostCard({ post, onDelete, onExtend, onStats }) {
 
       {/* Actions */}
       <div className="flex items-center justify-end gap-1 px-4 pb-3 pt-0 border-t border-ink-100 dark:border-ink-700 mt-2">
+        {status === 'APPROVED' && (
+          <button type="button" onClick={() => onView(id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-ink-600 dark:text-ink-200 hover:bg-ink-100 dark:hover:bg-ink-700 transition-colors">
+            <Eye className="h-3.5 w-3.5" /> Xem bài
+          </button>
+        )}
         <button type="button" onClick={() => onStats(id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-ink-600 dark:text-ink-200 hover:bg-ink-100 dark:hover:bg-ink-700 transition-colors">
           <BarChart2 className="h-3.5 w-3.5" /> Thống kê
         </button>
@@ -604,6 +610,7 @@ function PostCard({ post, onDelete, onExtend, onStats }) {
 // ── Page ───────────────────────────────────────────────────
 export default function PostManagementPage() {
   const toast = useToast();
+  const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('ALL');
@@ -746,6 +753,7 @@ export default function PostManagementPage() {
                   onDelete={(id) => setDeleteId(id)}
                   onExtend={setExtendPost}
                   onStats={setStatsPostId}
+                  onView={(id) => navigate(`/posts/${id}`)}
                 />
               </motion.div>
             ))}

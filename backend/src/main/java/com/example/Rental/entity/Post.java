@@ -63,9 +63,11 @@ public class Post {
     @Column(name = "approved_at")
     private LocalDateTime approvedAt;
 
+    @Builder.Default
     @Column(name = "view_count")
     private Integer viewCount = 0;
 
+    @Builder.Default
     @Column(name = "favorite_count")
     private Integer favoriteCount = 0;
 

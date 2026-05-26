@@ -4,10 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Heart,
   MapPin,
-  Star,
   ArrowRight,
   Ruler,
   Tag,
+  Eye,
+  Clock,
+  CheckCircle2,
   AirVent,
   Refrigerator,
   Bike,
@@ -29,6 +31,35 @@ const AMENITY_ICONS = {
 
 const formatPrice = (n) =>
   new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(n || 0) + 'đ/tháng';
+
+const formatPriceOnly = (n) =>
+  new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(n || 0) + 'đ';
+
+const ROOM_TYPE_LABELS = {
+  PHONG_TRO: 'Phòng trọ',
+  CHUNG_CU_MINI: 'Chung cư mini',
+  O_GHEP: 'Ở ghép',
+  HOMESTAY: 'Homestay',
+};
+
+const formatRelativeTime = (iso) => {
+  if (!iso) return null;
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return null;
+  const diffMs = Date.now() - then;
+  const day = 24 * 60 * 60 * 1000;
+  if (diffMs < day)         return 'Hôm nay';
+  if (diffMs < 2 * day)     return 'Hôm qua';
+  if (diffMs < 30 * day)    return `${Math.floor(diffMs / day)} ngày trước`;
+  if (diffMs < 365 * day)   return `${Math.floor(diffMs / (30 * day))} tháng trước`;
+  return `${Math.floor(diffMs / (365 * day))} năm trước`;
+};
+
+const isRecentlyPosted = (iso) => {
+  if (!iso) return false;
+  const diffMs = Date.now() - new Date(iso).getTime();
+  return diffMs < 3 * 24 * 60 * 60 * 1000;
+};
 
 const PLACEHOLDER_IMG =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 3'><rect width='4' height='3' fill='%23e6f5f5'/></svg>";
@@ -161,51 +192,62 @@ function CardBody({ post, dense = false }) {
   // Support both PostSummaryResponse (roomTitle, areaMq) and legacy field names
   const title = post.roomTitle ?? post.title;
   const area  = post.areaMq   ?? post.area;
-  const type  = post.roomType ?? post.type;
+  const typeKey = post.roomType ?? post.type;
+  const typeLabel = ROOM_TYPE_LABELS[typeKey] ?? typeKey;
+  const relTime = formatRelativeTime(post.createdAt);
 
   return (
-    <div className={['flex flex-col', dense ? 'p-3' : 'p-4'].join(' ')}>
-      <h3 className="text-sm font-semibold text-ink-900 dark:text-ink-50 line-clamp-1 leading-snug">
+    <div className={['flex flex-col h-full', dense ? 'p-3' : 'p-4'].join(' ')}>
+      {typeLabel ? (
+        <span className="self-start mb-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-[10px] font-semibold uppercase tracking-wide">
+          <Tag className="h-3 w-3" />
+          {typeLabel}
+        </span>
+      ) : null}
+
+      <h3 className="text-[15px] font-semibold text-ink-900 dark:text-ink-50 line-clamp-2 leading-snug">
         {title}
       </h3>
 
       <p className="mt-1.5 flex items-center gap-1.5 text-xs text-ink-600 dark:text-ink-200">
         <MapPin className="h-3.5 w-3.5 text-primary-500 shrink-0" />
         <span className="truncate">
-          {post.district}
-          {post.district && post.city ? ', ' : ''}
-          {post.city}
+          {[post.district, post.city].filter(Boolean).join(', ') || 'Đang cập nhật địa chỉ'}
         </span>
       </p>
 
-      <div className="mt-1.5 flex items-center gap-3 text-xs text-ink-400">
+      <div className="mt-2 flex items-center gap-x-3 gap-y-1 flex-wrap text-xs text-ink-500 dark:text-ink-300">
         {area ? (
           <span className="inline-flex items-center gap-1">
             <Ruler className="h-3.5 w-3.5" />
             {area} m²
           </span>
         ) : null}
-        {type ? (
+        {post.viewCount != null ? (
           <span className="inline-flex items-center gap-1">
-            <Tag className="h-3.5 w-3.5" />
-            {type}
+            <Eye className="h-3.5 w-3.5" />
+            {post.viewCount.toLocaleString('vi-VN')}
           </span>
         ) : null}
+        <span className="inline-flex items-center gap-1 text-success">
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          Còn trống
+        </span>
       </div>
 
-      <div className="mt-3 pt-3 border-t border-ink-100 dark:border-ink-700 flex items-center justify-between text-xs">
-        <span className="inline-flex items-center gap-1">
-          <Star className="h-3.5 w-3.5 fill-accent-500 text-accent-500" />
-          <span className="font-semibold text-ink-900 dark:text-ink-50">
-            {typeof post.rating === 'number' ? post.rating.toFixed(1) : '—'}
+      <div className="mt-auto pt-3 border-t border-ink-100 dark:border-ink-700 flex items-end justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-lg font-bold text-primary-500 font-display leading-none truncate">
+            {formatPriceOnly(post.price)}
+          </p>
+          <p className="mt-0.5 text-[11px] text-ink-400">/tháng</p>
+        </div>
+        {relTime ? (
+          <span className="inline-flex items-center gap-1 text-[11px] text-ink-400 shrink-0">
+            <Clock className="h-3 w-3" />
+            {relTime}
           </span>
-          {post.reviewCount != null && (
-            <span className="text-ink-400">({post.reviewCount})</span>
-          )}
-        </span>
-        <span className="font-semibold text-primary-500">
-          {formatPrice(post.price)}
-        </span>
+        ) : null}
       </div>
     </div>
   );
@@ -230,9 +272,11 @@ export function RoomCard({
                 alt={post.roomTitle ?? post.title}
                 className="aspect-[4/3] sm:aspect-auto sm:h-full sm:min-h-[180px]"
               />
-              <span className="absolute top-3 right-3 z-10 px-3 py-1 rounded-bl-xl rounded-tr-md bg-primary-500/90 backdrop-blur-sm text-white text-xs font-semibold">
-                {formatPrice(post.price)}
-              </span>
+              {isRecentlyPosted(post.createdAt) && (
+                <span className="absolute top-3 right-3 z-10 px-2.5 py-1 rounded-full bg-accent-500 text-ink-900 text-[10px] font-bold uppercase tracking-wide shadow-soft">
+                  Mới đăng
+                </span>
+              )}
               <div className="absolute top-3 left-3 z-10">
                 <FavoriteButton
                   post={post}
@@ -262,9 +306,11 @@ export function RoomCard({
               className="absolute inset-0 h-full w-full"
             />
 
-            <span className="absolute top-0 right-0 z-10 px-3 py-1.5 rounded-bl-xl bg-primary-500/90 backdrop-blur-sm text-white text-xs font-semibold">
-              {formatPrice(post.price)}
-            </span>
+            {isRecentlyPosted(post.createdAt) && (
+              <span className="absolute top-3 right-3 z-10 px-2.5 py-1 rounded-full bg-accent-500 text-ink-900 text-[10px] font-bold uppercase tracking-wide shadow-soft">
+                Mới đăng
+              </span>
+            )}
 
             <div className="absolute top-3 left-3 z-10">
               <FavoriteButton
