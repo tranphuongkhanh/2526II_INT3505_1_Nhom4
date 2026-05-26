@@ -19,6 +19,7 @@ import {
   AlertTriangle,
   RotateCw,
   Check,
+  MapPin,
 } from 'lucide-react';
 
 import RoomCard from '../components/RoomCard';
@@ -93,12 +94,17 @@ function useFilters() {
 
   const filters = useMemo(
     () => ({
+      keyword: params.get('q') || '',
       city: params.get('city') || '',
       district: params.get('district') || '',
       roomTypes: (params.get('type') || '').split(',').filter(Boolean),
       amenities: (params.get('amenities') || '').split(',').filter(Boolean),
       minPrice: Number(params.get('min_price')) || PRICE_MIN,
       maxPrice: Number(params.get('max_price')) || PRICE_MAX,
+      maxElectricity: params.get('max_electricity') ? Number(params.get('max_electricity')) : null,
+      maxWater: params.get('max_water') ? Number(params.get('max_water')) : null,
+      maxService: params.get('max_service') ? Number(params.get('max_service')) : null,
+      maxWifi: params.get('max_wifi') ? Number(params.get('max_wifi')) : null,
       sort: params.get('sort') || 'newest',
       page: Math.max(1, Number(params.get('page')) || 1),
     }),
@@ -115,6 +121,7 @@ function useFilters() {
           else next.set(key, value.join(','));
         } else next.set(key, String(value));
       };
+      if ('keyword' in patch) apply('q', patch.keyword);
       if ('city' in patch) {
         apply('city', patch.city);
         if (patch.city !== filters.city) apply('district', '');
@@ -130,6 +137,10 @@ function useFilters() {
         if (patch.maxPrice === PRICE_MAX) next.delete('max_price');
         else apply('max_price', patch.maxPrice);
       }
+      if ('maxElectricity' in patch) apply('max_electricity', patch.maxElectricity);
+      if ('maxWater' in patch) apply('max_water', patch.maxWater);
+      if ('maxService' in patch) apply('max_service', patch.maxService);
+      if ('maxWifi' in patch) apply('max_wifi', patch.maxWifi);
       if ('sort' in patch) {
         if (patch.sort === 'newest') next.delete('sort');
         else apply('sort', patch.sort);
@@ -253,10 +264,10 @@ function PriceRange({ min, max, onCommit }) {
 
   return (
     <div>
-      <div className="relative h-7">
-        <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-1.5 rounded-full bg-ink-200 dark:bg-ink-700" />
+      <div className="relative h-6">
+        <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-1 rounded-full bg-ink-200 dark:bg-ink-700" />
         <div
-          className="absolute top-1/2 -translate-y-1/2 h-1.5 rounded-full bg-primary-500"
+          className="absolute top-1/2 -translate-y-1/2 h-1 rounded-full bg-primary-500"
           style={{ left: `${pct(localMin)}%`, right: `${100 - pct(localMax)}%` }}
         />
         <input
@@ -332,6 +343,9 @@ function PriceRange({ min, max, onCommit }) {
 
 function FilterSidebar({ filters, update, reset, anyActive, onClose }) {
   const selectedCity = CITIES.find((c) => c.name === filters.city) || null;
+  const [localKeyword, setLocalKeyword] = useState(filters.keyword);
+
+  useEffect(() => { setLocalKeyword(filters.keyword); }, [filters.keyword]);
 
   const toggle = (list, item) => {
     const set = new Set(list);
@@ -340,8 +354,12 @@ function FilterSidebar({ filters, update, reset, anyActive, onClose }) {
     return Array.from(set);
   };
 
+  const commitKeyword = (val) => {
+    update({ keyword: val.trim() });
+  };
+
   return (
-    <aside className="h-full overflow-y-auto bg-white dark:bg-ink-900 lg:bg-transparent lg:dark:bg-transparent p-5 lg:p-0">
+    <aside className="bg-white dark:bg-ink-900 lg:bg-transparent lg:dark:bg-transparent p-5 lg:p-0 h-full overflow-y-auto lg:h-auto lg:overflow-visible pb-24 lg:pb-0">
       <div className="flex items-center justify-between mb-3">
         <h2 className="font-semibold text-ink-900 dark:text-ink-50">Bộ lọc</h2>
         <div className="flex items-center gap-2">
@@ -362,6 +380,33 @@ function FilterSidebar({ filters, update, reset, anyActive, onClose }) {
               aria-label="Đóng bộ lọc"
             >
               <X className="h-4 w-4" />
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      {/* Keyword search */}
+      <div className="border-b border-ink-100 dark:border-ink-700 py-4">
+        <label className="block text-sm font-semibold text-ink-900 dark:text-ink-50 mb-2">Từ khoá</label>
+        <div className="relative">
+          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400 pointer-events-none" />
+          <input
+            type="text"
+            value={localKeyword}
+            placeholder="Tên phòng, địa chỉ..."
+            onChange={(e) => setLocalKeyword(e.target.value)}
+            onBlur={(e) => commitKeyword(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && commitKeyword(localKeyword)}
+            className="w-full h-10 pl-9 pr-8 rounded-lg bg-ink-50 dark:bg-ink-800 border border-transparent focus:border-primary-500 text-sm text-ink-900 dark:text-ink-50 outline-none transition-colors"
+          />
+          {localKeyword ? (
+            <button
+              type="button"
+              onClick={() => { setLocalKeyword(''); commitKeyword(''); }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-ink-400 hover:text-ink-600 dark:hover:text-ink-200"
+              aria-label="Xoá từ khoá"
+            >
+              <X className="h-3.5 w-3.5" />
             </button>
           ) : null}
         </div>
@@ -421,20 +466,65 @@ function FilterSidebar({ filters, update, reset, anyActive, onClose }) {
         <PriceRange min={filters.minPrice} max={filters.maxPrice} onCommit={update} />
       </FilterSection>
 
-      <FilterSection title="Tiện nghi">
-        <div className="space-y-0.5">
-          {AMENITIES.map(({ key, label, Icon }) => (
-            <Checkbox
-              key={key}
-              checked={filters.amenities.includes(key)}
-              onChange={() => update({ amenities: toggle(filters.amenities, key) })}
-              label={label}
-              Icon={Icon}
-            />
-          ))}
+      <FilterSection title="Phí dịch vụ tối đa" defaultOpen={false}>
+        <div className="space-y-3">
+          <FeeInput
+            label="Tiền điện (đ/số)"
+            value={filters.maxElectricity}
+            onCommit={(v) => update({ maxElectricity: v })}
+            placeholder="VD: 3500"
+          />
+          <FeeInput
+            label="Tiền nước (đ/m³)"
+            value={filters.maxWater}
+            onCommit={(v) => update({ maxWater: v })}
+            placeholder="VD: 25000"
+          />
+          <FeeInput
+            label="Phí dịch vụ (đ/tháng)"
+            value={filters.maxService}
+            onCommit={(v) => update({ maxService: v })}
+            placeholder="VD: 100000"
+          />
+          <FeeInput
+            label="Phí Wifi (đ/tháng)"
+            value={filters.maxWifi}
+            onCommit={(v) => update({ maxWifi: v })}
+            placeholder="VD: 50000"
+          />
         </div>
       </FilterSection>
     </aside>
+  );
+}
+
+function FeeInput({ label, value, onCommit, placeholder }) {
+  const [local, setLocal] = useState(value ?? '');
+  useEffect(() => { setLocal(value ?? ''); }, [value]);
+
+  const commit = (raw) => {
+    const trimmed = String(raw ?? '').trim();
+    if (trimmed === '') { onCommit(null); return; }
+    const n = Number(trimmed);
+    if (!Number.isFinite(n) || n < 0) { onCommit(null); return; }
+    onCommit(n);
+  };
+
+  return (
+    <label className="block text-xs text-ink-400">
+      {label}
+      <input
+        type="number"
+        min={0}
+        step={1000}
+        value={local}
+        placeholder={placeholder}
+        onChange={(e) => setLocal(e.target.value)}
+        onBlur={(e) => commit(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && commit(e.target.value)}
+        className="mt-1 w-full h-9 rounded-lg bg-ink-50 dark:bg-ink-800 border border-transparent focus:border-primary-500 px-2 text-sm text-ink-900 dark:text-ink-50 outline-none"
+      />
+    </label>
   );
 }
 
@@ -444,15 +534,12 @@ function FilterSidebar({ filters, update, reset, anyActive, onClose }) {
 
 function ActiveFilterTags({ filters, update, reset }) {
   const tags = [];
+  if (filters.keyword) tags.push({ id: 'keyword', label: `"${filters.keyword}"`, onRemove: () => update({ keyword: '' }) });
   if (filters.city) tags.push({ id: 'city', label: filters.city, onRemove: () => update({ city: '' }) });
   if (filters.district) tags.push({ id: 'district', label: filters.district, onRemove: () => update({ district: '' }) });
   filters.roomTypes.forEach((k) => {
     const t = ROOM_TYPES.find((r) => r.key === k);
     if (t) tags.push({ id: `type-${k}`, label: t.label, onRemove: () => update({ roomTypes: filters.roomTypes.filter((x) => x !== k) }) });
-  });
-  filters.amenities.forEach((k) => {
-    const a = AMENITIES.find((x) => x.key === k);
-    if (a) tags.push({ id: `am-${k}`, label: a.label, onRemove: () => update({ amenities: filters.amenities.filter((x) => x !== k) }) });
   });
   if (filters.minPrice > PRICE_MIN || filters.maxPrice < PRICE_MAX) {
     tags.push({
@@ -460,6 +547,18 @@ function ActiveFilterTags({ filters, update, reset }) {
       label: `${fmtVND(filters.minPrice)} – ${fmtVND(filters.maxPrice)}`,
       onRemove: () => update({ minPrice: PRICE_MIN, maxPrice: PRICE_MAX }),
     });
+  }
+  if (filters.maxElectricity != null) {
+    tags.push({ id: 'el', label: `Điện ≤ ${fmtVND(filters.maxElectricity)}`, onRemove: () => update({ maxElectricity: null }) });
+  }
+  if (filters.maxWater != null) {
+    tags.push({ id: 'wt', label: `Nước ≤ ${fmtVND(filters.maxWater)}`, onRemove: () => update({ maxWater: null }) });
+  }
+  if (filters.maxService != null) {
+    tags.push({ id: 'sv', label: `Dịch vụ ≤ ${fmtVND(filters.maxService)}`, onRemove: () => update({ maxService: null }) });
+  }
+  if (filters.maxWifi != null) {
+    tags.push({ id: 'wf', label: `Wifi ≤ ${fmtVND(filters.maxWifi)}`, onRemove: () => update({ maxWifi: null }) });
   }
 
   if (tags.length === 0) return null;
@@ -574,14 +673,17 @@ export function SearchPage() {
 
   const [viewMode, setViewMode] = useState('grid');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const anyActive =
-    Boolean(filters.city || filters.district) ||
+    Boolean(filters.keyword || filters.city || filters.district) ||
     filters.roomTypes.length > 0 ||
-    filters.amenities.length > 0 ||
     filters.minPrice > PRICE_MIN ||
     filters.maxPrice < PRICE_MAX ||
-    filters.sort !== 'newest';
+    filters.maxElectricity != null ||
+    filters.maxWater != null ||
+    filters.maxService != null ||
+    filters.maxWifi != null;
 
   // Fetch when filters change
   useEffect(() => {
@@ -589,11 +691,16 @@ export function SearchPage() {
     const apiParams = {
       page: filters.page,
       size: PAGE_SIZE,
+      ...(filters.keyword && { keyword: filters.keyword }),
       ...(filters.city && { city: filters.city }),
       ...(filters.district && { district: filters.district }),
-      ...(filters.roomTypes.length === 1 && { roomType: filters.roomTypes[0] }),
+      ...(filters.roomTypes.length > 0 && { roomType: filters.roomTypes[0] }),
       ...(filters.minPrice > PRICE_MIN && { minPrice: filters.minPrice }),
       ...(filters.maxPrice < PRICE_MAX && { maxPrice: filters.maxPrice }),
+      ...(filters.maxElectricity != null && { maxElectricityPrice: filters.maxElectricity }),
+      ...(filters.maxWater != null && { maxWaterPrice: filters.maxWater }),
+      ...(filters.maxService != null && { maxServiceFee: filters.maxService }),
+      ...(filters.maxWifi != null && { maxWifiFee: filters.maxWifi }),
     };
 
     setIsLoading(true);
@@ -629,40 +736,76 @@ export function SearchPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 lg:py-10">
-      <div className="grid grid-cols-1 lg:grid-cols-[18rem_1fr] gap-8">
+      {/* Page header */}
+      <header className="mb-6 lg:mb-8">
+        <p className="text-xs font-semibold uppercase tracking-wider text-primary-500">Phòng cho thuê</p>
+        <h1 className="mt-1 font-display text-2xl lg:text-3xl font-bold text-ink-900 dark:text-ink-50">
+          {filters.city
+            ? `Phòng trọ tại ${filters.district ? `${filters.district}, ` : ''}${filters.city}`
+            : 'Tìm phòng trọ phù hợp với bạn'}
+        </h1>
+        <p className="mt-1.5 text-sm text-ink-600 dark:text-ink-200 max-w-2xl">
+          Lọc theo khu vực, giá thuê và phí dịch vụ để tìm đúng phòng — minh bạch, không qua môi giới.
+        </p>
+      </header>
+
+      <div
+        className={[
+          'grid grid-cols-1 gap-8',
+          sidebarCollapsed ? 'lg:grid-cols-[3rem_1fr]' : 'lg:grid-cols-[18rem_1fr]',
+        ].join(' ')}
+      >
         {/* ── Desktop sidebar ── */}
         <div className="hidden lg:block">
           <div className="sticky top-24 max-h-[calc(100vh-6rem)] overflow-hidden">
-            <FilterSidebar
-              filters={filters}
-              update={update}
-              reset={reset}
-              anyActive={anyActive}
-            />
+            {sidebarCollapsed ? (
+              <button
+                type="button"
+                onClick={() => setSidebarCollapsed(false)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-ink-100 dark:border-ink-700 bg-white dark:bg-ink-900 text-ink-600 dark:text-ink-200 hover:border-primary-500 hover:text-primary-500 transition-colors"
+                aria-label="Hiện bộ lọc"
+                title="Hiện bộ lọc"
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+              </button>
+            ) : (
+              <div className="flex flex-col h-full min-h-0">
+                <button
+                  type="button"
+                  onClick={() => setSidebarCollapsed(true)}
+                  className="shrink-0 self-end mb-2 inline-flex items-center gap-1 text-xs font-medium text-ink-400 hover:text-primary-500 transition-colors"
+                  aria-label="Thu gọn bộ lọc"
+                >
+                  Thu gọn
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </button>
+                <div className="flex-1 min-h-0 overflow-y-auto pr-1 scrollbar-thin">
+                  <FilterSidebar
+                    filters={filters}
+                    update={update}
+                    reset={reset}
+                    anyActive={anyActive}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* ── Results ── */}
         <div ref={resultsRef} className="min-w-0">
           {/* Action bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <p className="text-sm text-ink-600 dark:text-ink-200">
-              <span className="font-semibold text-ink-900 dark:text-ink-50">
-                {totalCount.toLocaleString('vi-VN')}
-              </span>{' '}
-              phòng tìm thấy
-            </p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-ink-100 dark:border-ink-700">
+            <div className="flex items-baseline gap-2">
+              <p className="text-base text-ink-600 dark:text-ink-200">
+                <span className="font-bold text-xl text-ink-900 dark:text-ink-50">
+                  {totalCount.toLocaleString('vi-VN')}
+                </span>{' '}
+                phòng đang cho thuê
+              </p>
+              <span className="text-xs text-ink-400">· sắp xếp theo mới nhất</span>
+            </div>
             <div className="flex items-center gap-2">
-              <select
-                value={filters.sort}
-                onChange={(e) => update({ sort: e.target.value })}
-                className="h-9 rounded-lg bg-white dark:bg-ink-900 border border-ink-100 dark:border-ink-700 text-sm text-ink-900 dark:text-ink-50 px-2.5 pr-7 focus:border-primary-500 outline-none transition-colors"
-                aria-label="Sắp xếp"
-              >
-                {SORT_OPTIONS.map((s) => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
-                ))}
-              </select>
               <div className="inline-flex rounded-lg border border-ink-100 dark:border-ink-700 overflow-hidden">
                 <button
                   type="button"
@@ -738,8 +881,8 @@ export function SearchPage() {
           ) : posts.length === 0 ? (
             <EmptyState
               icon={SearchIcon}
-              title="Không tìm thấy phòng phù hợp"
-              description="Thử thay đổi bộ lọc hoặc mở rộng khu vực tìm kiếm."
+              title="Chưa có phòng nào khớp với tiêu chí"
+              description="Hãy thử mở rộng khu vực, nới khoảng giá hoặc bỏ bớt phí dịch vụ tối đa để xem thêm lựa chọn."
               action={{ label: 'Xoá bộ lọc', onClick: reset, icon: X }}
             />
           ) : (

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
 import {
   Search,
@@ -38,7 +38,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/Toast';
 import ThemeToggle from '../components/ui/ThemeToggle';
 import Avatar from '../components/ui/Avatar';
-import { pageVariants, springs } from '../lib/animations';
+import { springs } from '../lib/animations';
 
 function NavbarSearch() {
   const navigate = useNavigate();
@@ -336,7 +336,6 @@ function Footer() {
 }
 
 export function PublicLayout() {
-  const location = useLocation();
   const { role, isLoading } = useAuth();
 
   if (isLoading) {
@@ -354,17 +353,7 @@ export function PublicLayout() {
     <div className="min-h-screen flex flex-col bg-base">
       <Navbar />
       <main className="flex-1">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={location.pathname}
-            variants={pageVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-          >
-            <Outlet />
-          </motion.div>
-        </AnimatePresence>
+        <Outlet />
       </main>
       <Footer />
     </div>

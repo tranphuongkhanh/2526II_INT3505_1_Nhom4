@@ -28,10 +28,10 @@ const AMENITY_ICONS = {
 };
 
 const ROOM_TYPES = {
-  BOARDING:  'Phòng trọ',
-  MINI_APT:  'Chung cư mini',
-  SHARED:    'Ở ghép',
-  HOMESTAY:  'Homestay',
+  PHONG_TRO:    'Phòng trọ',
+  CHUNG_CU_MINI: 'Chung cư mini',
+  O_GHEP:       'Ở ghép',
+  HOMESTAY:     'Homestay',
 };
 
 const REPORT_REASONS = [
@@ -198,7 +198,6 @@ function Lightbox({ images, startIndex, postId, onClose }) {
             className="absolute inset-0 flex items-center justify-center cursor-grab active:cursor-grabbing"
           >
             <motion.img
-              layoutId={index === startIndex ? `post-image-${postId}` : undefined}
               src={images[index]}
               alt={`Ảnh ${index + 1}`}
               style={{ scale: imgScale, maxHeight: '80vh', maxWidth: '90vw', objectFit: 'contain' }}
@@ -244,53 +243,65 @@ function ImageGallery({ images, postId }) {
 
   const imgs      = images?.length ? images : [PLACEHOLDER_IMG];
   const mainImg   = imgs[0];
-  const gridSlots = [imgs[1], imgs[2], imgs[3], imgs[4]]; // up to 4 small
-  const remaining = Math.max(0, imgs.length - 5);
+  // Up to 6 small thumbnails on the right (2 cols × 3 rows)
+  const gridSlots = [imgs[1], imgs[2], imgs[3], imgs[4], imgs[5], imgs[6]];
+  const visibleCount = Math.min(imgs.length, 7);
+  const remaining = Math.max(0, imgs.length - visibleCount);
+  const lastVisibleIndex = visibleCount - 2; // last index inside right grid
 
   return (
     <>
       {/* ── Desktop mosaic ── */}
-      <div className="hidden md:flex h-[480px] gap-2 rounded-2xl overflow-hidden">
+      <div className="hidden md:flex h-[540px] gap-3 rounded-2xl overflow-hidden">
         {/* main image 60% */}
-        <motion.div
-          layoutId={`post-image-${postId}`}
-          className="flex-[3] relative cursor-pointer group overflow-hidden"
+        <div
+          className="flex-[3] relative cursor-pointer group overflow-hidden rounded-l-2xl"
           onClick={() => open(0)}
-          style={{ willChange: 'transform' }}
         >
           <img
             src={mainImg}
             alt="Ảnh chính"
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
           />
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-        </motion.div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); open(0); }}
+            className="absolute bottom-4 left-4 inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full bg-white/95 hover:bg-white text-ink-900 text-xs font-semibold shadow-lg backdrop-blur transition-all opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0"
+          >
+            <ImagesIcon className="h-3.5 w-3.5" />
+            Xem ảnh
+          </button>
+        </div>
 
-        {/* right 2×2 grid 40% */}
-        <div className="flex-[2] grid grid-cols-2 grid-rows-2 gap-2">
+        {/* right 2×3 grid 40% — up to 6 thumbnails */}
+        <div className="flex-[2] grid grid-cols-2 grid-rows-3 gap-3">
           {gridSlots.map((src, i) => {
-            const isLast = i === 3;
+            if (!src) return <div key={i} className="rounded-md bg-ink-100 dark:bg-ink-800" />;
+            const isLast = i === lastVisibleIndex && remaining > 0;
+            const rounded =
+              i === 1 ? 'rounded-tr-2xl' :
+              i === 5 ? 'rounded-br-2xl' : '';
             return (
               <div
                 key={i}
-                className="relative overflow-hidden rounded-sm cursor-pointer group"
-                onClick={() => src && open(i + 1)}
+                className={`relative overflow-hidden cursor-pointer group ${rounded}`}
+                onClick={() => open(i + 1)}
               >
                 <img
-                  src={src || PLACEHOLDER_IMG}
+                  src={src}
                   alt={`Ảnh ${i + 2}`}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
                 {isLast && (
                   <div
-                    className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 gap-1.5"
+                    className="absolute inset-0 flex flex-col items-center justify-center bg-black/55 gap-1 backdrop-blur-[1px]"
                     onClick={(e) => { e.stopPropagation(); open(0); }}
                   >
-                    <ImagesIcon className="h-5 w-5 text-white" />
-                    <span className="text-white text-sm font-semibold">Xem tất cả ảnh</span>
-                    {remaining > 0 && (
-                      <span className="text-white/70 text-xs">+{remaining} ảnh</span>
-                    )}
+                    <ImagesIcon className="h-6 w-6 text-white" />
+                    <span className="text-white text-sm font-semibold">+{remaining} ảnh</span>
+                    <span className="text-white/70 text-[11px]">Xem tất cả</span>
                   </div>
                 )}
               </div>
@@ -299,8 +310,25 @@ function ImageGallery({ images, postId }) {
         </div>
       </div>
 
+      {/* ── Desktop thumbnail strip ── */}
+      {imgs.length > 1 && (
+        <div className="hidden md:flex mt-3 gap-2 overflow-x-auto pb-1 scrollbar-thin">
+          {imgs.map((src, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => open(i)}
+              className="relative shrink-0 h-20 w-28 rounded-lg overflow-hidden border-2 border-transparent hover:border-primary-500 transition-all hover:scale-[1.03]"
+              aria-label={`Xem ảnh ${i + 1}`}
+            >
+              <img src={src} alt="" className="h-full w-full object-cover" />
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* ── Mobile carousel ── */}
-      <div className="md:hidden relative h-72 rounded-2xl overflow-hidden">
+      <div className="md:hidden relative h-80 rounded-2xl overflow-hidden">
         <div
           className="flex h-full overflow-x-auto snap-x snap-mandatory"
           style={{ scrollbarWidth: 'none' }}
@@ -337,6 +365,25 @@ function ImageGallery({ images, postId }) {
           {mobileIndex + 1}/{imgs.length}
         </button>
       </div>
+
+      {/* ── Mobile thumbnail strip ── */}
+      {imgs.length > 1 && (
+        <div className="md:hidden flex mt-3 gap-2 overflow-x-auto px-1 scrollbar-thin">
+          {imgs.map((src, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => open(i)}
+              className={`shrink-0 h-16 w-20 rounded-lg overflow-hidden border-2 transition-all ${
+                i === mobileIndex ? 'border-primary-500' : 'border-transparent'
+              }`}
+              aria-label={`Xem ảnh ${i + 1}`}
+            >
+              <img src={src} alt="" className="h-full w-full object-cover" />
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Lightbox portal */}
       <AnimatePresence>
@@ -506,7 +553,7 @@ function ContactCard({ post, sentinelRef, onReport }) {
       >
         {/* price */}
         <div>
-          <span className="text-3xl font-bold text-primary-500 font-display leading-none">
+          <span className="text-2xl font-bold text-primary-500 font-display leading-none break-all">
             {formatPrice(post.price)}
           </span>
         </div>
@@ -950,9 +997,10 @@ export default function PostDetailPage() {
         setPost(p);
         const roomId = p?.roomId;
         if (roomId) {
-          return reviewApi.getByRoom(roomId).then((rv) => {
-            if (active) setReviews(rv?.items ?? []);
-          });
+          // Load reviews independently — don't let review errors kill the page
+          reviewApi.getByRoom(roomId)
+            .then((rv) => { if (active) setReviews(rv?.items ?? []); })
+            .catch(() => {});
         }
       })
       .catch((err) => {
