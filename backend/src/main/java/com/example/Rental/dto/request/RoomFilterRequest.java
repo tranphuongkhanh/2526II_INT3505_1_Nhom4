@@ -26,12 +26,12 @@ public class RoomFilterRequest {
     private Boolean hasPrivateWc;
     private Boolean hasSecurity;
 
-    private BigDecimal minWifiFee;
-    private BigDecimal minWaterPricePerUnit;
-    private BigDecimal minElectricityPricePerUnit;
-    private BigDecimal minServiceFee;
-    private BigDecimal minBikeParkingFee;
-    private BigDecimal minDeposit;
+    private BigDecimal maxWifiFee;
+    private BigDecimal maxWaterPricePerUnit;
+    private BigDecimal maxElectricityPricePerUnit;
+    private BigDecimal maxServiceFee;
+    private BigDecimal maxBikeParkingFee;
+    private BigDecimal maxDeposit;
 
     private Double minAvgRating;  // Rating tối thiểu
 }
