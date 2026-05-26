@@ -18,14 +18,14 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     Page<Post> findByCreatedById(Long userId, Pageable pageable);
     List<Post> findByStatusOrderByCreatedAtDesc(PostStatus status);
 
-    @Query("SELECT p FROM Post p JOIN FETCH p.room r WHERE p.status = 'APPROVED' AND p.endDate > CURRENT_TIMESTAMP AND r.rentalStatus = 'AVAILABLE'")
+    @Query("SELECT p FROM Post p JOIN FETCH p.room r WHERE p.status = 'APPROVED' AND p.endDate > CURRENT_TIMESTAMP")
     List<Post> findAllActivePosts();
 
     long countByStatus(PostStatus status);
 
     // 1. API Tìm kiếm cho Guest
     @Query("SELECT p FROM Post p JOIN p.room r WHERE " +
-           "p.status = 'APPROVED' AND p.endDate > CURRENT_TIMESTAMP AND r.rentalStatus = 'AVAILABLE' AND " +
+           "p.status = 'APPROVED' AND p.endDate > CURRENT_TIMESTAMP AND " +
            "(cast(:keyword as string) IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', cast(:keyword as string), '%')) OR LOWER(r.address) LIKE LOWER(CONCAT('%', cast(:keyword as string), '%'))) AND " +
            "(cast(:minPrice as string) IS NULL OR r.price >= :minPrice) AND " +
            "(cast(:maxPrice as string) IS NULL OR r.price <= :maxPrice) AND " +
