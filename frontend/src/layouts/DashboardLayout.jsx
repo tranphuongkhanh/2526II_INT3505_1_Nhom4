@@ -88,7 +88,7 @@ function SidebarItem({ to, label, icon: Icon, end, collapsed, onNavigate }) {
   );
 }
 
-function Sidebar({ items, collapsed, onToggle, isMobile, onCloseMobile }) {
+function Sidebar({ items, collapsed, onToggle, isMobile, onCloseMobile, logoTo }) {
   return (
     <motion.aside
       initial={false}
@@ -101,15 +101,14 @@ function Sidebar({ items, collapsed, onToggle, isMobile, onCloseMobile }) {
       ].join(' ')}
     >
       <div className="flex items-center justify-between h-16 px-3 border-b border-ink-100 dark:border-ink-700">
-        <Link
-          to="/"
-          className={[
-            'font-display font-bold text-primary-500',
-            collapsed && !isMobile ? 'text-base' : 'text-xl',
-          ].join(' ')}
-        >
-          {collapsed && !isMobile ? 'N' : 'RoomHub'}
-        </Link>
+        {(!collapsed || isMobile) && (
+          <Link
+            to={logoTo}
+            className="font-display font-bold text-primary-500 text-xl"
+          >
+            RoomHub
+          </Link>
+        )}
         {isMobile ? (
           <button
             type="button"
@@ -119,7 +118,16 @@ function Sidebar({ items, collapsed, onToggle, isMobile, onCloseMobile }) {
           >
             <X className="h-5 w-5" />
           </button>
-        ) : null}
+        ) : (
+          <button
+            type="button"
+            onClick={onToggle}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink-400 hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors"
+            aria-label={collapsed ? 'Mở rộng' : 'Thu gọn'}
+          >
+            {collapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
+          </button>
+        )}
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 py-4 space-y-1">
@@ -133,19 +141,6 @@ function Sidebar({ items, collapsed, onToggle, isMobile, onCloseMobile }) {
         ))}
       </nav>
 
-      {!isMobile ? (
-        <div className="border-t border-ink-100 dark:border-ink-700 p-2">
-          <button
-            type="button"
-            onClick={onToggle}
-            className="w-full flex items-center justify-center gap-2 h-10 rounded-xl text-ink-400 hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors"
-            aria-label={collapsed ? 'Mở rộng' : 'Thu gọn'}
-          >
-            {collapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
-            {!collapsed ? <span className="text-xs font-medium">Thu gọn</span> : null}
-          </button>
-        </div>
-      ) : null}
     </motion.aside>
   );
 }
@@ -278,6 +273,7 @@ export function DashboardLayout() {
           items={items}
           collapsed={collapsed}
           onToggle={() => setCollapsed((c) => !c)}
+          logoTo={role === 'ADMIN' ? '/admin' : '/'}
         />
       </div>
 
@@ -298,6 +294,7 @@ export function DashboardLayout() {
                 onToggle={() => { }}
                 isMobile
                 onCloseMobile={() => setMobileOpen(false)}
+                logoTo={role === 'ADMIN' ? '/admin' : '/'}
               />
             </div>
           </>

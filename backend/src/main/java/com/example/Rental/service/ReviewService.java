@@ -122,6 +122,14 @@ public class ReviewService {
         return reviewRepository.findByStatus(ReviewStatus.PENDING, pageable);
     }
 
+    @Transactional(readOnly = true)
+    public Page<Review> getReviewsByStatus(ReviewStatus status, Pageable pageable) {
+        if (status == null) {
+            return reviewRepository.findAll(pageable);
+        }
+        return reviewRepository.findByStatus(status, pageable);
+    }
+
     @Transactional
     public void updateReviewStatus(Long reviewId, ReviewStatus status, String adminEmail) {
         User admin = userRepository.findByEmail(adminEmail)
