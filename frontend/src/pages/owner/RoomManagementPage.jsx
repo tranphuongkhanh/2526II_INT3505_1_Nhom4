@@ -3,7 +3,7 @@ import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import {
   Plus, Search, LayoutGrid, List, Edit2, Trash2, Star, Upload,
   Wind, Flame, Shirt, Refrigerator, GripVertical,
-  Home, X, AlertCircle, ToggleLeft,
+  Home, X, AlertCircle, ToggleLeft, Eye, MapPin, Wifi, Zap, Droplets,
 } from 'lucide-react';
 import { roomApi } from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
@@ -212,53 +212,51 @@ function ImageSection({ roomId, images, onImagesChange, pendingFiles, onPendingC
         />
       </div>
 
-      {/* Saved images (draggable) */}
-      {images.length > 0 && (
-        <Reorder.Group
-          axis="x"
-          values={images}
-          onReorder={onImagesChange}
-          className="flex flex-wrap gap-3"
-        >
-          {images.map((img) => (
-            <Reorder.Item
-              key={img.id}
-              value={img}
-              whileDrag={{ scale: 1.08, boxShadow: '0 12px 32px rgba(0,0,0,0.25)', rotate: 2, zIndex: 20 }}
-              className="relative group cursor-grab active:cursor-grabbing"
-            >
-              <div className="relative h-24 w-24 rounded-xl overflow-hidden border-2 border-ink-200 dark:border-ink-700 select-none">
-                <img
-                  src={img.imageUrl}
-                  alt=""
-                  className="h-full w-full object-cover"
-                  onError={(e) => { e.currentTarget.src = ''; }}
-                />
-                {img.thumbnail && (
-                  <div className="absolute inset-0 border-2 border-accent-500 rounded-xl pointer-events-none" />
-                )}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-end justify-between p-1">
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteExisting(img.id)}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded-lg bg-red-500 text-white transition-opacity"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                  <ThumbnailButton isThumbnail={img.thumbnail} onClick={() => handleThumbnail(img.id)} />
-                </div>
-                <GripVertical className="absolute top-1 left-1 h-3.5 w-3.5 text-white/70 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </div>
-            </Reorder.Item>
-          ))}
-        </Reorder.Group>
-      )}
-
-      {/* Pending (not yet uploaded) images */}
-      {pendingFiles.length > 0 && (
+      {hasAny ? (
         <div className="flex flex-wrap gap-3">
+          {/* Saved images (draggable) */}
+          <Reorder.Group
+            axis="x"
+            values={images}
+            onReorder={onImagesChange}
+            className="contents"
+          >
+            {images.map((img) => (
+              <Reorder.Item
+                key={img.id}
+                value={img}
+                whileDrag={{ scale: 1.08, boxShadow: '0 12px 32px rgba(0,0,0,0.25)', rotate: 2, zIndex: 20 }}
+                className="relative group cursor-grab active:cursor-grabbing"
+              >
+                <div className="relative h-24 w-24 rounded-xl overflow-hidden border-2 border-ink-200 dark:border-ink-700 select-none">
+                  <img
+                    src={img.imageUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    onError={(e) => { e.currentTarget.src = ''; }}
+                  />
+                  {img.thumbnail && (
+                    <div className="absolute inset-0 border-2 border-accent-500 rounded-xl pointer-events-none" />
+                  )}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-end justify-between p-1">
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteExisting(img.id)}
+                      className="opacity-0 group-hover:opacity-100 p-1 rounded-lg bg-red-500 text-white transition-opacity"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                    <ThumbnailButton isThumbnail={img.thumbnail} onClick={() => handleThumbnail(img.id)} />
+                  </div>
+                  <GripVertical className="absolute top-1 left-1 h-3.5 w-3.5 text-white/70 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              </Reorder.Item>
+            ))}
+          </Reorder.Group>
+
+          {/* Pending (not yet uploaded) images */}
           {pendingFiles.map((p) => (
-            <div key={p.id} className="relative group h-24 w-24 rounded-xl overflow-hidden border-2 border-dashed border-primary-400 dark:border-primary-600">
+            <div key={p.id} className="relative group h-24 w-24 rounded-xl overflow-hidden border-2 border-dashed border-primary-400 dark:border-primary-600 shrink-0">
               <img src={p.preview} alt="" className="h-full w-full object-cover opacity-80" />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-end justify-between p-1">
                 <button
@@ -272,10 +270,18 @@ function ImageSection({ roomId, images, onImagesChange, pendingFiles, onPendingC
               <div className="absolute top-1 right-1 bg-primary-500 rounded px-1 py-0.5 text-white text-[10px] leading-none">mới</div>
             </div>
           ))}
-        </div>
-      )}
 
-      {!hasAny && (
+          {/* Add more button */}
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="h-24 w-24 border-2 border-dashed border-ink-200 dark:border-ink-700 rounded-xl flex flex-col items-center justify-center gap-1 text-ink-400 hover:border-primary-400 hover:text-primary-500 transition-colors shrink-0"
+          >
+            <Upload className="h-5 w-5" />
+            <span className="text-xs">Thêm ảnh</span>
+          </button>
+        </div>
+      ) : (
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
@@ -286,6 +292,118 @@ function ImageSection({ roomId, images, onImagesChange, pendingFiles, onPendingC
         </button>
       )}
     </div>
+  );
+}
+
+// ── Room detail (view-only) modal ──────────────────────────
+function RoomDetailModal({ room, onClose }) {
+  const [imgIdx, setImgIdx] = useState(0);
+  const images = room?.images ?? [];
+  const current = images[imgIdx];
+
+  useEffect(() => { setImgIdx(0); }, [room?.id]);
+
+  if (!room) return null;
+
+  const price = Number(room.price ?? 0).toLocaleString('vi-VN');
+  const statusCfg = STATUS_MAP[room.rentalStatus] ?? STATUS_MAP.AVAILABLE;
+  const address = [room.address, room.ward, room.district, room.city].filter(Boolean).join(', ');
+
+  const FeeRow = ({ label, value, unit }) => value != null && Number(value) > 0 ? (
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-ink-500 dark:text-ink-300">{label}</span>
+      <span className="font-medium text-ink-900 dark:text-ink-50">{Number(value).toLocaleString('vi-VN')} VNĐ{unit}</span>
+    </div>
+  ) : null;
+
+  return (
+    <Modal isOpen={!!room} onClose={onClose} size="xl" title="Chi tiết phòng"
+      footer={<Button variant="ghost" onClick={onClose}>Đóng</Button>}
+    >
+      <div className="space-y-5 py-2">
+        {/* Images */}
+        {images.length > 0 ? (
+          <div className="space-y-2">
+            <div className="relative h-56 rounded-xl overflow-hidden bg-ink-100 dark:bg-ink-800">
+              <img src={current?.imageUrl} alt="" className="h-full w-full object-cover" />
+              <span className={`absolute top-3 left-3 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusCfg.cls}`}>{statusCfg.label}</span>
+            </div>
+            {images.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {images.map((img, i) => (
+                  <button key={img.id} type="button" onClick={() => setImgIdx(i)}
+                    className={`h-14 w-14 shrink-0 rounded-lg overflow-hidden border-2 transition-colors ${i === imgIdx ? 'border-primary-500' : 'border-transparent'}`}>
+                    <img src={img.imageUrl} alt="" className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="h-32 rounded-xl bg-ink-100 dark:bg-ink-800 flex items-center justify-center">
+            <Home className="h-10 w-10 text-ink-300" />
+          </div>
+        )}
+
+        {/* Title & type */}
+        <div>
+          <h2 className="text-xl font-bold text-ink-900 dark:text-ink-50">{room.title}</h2>
+          <p className="text-sm text-ink-400 mt-0.5">{ROOM_TYPES.find((t) => t.value === room.roomType)?.label ?? room.roomType}</p>
+        </div>
+
+        {/* Price + area */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="col-span-2 rounded-xl bg-primary-50 dark:bg-primary-900/20 p-3">
+            <p className="text-xs text-ink-400 mb-0.5">Giá thuê</p>
+            <p className="text-xl font-bold text-primary-500">{price} <span className="text-xs font-normal">VNĐ/tháng</span></p>
+          </div>
+          <div className="rounded-xl bg-ink-50 dark:bg-ink-800 p-3">
+            <p className="text-xs text-ink-400 mb-0.5">Diện tích</p>
+            <p className="text-xl font-bold text-ink-900 dark:text-ink-50">{room.areaMq ?? '?'} <span className="text-xs font-normal">m²</span></p>
+          </div>
+        </div>
+
+        {/* Address */}
+        {address && (
+          <div className="flex items-start gap-2 text-sm text-ink-600 dark:text-ink-200">
+            <MapPin className="h-4 w-4 shrink-0 mt-0.5 text-ink-400" />
+            <span>{address}</span>
+          </div>
+        )}
+
+        {/* Description */}
+        {room.description && (
+          <div>
+            <p className="text-sm font-medium text-ink-700 dark:text-ink-200 mb-1">Mô tả</p>
+            <p className="text-sm text-ink-500 dark:text-ink-300 leading-relaxed whitespace-pre-line">{room.description}</p>
+          </div>
+        )}
+
+        {/* Amenities */}
+        <div>
+          <p className="text-sm font-medium text-ink-700 dark:text-ink-200 mb-2">Tiện ích</p>
+          <div className="flex flex-wrap gap-2">
+            {AMENITY_DEFS.map(({ key, label, icon: Icon }) => (
+              <span key={key} className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${room[key] ? 'border-primary-300 bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400' : 'border-ink-200 dark:border-ink-700 text-ink-400 opacity-50'}`}>
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Fees */}
+        <div className="space-y-2.5">
+          <p className="text-sm font-medium text-ink-700 dark:text-ink-200">Chi phí dịch vụ</p>
+          <FeeRow label="Wifi" value={room.wifiFee} unit="/tháng" />
+          <FeeRow label="Điện" value={room.electricityPricePerUnit} unit="/số" />
+          <FeeRow label="Nước" value={room.waterPricePerUnit} unit="/m³" />
+          <FeeRow label="Dịch vụ chung" value={room.serviceFee} unit="/tháng" />
+          <FeeRow label="Gửi xe máy" value={room.bikeParkingFee} unit="/tháng" />
+          <FeeRow label="Đặt cọc" value={room.deposit} unit="" />
+        </div>
+      </div>
+    </Modal>
   );
 }
 
@@ -485,7 +603,7 @@ function RoomModal({ isOpen, onClose, editRoom, onSaved }) {
 }
 
 // ── Room card ──────────────────────────────────────────────
-function RoomCard({ room, view, onEdit, onDelete, onToggleStatus }) {
+function RoomCard({ room, view, onView, onEdit, onDelete, onToggleStatus }) {
   const toast = useToast();
   const [toggling, setToggling] = useState(false);
   const thumbnail = room.images?.find((i) => i.thumbnail) ?? room.images?.[0];
@@ -521,7 +639,7 @@ function RoomCard({ room, view, onEdit, onDelete, onToggleStatus }) {
           <p className="text-sm text-ink-400 mt-0.5">{price} VNĐ/tháng · {room.areaMq ?? '?'} m²</p>
         </div>
         <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0 ${statusCfg.cls}`}>{statusCfg.label}</span>
-        <ActionButtons onEdit={onEdit} onDelete={onDelete} onToggle={handleToggle} toggling={toggling} />
+        <ActionButtons onView={onView} onEdit={onEdit} onDelete={onDelete} onToggle={handleToggle} toggling={toggling} />
       </motion.div>
     );
   }
@@ -553,16 +671,19 @@ function RoomCard({ room, view, onEdit, onDelete, onToggleStatus }) {
           </div>
         ) : null}
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-ink-100 dark:border-ink-700">
-          <ActionButtons onEdit={onEdit} onDelete={onDelete} onToggle={handleToggle} toggling={toggling} />
+          <ActionButtons onView={onView} onEdit={onEdit} onDelete={onDelete} onToggle={handleToggle} toggling={toggling} />
         </div>
       </div>
     </motion.div>
   );
 }
 
-function ActionButtons({ onEdit, onDelete, onToggle, toggling }) {
+function ActionButtons({ onView, onEdit, onDelete, onToggle, toggling }) {
   return (
     <>
+      <button type="button" onClick={onView} className="p-2 rounded-lg text-ink-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="Xem chi tiết">
+        <Eye className="h-4 w-4" />
+      </button>
       <button type="button" onClick={onToggle} disabled={toggling} className="p-2 rounded-lg text-ink-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="Đổi trạng thái">
         <ToggleLeft className="h-4 w-4" />
       </button>
@@ -588,6 +709,7 @@ export default function RoomManagementPage() {
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [viewRoom, setViewRoom] = useState(null);
 
   useEffect(() => {
     roomApi.getAll()
@@ -613,6 +735,7 @@ export default function RoomManagementPage() {
 
   const openCreate = useCallback(() => { setEditRoom(null); setModalOpen(true); }, []);
   const openEdit = useCallback((room) => { setEditRoom(room); setModalOpen(true); }, []);
+  const openView = useCallback((room) => setViewRoom(room), []);
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -697,6 +820,7 @@ export default function RoomManagementPage() {
                 <RoomCard
                   room={room}
                   view={view}
+                  onView={() => openView(room)}
                   onEdit={() => openEdit(room)}
                   onDelete={() => setDeleteId(room.id)}
                   onToggleStatus={handleToggleStatus}
@@ -706,6 +830,9 @@ export default function RoomManagementPage() {
           </AnimatePresence>
         </motion.div>
       )}
+
+      {/* View detail modal */}
+      <RoomDetailModal room={viewRoom} onClose={() => setViewRoom(null)} />
 
       {/* Create/Edit modal */}
       <RoomModal
