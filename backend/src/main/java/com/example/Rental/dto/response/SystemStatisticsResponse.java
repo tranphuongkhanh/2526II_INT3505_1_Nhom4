@@ -10,6 +10,8 @@ public class SystemStatisticsResponse {
     private long totalUsers;
     private long totalRooms;
     private Map<String, Long> postsByStatus;
+    private Map<String, Long> usersByRole;
+    private Map<String, Long> usersByStatus;
     private long pendingReviews;
     private long pendingReports;
 }

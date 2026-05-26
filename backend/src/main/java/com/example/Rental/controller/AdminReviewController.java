@@ -35,14 +35,18 @@ public class AdminReviewController {
     private final ReviewService reviewService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<ReviewListResponse>> getPendingReviews(
+    public ResponseEntity<ApiResponse<ReviewListResponse>> getReviews(
+            @RequestParam(required = false) String status,
             @RequestParam(required = false, defaultValue = "1") Integer page,
-            @RequestParam(required = false, defaultValue = "10") Integer limit) {
-            
+            @RequestParam(required = false, defaultValue = "200") Integer limit) {
 
-        
+        com.example.Rental.enums.ReviewStatus reviewStatus = null;
+        if (status != null && !status.isBlank()) {
+            reviewStatus = com.example.Rental.enums.ReviewStatus.valueOf(status.toUpperCase());
+        }
+
         Pageable pageable = PageRequest.of(page - 1, limit);
-        Page<Review> reviewPage = reviewService.getPendingReviews(pageable);
+        Page<Review> reviewPage = reviewService.getReviewsByStatus(reviewStatus, pageable);
         
         List<ReviewResponse> items = reviewPage.getContent().stream()
                 .map(ReviewResponse::fromEntity)

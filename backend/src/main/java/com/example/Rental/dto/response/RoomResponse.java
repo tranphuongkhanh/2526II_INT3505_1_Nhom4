@@ -28,12 +28,16 @@ public class RoomResponse {
     private String ward;
     private String district;
     private String city;
-    private Boolean hasWifi;
     private Boolean hasAc;
     private Boolean hasFridge;
-    private Boolean hasParking;
     private Boolean hasPrivateWc;
     private Boolean hasSecurity;
+    private BigDecimal wifiFee;
+    private BigDecimal waterPricePerUnit;
+    private BigDecimal electricityPricePerUnit;
+    private BigDecimal serviceFee;
+    private BigDecimal bikeParkingFee;
+    private BigDecimal deposit;
     private RentalStatus rentalStatus;
     private Double avgRating;
     private Integer reviewCount;

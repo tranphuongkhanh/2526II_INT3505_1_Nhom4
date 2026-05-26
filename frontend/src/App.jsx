@@ -31,14 +31,12 @@ import ContractManagementPage from './pages/owner/ContractManagementPage';
 import BillManagementPage from './pages/owner/BillManagementPage';
 import VehicleManagementPage from './pages/owner/VehicleManagementPage';
 import PaymentHistoryPage from './pages/owner/PaymentHistoryPage';
-import {
-  AdminDashboardPage,
-  UserManagementPage,
-  PostModerationPage,
-  ReviewModerationPage,
-  ReportManagementPage,
-  NotFoundPage,
-} from './pages/_placeholders';
+import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+import UserManagementPage from './pages/admin/UserManagementPage';
+import PostModerationPage from './pages/admin/PostModerationPage';
+import ReviewModerationPage from './pages/admin/ReviewModerationPage';
+import ReportManagementPage from './pages/admin/ReportManagementPage';
+import { NotFoundPage } from './pages/_placeholders';
 
 function ProtectedShell({ children }) {
   return <ProtectedRoute>{children}</ProtectedRoute>;

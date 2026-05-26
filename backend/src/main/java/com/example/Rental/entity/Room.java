@@ -59,23 +59,35 @@ public class Room {
     @Column(nullable = false)
     private String city;
 
-    @Column(name = "has_wifi")
-    private Boolean hasWifi = false;
-
     @Column(name = "has_ac")
     private Boolean hasAc = false;
 
     @Column(name = "has_fridge")
     private Boolean hasFridge = false;
 
-    @Column(name = "has_parking")
-    private Boolean hasParking = false;
-
     @Column(name = "has_private_wc")
     private Boolean hasPrivateWc = false;
 
     @Column(name = "has_security")
     private Boolean hasSecurity = false;
+
+    @Column(name = "wifi_fee", precision = 12, scale = 2)
+    private BigDecimal wifiFee;
+
+    @Column(name = "water_price_per_unit", precision = 12, scale = 2)
+    private BigDecimal waterPricePerUnit;
+
+    @Column(name = "electricity_price_per_unit", precision = 12, scale = 2)
+    private BigDecimal electricityPricePerUnit;
+
+    @Column(name = "service_fee", precision = 12, scale = 2)
+    private BigDecimal serviceFee;
+
+    @Column(name = "bike_parking_fee", precision = 12, scale = 2)
+    private BigDecimal bikeParkingFee;
+
+    @Column(name = "deposit", precision = 12, scale = 2)
+    private BigDecimal deposit;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "rental_status")

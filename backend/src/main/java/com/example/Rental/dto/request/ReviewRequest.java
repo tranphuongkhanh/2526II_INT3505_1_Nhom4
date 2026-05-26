@@ -13,7 +13,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class ReviewRequest {
-    @NotNull(message = "Contract ID is required")
     private Long contractId;
 
     @NotNull(message = "Rating is required")

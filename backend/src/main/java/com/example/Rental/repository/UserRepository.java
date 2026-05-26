@@ -17,6 +17,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByUsername(String username);
     Optional<User> findByResetToken(String resetToken);
     List<User> findByRole(UserRole role);
+    long countByRole(UserRole role);
+    long countByStatus(UserStatus status);
 
     // Pageable queries for listing with filters
     Page<User> findByRole(UserRole role, Pageable pageable);

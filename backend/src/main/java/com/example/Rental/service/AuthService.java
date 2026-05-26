@@ -108,6 +108,7 @@ public class AuthService {
                 .avatarUrl(user.getAvatarUrl())
                 .role(user.getRole().name())
                 .status(user.getStatus().name())
+                .createdAt(user.getCreatedAt())
                 .build();
     }
 

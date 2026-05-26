@@ -139,12 +139,16 @@ public class PostService {
                 .ward(room.getWard())
                 .district(room.getDistrict())
                 .city(room.getCity())
-                .hasWifi(room.getHasWifi())
                 .hasAc(room.getHasAc())
                 .hasFridge(room.getHasFridge())
-                .hasParking(room.getHasParking())
                 .hasPrivateWc(room.getHasPrivateWc())
                 .hasSecurity(room.getHasSecurity())
+                .wifiFee(room.getWifiFee())
+                .waterPricePerUnit(room.getWaterPricePerUnit())
+                .electricityPricePerUnit(room.getElectricityPricePerUnit())
+                .serviceFee(room.getServiceFee())
+                .bikeParkingFee(room.getBikeParkingFee())
+                .deposit(room.getDeposit())
                 .imageUrls(images)
                 .build();
     }

@@ -174,7 +174,7 @@ export function RegisterPage() {
         email,
         username,
         fullName,
-        phoneNumber,
+        phone: phoneNumber,
         password,
         role: role.toLowerCase(),
         ...(role === 'OWNER' ? { citizenId: idCardNumber, permanentAddress: address } : {}),

@@ -4,6 +4,8 @@ import com.example.Rental.dto.response.SystemStatisticsResponse;
 import com.example.Rental.enums.PostStatus;
 import com.example.Rental.enums.ReportStatus;
 import com.example.Rental.enums.ReviewStatus;
+import com.example.Rental.enums.UserRole;
+import com.example.Rental.enums.UserStatus;
 import com.example.Rental.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -32,6 +34,15 @@ public class AdminStatisticsService {
             postsByStatus.put(status.name(), postRepository.countByStatus(status));
         }
 
+        Map<String, Long> usersByRole = new HashMap<>();
+        usersByRole.put(UserRole.RENTER.name(), userRepository.countByRole(UserRole.RENTER));
+        usersByRole.put(UserRole.OWNER.name(), userRepository.countByRole(UserRole.OWNER));
+
+        Map<String, Long> usersByStatus = new HashMap<>();
+        for (UserStatus status : UserStatus.values()) {
+            usersByStatus.put(status.name(), userRepository.countByStatus(status));
+        }
+
         long pendingReviews = reviewRepository.countByStatus(ReviewStatus.PENDING);
         long pendingReports = reportRepository.countByStatus(ReportStatus.PENDING);
 
@@ -39,6 +50,8 @@ public class AdminStatisticsService {
                 .totalUsers(totalUsers)
                 .totalRooms(totalRooms)
                 .postsByStatus(postsByStatus)
+                .usersByRole(usersByRole)
+                .usersByStatus(usersByStatus)
                 .pendingReviews(pendingReviews)
                 .pendingReports(pendingReports)
                 .build();

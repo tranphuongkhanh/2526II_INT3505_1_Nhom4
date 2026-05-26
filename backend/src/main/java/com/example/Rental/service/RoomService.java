@@ -45,12 +45,16 @@ public class RoomService {
                 .ward(room.getWard())
                 .district(room.getDistrict())
                 .city(room.getCity())
-                .hasWifi(room.getHasWifi())
                 .hasAc(room.getHasAc())
                 .hasFridge(room.getHasFridge())
-                .hasParking(room.getHasParking())
                 .hasPrivateWc(room.getHasPrivateWc())
                 .hasSecurity(room.getHasSecurity())
+                .wifiFee(room.getWifiFee())
+                .waterPricePerUnit(room.getWaterPricePerUnit())
+                .electricityPricePerUnit(room.getElectricityPricePerUnit())
+                .serviceFee(room.getServiceFee())
+                .bikeParkingFee(room.getBikeParkingFee())
+                .deposit(room.getDeposit())
                 .rentalStatus(room.getRentalStatus())
                 .avgRating(room.getAvgRating())
                 .reviewCount(room.getReviewCount())
@@ -90,12 +94,16 @@ public class RoomService {
                 .ward(request.getWard())
                 .district(request.getDistrict())
                 .city(request.getCity())
-                .hasWifi(request.getHasWifi())
                 .hasAc(request.getHasAc())
                 .hasFridge(request.getHasFridge())
-                .hasParking(request.getHasParking())
                 .hasPrivateWc(request.getHasPrivateWc())
                 .hasSecurity(request.getHasSecurity())
+                .wifiFee(request.getWifiFee())
+                .waterPricePerUnit(request.getWaterPricePerUnit())
+                .electricityPricePerUnit(request.getElectricityPricePerUnit())
+                .serviceFee(request.getServiceFee())
+                .bikeParkingFee(request.getBikeParkingFee())
+                .deposit(request.getDeposit())
                 .rentalStatus(RentalStatus.AVAILABLE)
                 .avgRating(0.0)
                 .reviewCount(0)
@@ -133,12 +141,16 @@ public class RoomService {
         room.setWard(request.getWard());
         room.setDistrict(request.getDistrict());
         room.setCity(request.getCity());
-        room.setHasWifi(request.getHasWifi());
         room.setHasAc(request.getHasAc());
         room.setHasFridge(request.getHasFridge());
-        room.setHasParking(request.getHasParking());
         room.setHasPrivateWc(request.getHasPrivateWc());
         room.setHasSecurity(request.getHasSecurity());
+        room.setWifiFee(request.getWifiFee());
+        room.setWaterPricePerUnit(request.getWaterPricePerUnit());
+        room.setElectricityPricePerUnit(request.getElectricityPricePerUnit());
+        room.setServiceFee(request.getServiceFee());
+        room.setBikeParkingFee(request.getBikeParkingFee());
+        room.setDeposit(request.getDeposit());
 
         Room updatedRoom = roomRepository.save(room);
         return fromEntity(updatedRoom);

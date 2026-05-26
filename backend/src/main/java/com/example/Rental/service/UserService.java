@@ -80,9 +80,22 @@ public class UserService {
                 .avatarUrl(user.getAvatarUrl())
                 .role(user.getRole().name())
                 .status(user.getStatus().name())
+                .createdAt(user.getCreatedAt())
                 .build();
     }
 
+    public List<UserResponse> getAllUsers() {
+        return userRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    public UserResponse updateUserStatus(Long id, String statusStr) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setStatus(UserStatus.valueOf(statusStr.toUpperCase()));
+        User saved = userRepository.save(user);
+        log.info("Admin updated status of user {} to {}", id, statusStr);
     // New: list users with optional filters role and status, pageable
     public UserListResponse listUsers(UserRole role, UserStatus status, int page, int limit) {
         if (page < 1) page = 1;

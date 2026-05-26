@@ -3,6 +3,8 @@ package com.example.Rental.dto.response;
 import lombok.Builder;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 @Builder
 public class UserResponse {
@@ -16,5 +18,5 @@ public class UserResponse {
     private String avatarUrl;
     private String role;
     private String status;
-    // KHÔNG có passwordHash, resetToken
+    private LocalDateTime createdAt;
 }
