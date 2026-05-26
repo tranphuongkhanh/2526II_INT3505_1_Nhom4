@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
-import { CheckCircle, XCircle, Shield, Star } from 'lucide-react';
+import { CheckCircle, XCircle, Shield, Star, Home, User } from 'lucide-react';
 import { reviewApi } from '../../lib/api';
 import { springs } from '../../lib/animations';
 import Card from '../../components/ui/Card';
@@ -57,6 +57,12 @@ function AnimatedStars({ rating, size = 'md' }) {
 
 // ── Review card ────────────────────────────────────────────
 function ReviewCard({ review, exitDir, exiting, onApprove, onReject, busy }) {
+  const reviewType = review.review_type;
+  const reviewerName = review.reviewer_name;
+  const reviewerAvatar = review.reviewer_avatar;
+  const targetName = review.target_room_title ?? review.target_user_name;
+  const isRenterReview = reviewType === 'RENTER_REVIEW';
+
   return (
     <motion.div
       layout
@@ -75,27 +81,32 @@ function ReviewCard({ review, exitDir, exiting, onApprove, onReject, busy }) {
         <div className="flex items-start justify-between gap-3">
           {/* Reviewer info */}
           <div className="flex items-start gap-3 flex-1 min-w-0">
-            <Avatar src={review.reviewerAvatar} name={review.reviewerName} size="md" />
+            <Avatar src={reviewerAvatar} name={reviewerName} size="md" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <p className="font-semibold text-ink-900 dark:text-ink-50 text-sm">
-                  {review.reviewerName}
+                  {reviewerName ?? '—'}
                 </p>
                 <Badge
-                  variant={review.type === 'RENTER_REVIEW' ? 'info' : 'info'}
-                  className={review.type === 'RENTER_REVIEW' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : ''}
+                  variant="info"
+                  className={isRenterReview ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : ''}
                 >
-                  {TYPE_META[review.type]?.label ?? review.type}
+                  {TYPE_META[reviewType]?.label ?? reviewType}
                 </Badge>
                 <Badge variant={STATUS_META[review.status]?.variant ?? 'info'}>
                   {STATUS_META[review.status]?.label ?? review.status}
                 </Badge>
               </div>
 
-              <p className="text-xs text-ink-400 mt-0.5">
-                về <span className="text-primary-500 font-medium">{review.targetName}</span>
-                {' · '}{fmt(review.createdAt)}
-              </p>
+              {/* Target info */}
+              <div className="flex items-center gap-1.5 mt-1 text-xs text-ink-500 dark:text-ink-300">
+                {isRenterReview
+                  ? <User className="h-3.5 w-3.5 shrink-0 text-purple-400" />
+                  : <Home className="h-3.5 w-3.5 shrink-0 text-primary-400" />}
+                <span>về <span className="font-medium text-ink-700 dark:text-ink-100">{targetName ?? '—'}</span></span>
+                <span className="text-ink-300">·</span>
+                <span>{fmt(review.created_at)}</span>
+              </div>
 
               <div className="mt-2">
                 <AnimatedStars rating={review.rating} />

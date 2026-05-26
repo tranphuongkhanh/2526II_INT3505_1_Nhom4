@@ -25,7 +25,6 @@ import RoomCard from '../components/RoomCard';
 import Button from '../components/ui/Button';
 import Skeleton from '../components/ui/Skeleton';
 import EmptyState from '../components/ui/EmptyState';
-import { useToast } from '../components/ui/Toast';
 import { postApi } from '../lib/api';
 import { springs, easings } from '../lib/animations';
 
@@ -56,9 +55,9 @@ const CITIES = [
 ];
 
 const ROOM_TYPES = [
-  { key: 'BOARDING', label: 'Phòng trọ' },
-  { key: 'MINI_APT', label: 'Chung cư mini' },
-  { key: 'SHARED', label: 'Ở ghép' },
+  { key: 'PHONG_TRO', label: 'Phòng trọ' },
+  { key: 'CHUNG_CU_MINI', label: 'Chung cư mini' },
+  { key: 'O_GHEP', label: 'Ở ghép' },
   { key: 'HOMESTAY', label: 'Homestay' },
 ];
 
@@ -84,41 +83,6 @@ const PAGE_SIZE = 12;
 
 const fmtVND = (n) =>
   new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(n) + 'đ';
-
-// ═════════════════════════════════════════════════════════
-// Fallback data (when backend not reachable)
-// ═════════════════════════════════════════════════════════
-
-const FALLBACK_POSTS = Array.from({ length: 24 }).map((_, i) => {
-  const cities = ['Hà Nội', 'TP. Hồ Chí Minh', 'Đà Nẵng'];
-  const districts = ['Cầu Giấy', 'Đống Đa', 'Quận 1', 'Bình Thạnh', 'Thủ Đức', 'Hải Châu'];
-  const types = ['Phòng trọ', 'Studio', 'Phòng ghép', 'Căn hộ'];
-  const imgs = [
-    'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=800&q=70',
-    'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=70',
-    'https://images.unsplash.com/photo-1554995207-c18c203602cb?auto=format&fit=crop&w=800&q=70',
-    'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=70',
-    'https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&w=800&q=70',
-    'https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=800&q=70',
-    'https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=800&q=70',
-    'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=800&q=70',
-  ];
-  const allAmen = ['wifi', 'ac', 'fridge', 'parking', 'wc', 'security'];
-  return {
-    id: `fallback-${i + 1}`,
-    title: `Phòng trọ ${types[i % types.length]} #${i + 1} — đầy đủ tiện nghi`,
-    thumbnailUrl: imgs[i % imgs.length],
-    price: 1_500_000 + (i % 8) * 800_000,
-    city: cities[i % cities.length],
-    district: districts[i % districts.length],
-    area: 16 + (i % 6) * 4,
-    type: types[i % types.length],
-    amenities: allAmen.slice(0, 3 + (i % 4)),
-    rating: 4 + ((i * 0.13) % 1),
-    reviewCount: 5 + (i * 3) % 60,
-    createdAt: Date.now() - i * 86400000,
-  };
-});
 
 // ═════════════════════════════════════════════════════════
 // Hooks for URL-synced filters
@@ -596,38 +560,11 @@ function Pagination({ current, total, onChange }) {
 }
 
 // ═════════════════════════════════════════════════════════
-// Card matching against filters (used when API returns unfiltered fallback data)
-// ═════════════════════════════════════════════════════════
-
-const CITY_TO_DISTRICTS = Object.fromEntries(CITIES.map((c) => [c.name, new Set(c.districts)]));
-
-function matchesFilters(post, f) {
-  if (f.city && post.city !== f.city) return false;
-  if (f.district && post.district !== f.district) return false;
-  if (f.minPrice && post.price < f.minPrice) return false;
-  if (f.maxPrice && post.price > f.maxPrice) return false;
-  if (f.amenities.length && !f.amenities.every((a) => (post.amenities || []).includes(a))) return false;
-  // roomTypes are server-side; skip locally
-  return true;
-}
-
-function sortPosts(list, sort) {
-  const arr = [...list];
-  switch (sort) {
-    case 'price_asc':  return arr.sort((a, b) => a.price - b.price);
-    case 'price_desc': return arr.sort((a, b) => b.price - a.price);
-    case 'rating':     return arr.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-    default:           return arr.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-  }
-}
-
-// ═════════════════════════════════════════════════════════
 // Page
 // ═════════════════════════════════════════════════════════
 
 export function SearchPage() {
   const { filters, update, reset } = useFilters();
-  const toast = useToast();
   const resultsRef = useRef(null);
 
   const [posts, setPosts] = useState([]);
@@ -667,24 +604,14 @@ export function SearchPage() {
         if (cancelled) return;
         const list = res?.items ?? [];
         const total = res?.totalCount ?? list.length;
-        if (list.length > 0) {
-          setPosts(list);
-          setTotalCount(total);
-        } else {
-          // empty server response → fall back to local filtering of demo data
-          const filtered = sortPosts(FALLBACK_POSTS.filter((p) => matchesFilters(p, filters)), filters.sort);
-          setTotalCount(filtered.length);
-          const start = (filters.page - 1) * PAGE_SIZE;
-          setPosts(filtered.slice(start, start + PAGE_SIZE));
-        }
+        setPosts(list);
+        setTotalCount(total);
       })
       .catch(() => {
         if (cancelled) return;
-        setError('Không thể kết nối tới máy chủ. Hiển thị dữ liệu mẫu.');
-        const filtered = sortPosts(FALLBACK_POSTS.filter((p) => matchesFilters(p, filters)), filters.sort);
-        setTotalCount(filtered.length);
-        const start = (filters.page - 1) * PAGE_SIZE;
-        setPosts(filtered.slice(start, start + PAGE_SIZE));
+        setError('Không thể kết nối tới máy chủ. Vui lòng thử lại.');
+        setPosts([]);
+        setTotalCount(0);
       })
       .finally(() => !cancelled && setIsLoading(false));
 

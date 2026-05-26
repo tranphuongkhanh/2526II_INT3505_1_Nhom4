@@ -32,9 +32,15 @@ public class ReviewResponse {
     
     @JsonProperty("target_room_id")
     private Long targetRoomId;
-    
+
+    @JsonProperty("target_room_title")
+    private String targetRoomTitle;
+
     @JsonProperty("target_user_id")
     private Long targetUserId;
+
+    @JsonProperty("target_user_name")
+    private String targetUserName;
     
     @JsonProperty("contract_id")
     private Long contractId;
@@ -57,7 +63,9 @@ public class ReviewResponse {
                 .reviewerName(review.getReviewer() != null ? review.getReviewer().getFullName() : null)
                 .reviewerAvatar(review.getReviewer() != null ? review.getReviewer().getAvatarUrl() : null)
                 .targetRoomId(review.getTargetRoom() != null ? review.getTargetRoom().getId() : null)
+                .targetRoomTitle(review.getTargetRoom() != null ? review.getTargetRoom().getTitle() : null)
                 .targetUserId(review.getTargetUser() != null ? review.getTargetUser().getId() : null)
+                .targetUserName(review.getTargetUser() != null ? review.getTargetUser().getFullName() : null)
                 .contractId(review.getContract() != null ? review.getContract().getId() : null)
                 .rating(review.getRating())
                 .comment(review.getComment())

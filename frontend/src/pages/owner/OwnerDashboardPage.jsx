@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import { roomApi, postApi, paymentApi } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { useToast } from '../../components/ui/Toast';
 import { springs } from '../../lib/animations';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -141,9 +140,9 @@ function StatusBadge({ status }) {
 export default function OwnerDashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  useToast();
 
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [rooms, setRooms] = useState([]);
   const [posts, setPosts] = useState([]);
   const [payments, setPayments] = useState([]);
@@ -151,16 +150,19 @@ export default function OwnerDashboardPage() {
 
   useEffect(() => {
     Promise.all([
-      roomApi.getAll().catch(() => []),
-      postApi.getMyPosts().catch(() => []),
-      paymentApi.getMyPayments().catch(() => []),
+      roomApi.getAll(),
+      postApi.getMyPosts(),
+      paymentApi.getMyPayments(),
     ]).then(([r, p, pay]) => {
       const toArr = (x) => (Array.isArray(x) ? x : (x?.content ?? x?.items ?? x?.data ?? []));
       setRooms(toArr(r));
       setPosts(toArr(p));
       setPayments(toArr(pay));
-      setLoading(false);
       setTimeout(() => setScrambleActive(true), 80);
+    }).catch(() => {
+      setError(true);
+    }).finally(() => {
+      setLoading(false);
     });
   }, []);
 
@@ -185,6 +187,19 @@ export default function OwnerDashboardPage() {
     () => [...posts].sort((a, b) => new Date(b.createdAt ?? 0) - new Date(a.createdAt ?? 0)).slice(0, 5),
     [posts],
   );
+
+  if (!loading && error) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={springs.smooth}
+        className="flex flex-col items-center justify-center py-24 text-center"
+      >
+        <p className="text-ink-400">Không thể tải dữ liệu. Vui lòng thử lại sau.</p>
+      </motion.div>
+    );
+  }
 
   if (!loading && rooms.length === 0) {
     return (
