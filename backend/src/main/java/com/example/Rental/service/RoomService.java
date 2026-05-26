@@ -20,6 +20,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Service
@@ -87,8 +88,8 @@ public class RoomService {
                 .owner(owner)
                 .title(request.getTitle())
                 .description(request.getDescription())
-                .price(request.getPrice())
-                .areaMq(request.getAreaMq())
+                .price(request.getPrice() != null ? request.getPrice() : BigDecimal.ZERO)
+                .areaMq(request.getAreaMq() != null ? request.getAreaMq() : 0.0)
                 .roomType(request.getRoomType())
                 .address(request.getAddress())
                 .ward(request.getWard())
@@ -98,12 +99,12 @@ public class RoomService {
                 .hasFridge(request.getHasFridge())
                 .hasPrivateWc(request.getHasPrivateWc())
                 .hasSecurity(request.getHasSecurity())
-                .wifiFee(request.getWifiFee())
-                .waterPricePerUnit(request.getWaterPricePerUnit())
-                .electricityPricePerUnit(request.getElectricityPricePerUnit())
-                .serviceFee(request.getServiceFee())
-                .bikeParkingFee(request.getBikeParkingFee())
-                .deposit(request.getDeposit())
+                .wifiFee(request.getWifiFee() != null ? request.getWifiFee() : BigDecimal.ZERO)
+                .waterPricePerUnit(request.getWaterPricePerUnit() != null ? request.getWaterPricePerUnit() : BigDecimal.ZERO)
+                .electricityPricePerUnit(request.getElectricityPricePerUnit() != null ? request.getElectricityPricePerUnit() : BigDecimal.ZERO)
+                .serviceFee(request.getServiceFee() != null ? request.getServiceFee() : BigDecimal.ZERO)
+                .bikeParkingFee(request.getBikeParkingFee() != null ? request.getBikeParkingFee() : BigDecimal.ZERO)
+                .deposit(request.getDeposit() != null ? request.getDeposit() : BigDecimal.ZERO)
                 .rentalStatus(RentalStatus.AVAILABLE)
                 .avgRating(0.0)
                 .reviewCount(0)
@@ -134,8 +135,8 @@ public class RoomService {
 
         room.setTitle(request.getTitle());
         room.setDescription(request.getDescription());
-        room.setPrice(request.getPrice());
-        room.setAreaMq(request.getAreaMq());
+        room.setPrice(request.getPrice() != null ? request.getPrice() : BigDecimal.ZERO);
+        room.setAreaMq(request.getAreaMq() != null ? request.getAreaMq() : 0.0);
         room.setRoomType(request.getRoomType());
         room.setAddress(request.getAddress());
         room.setWard(request.getWard());
@@ -145,12 +146,12 @@ public class RoomService {
         room.setHasFridge(request.getHasFridge());
         room.setHasPrivateWc(request.getHasPrivateWc());
         room.setHasSecurity(request.getHasSecurity());
-        room.setWifiFee(request.getWifiFee());
-        room.setWaterPricePerUnit(request.getWaterPricePerUnit());
-        room.setElectricityPricePerUnit(request.getElectricityPricePerUnit());
-        room.setServiceFee(request.getServiceFee());
-        room.setBikeParkingFee(request.getBikeParkingFee());
-        room.setDeposit(request.getDeposit());
+        room.setWifiFee(request.getWifiFee() != null ? request.getWifiFee() : BigDecimal.ZERO);
+        room.setWaterPricePerUnit(request.getWaterPricePerUnit() != null ? request.getWaterPricePerUnit() : BigDecimal.ZERO);
+        room.setElectricityPricePerUnit(request.getElectricityPricePerUnit() != null ? request.getElectricityPricePerUnit() : BigDecimal.ZERO);
+        room.setServiceFee(request.getServiceFee() != null ? request.getServiceFee() : BigDecimal.ZERO);
+        room.setBikeParkingFee(request.getBikeParkingFee() != null ? request.getBikeParkingFee() : BigDecimal.ZERO);
+        room.setDeposit(request.getDeposit() != null ? request.getDeposit() : BigDecimal.ZERO);
 
         Room updatedRoom = roomRepository.save(room);
         return fromEntity(updatedRoom);
