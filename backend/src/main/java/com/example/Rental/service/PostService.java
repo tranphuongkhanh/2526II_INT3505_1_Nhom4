@@ -167,19 +167,36 @@ public class PostService {
         Page<Post> posts = postRepository.findByCreatedById(owner.getId(), pageable);
 
         // 3. Map sang DTO
-        return posts.map(post -> OwnerPostResponse.builder()
-                .id(post.getId())
-                .roomTitle(post.getRoom().getTitle())
-                .status(post.getStatus())
-                .rejectReason(post.getRejectReason())
-                .listingFee(post.getListingFee())
-                .startDate(post.getStartDate())
-                .endDate(post.getEndDate())
-                .viewCount(post.getViewCount())
-                .favoriteCount(post.getFavoriteCount())
-                .createdAt(post.getCreatedAt())
-                .build()
-        );
+        return posts.map(post -> {
+            Room room = post.getRoom();
+            String thumbnailUrl = room.getImages() == null ? null : room.getImages().stream()
+                    .filter(img -> Boolean.TRUE.equals(img.getIsThumbnail()))
+                    .map(RoomImage::getImageUrl)
+                    .findFirst()
+                    .orElse(room.getImages().stream()
+                            .map(RoomImage::getImageUrl)
+                            .findFirst()
+                            .orElse(null));
+            String address = java.util.stream.Stream.of(
+                    room.getAddress(), room.getDistrict(), room.getCity())
+                    .filter(s -> s != null && !s.isBlank())
+                    .collect(java.util.stream.Collectors.joining(", "));
+            return OwnerPostResponse.builder()
+                    .id(post.getId())
+                    .roomTitle(room.getTitle())
+                    .status(post.getStatus())
+                    .rejectReason(post.getRejectReason())
+                    .listingFee(post.getListingFee())
+                    .startDate(post.getStartDate())
+                    .endDate(post.getEndDate())
+                    .viewCount(post.getViewCount())
+                    .favoriteCount(post.getFavoriteCount())
+                    .createdAt(post.getCreatedAt())
+                    .thumbnailUrl(thumbnailUrl)
+                    .price(room.getPrice())
+                    .address(address.isBlank() ? null : address)
+                    .build();
+        });
     }
 
     @Transactional
@@ -388,9 +405,10 @@ public class PostService {
 
     // --- Helper Method ---
     private AdminPostResponse mapToAdminPostResponse(Post post) {
+        Room room = post.getRoom();
         return AdminPostResponse.builder()
                 .id(post.getId())
-                .roomTitle(post.getRoom().getTitle())
+                .roomTitle(room.getTitle())
                 .ownerName(post.getCreatedBy().getFullName())
                 .ownerEmail(post.getCreatedBy().getEmail())
                 .status(post.getStatus())
@@ -400,6 +418,36 @@ public class PostService {
                 .rejectReason(post.getRejectReason())
                 .approvedByEmail(post.getApprovedBy() != null ? post.getApprovedBy().getEmail() : null)
                 .approvedAt(post.getApprovedAt())
+                // Room details
+                .price(room.getPrice())
+                .deposit(room.getDeposit())
+                .areaMq(room.getAreaMq())
+                .roomType(room.getRoomType())
+                .description(room.getDescription())
+                .address(room.getAddress())
+                .ward(room.getWard())
+                .district(room.getDistrict())
+                .city(room.getCity())
+                .hasAc(room.getHasAc())
+                .hasFridge(room.getHasFridge())
+                .hasPrivateWc(room.getHasPrivateWc())
+                .hasSecurity(room.getHasSecurity())
+                .wifiFee(room.getWifiFee())
+                .electricityPricePerUnit(room.getElectricityPricePerUnit())
+                .waterPricePerUnit(room.getWaterPricePerUnit())
+                .serviceFee(room.getServiceFee())
+                .bikeParkingFee(room.getBikeParkingFee())
+                .images(room.getImages() != null
+                        ? room.getImages().stream()
+                                .sorted(java.util.Comparator.comparingInt(img -> img.getDisplayOrder() != null ? img.getDisplayOrder() : 0))
+                                .map(img -> com.example.Rental.dto.response.RoomImageResponse.builder()
+                                        .id(img.getId())
+                                        .imageUrl(img.getImageUrl())
+                                        .thumbnail(img.getIsThumbnail())
+                                        .displayOrder(img.getDisplayOrder())
+                                        .build())
+                                .collect(java.util.stream.Collectors.toList())
+                        : java.util.Collections.emptyList())
                 .build();
     }
 }
