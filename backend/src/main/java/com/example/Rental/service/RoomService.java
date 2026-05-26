@@ -2,6 +2,7 @@ package com.example.Rental.service;
 
 import com.example.Rental.dto.request.RoomFilterRequest;
 import com.example.Rental.dto.request.RoomRequest;
+import com.example.Rental.dto.response.RoomImageResponse;
 import com.example.Rental.dto.response.RoomResponse;
 import com.example.Rental.entity.Room;
 import com.example.Rental.entity.User;
@@ -21,6 +22,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -60,9 +64,21 @@ public class RoomService {
                 .reviewCount(room.getReviewCount())
                 .createdAt(room.getCreatedAt())
                 .updatedAt(room.getUpdatedAt())
+                .images(room.getImages() != null
+                    ? room.getImages().stream()
+                        .sorted(Comparator.comparingInt(img -> img.getDisplayOrder() != null ? img.getDisplayOrder() : 0))
+                        .map(img -> RoomImageResponse.builder()
+                            .id(img.getId())
+                            .imageUrl(img.getImageUrl())
+                            .thumbnail(img.getIsThumbnail())
+                            .displayOrder(img.getDisplayOrder())
+                            .build())
+                        .collect(Collectors.toList())
+                    : Collections.emptyList())
                 .build();
     }
 
+    @Transactional(readOnly = true)
     public Page<RoomResponse> getAllRoomsByOwner(Long ownerId, RoomFilterRequest filter, int page, int size) {
         // Chuyển trang từ 1-index sang 0-index, mặc định sắp xếp phòng mới nhất lên đầu
         int pageNumber = page - 1;
@@ -123,6 +139,7 @@ public class RoomService {
         return room;
     }
 
+    @Transactional(readOnly = true)
     public RoomResponse getRoomDetail(Long roomId, Long ownerId) {
         Room room = getRoomEntity(roomId, ownerId);
         return fromEntity(room);
