@@ -19,6 +19,9 @@ public class ReportResponse {
     
     @JsonProperty("post_id")
     private Long postId;
+
+    @JsonProperty("post_title")
+    private String postTitle;
     
     @JsonProperty("reporter_id")
     private Long reporterId;
@@ -48,6 +51,8 @@ public class ReportResponse {
         return ReportResponse.builder()
                 .id(report.getId())
                 .postId(report.getPost() != null ? report.getPost().getId() : null)
+                .postTitle(report.getPost() != null && report.getPost().getRoom() != null
+                        ? report.getPost().getRoom().getTitle() : null)
                 .reporterId(report.getReporter() != null ? report.getReporter().getId() : null)
                 .reporterName(report.getReporter() != null ? report.getReporter().getFullName() : null)
                 .reporterEmail(report.getReporter() != null ? report.getReporter().getEmail() : null)
