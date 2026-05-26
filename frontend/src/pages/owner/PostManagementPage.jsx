@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileText, Eye, Heart, Calendar, AlertCircle, BarChart2, Plus,
-  X, TrendingUp, RefreshCw, Home,
+  X, TrendingUp, RefreshCw, Home, MapPin, Ruler, Wind, Refrigerator,
+  ShieldCheck, Flame, Wifi, Zap, Droplets, Star, DollarSign,
 } from 'lucide-react';
 import { postApi, roomApi } from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
@@ -90,8 +91,8 @@ function BarChart({ data }) {
   );
 }
 
-// ── Stats drawer ───────────────────────────────────────────
-function StatsDrawer({ postId, onClose }) {
+// ── Stats modal popup ──────────────────────────────────────
+function StatsModal({ postId, onClose }) {
   const toast = useToast();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -99,6 +100,7 @@ function StatsDrawer({ postId, onClose }) {
   useEffect(() => {
     if (!postId) return;
     setLoading(true);
+    setStats(null);
     postApi.getStats(postId)
       .then(setStats)
       .catch(() => toast.error('Không thể tải thống kê.'))
@@ -111,81 +113,90 @@ function StatsDrawer({ postId, onClose }) {
         <>
           <motion.div
             key="stats-backdrop"
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={onClose}
           />
           <motion.div
-            key="stats-panel"
-            className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-md bg-white dark:bg-ink-900 border-l border-ink-100 dark:border-ink-700 shadow-elevated flex flex-col"
-            initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
-            transition={springs.smooth}
+            key="stats-modal"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-ink-100 dark:border-ink-700">
-              <div className="flex items-center gap-2">
-                <BarChart2 className="h-5 w-5 text-primary-500" />
-                <h3 className="font-semibold text-ink-900 dark:text-ink-50">Thống kê bài đăng</h3>
-              </div>
-              <button type="button" onClick={onClose} className="p-2 rounded-lg text-ink-400 hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6 space-y-8">
-              {loading ? (
-                <div className="space-y-6">
-                  {[1, 2, 3].map((i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
+            <motion.div
+              className="pointer-events-auto w-full max-w-lg bg-white dark:bg-ink-900 rounded-2xl border border-ink-100 dark:border-ink-700 shadow-elevated flex flex-col max-h-[85vh]"
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              transition={springs.smooth}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-ink-100 dark:border-ink-700 shrink-0">
+                <div className="flex items-center gap-2">
+                  <BarChart2 className="h-5 w-5 text-primary-500" />
+                  <h3 className="font-semibold text-ink-900 dark:text-ink-50">Thống kê bài đăng</h3>
                 </div>
-              ) : !stats ? (
-                <div className="text-center py-12 text-ink-400">Không có dữ liệu.</div>
-              ) : (
-                <>
-                  {/* Summary */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-ink-50 dark:bg-ink-800 rounded-xl p-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Eye className="h-4 w-4 text-primary-500" />
-                        <span className="text-xs text-ink-400 font-medium">Tổng lượt xem</span>
-                      </div>
-                      <p className="text-2xl font-bold font-mono text-ink-900 dark:text-ink-50">{stats.totalViews ?? 0}</p>
-                    </div>
-                    <div className="bg-ink-50 dark:bg-ink-800 rounded-xl p-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Heart className="h-4 w-4 text-red-500" />
-                        <span className="text-xs text-ink-400 font-medium">Tổng lượt thích</span>
-                      </div>
-                      <p className="text-2xl font-bold font-mono text-ink-900 dark:text-ink-50">{stats.favoriteCount ?? 0}</p>
-                    </div>
-                  </div>
+                <button type="button" onClick={onClose} className="p-2 rounded-lg text-ink-400 hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
 
-                  {/* Views by day chart */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <TrendingUp className="h-4 w-4 text-primary-500" />
-                      <h4 className="text-sm font-semibold text-ink-900 dark:text-ink-50">Lượt xem theo ngày</h4>
-                    </div>
-                    <LineChart data={
-                      Object.entries(stats.viewsByDay ?? {})
-                        .sort(([a], [b]) => a.localeCompare(b))
-                        .map(([, count]) => ({ count }))
-                    } />
+              {/* Body */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                {loading ? (
+                  <div className="space-y-6">
+                    {[1, 2, 3].map((i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
                   </div>
+                ) : !stats ? (
+                  <div className="text-center py-12 text-ink-400">Không có dữ liệu.</div>
+                ) : (
+                  <>
+                    {/* Summary */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-ink-50 dark:bg-ink-800 rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Eye className="h-4 w-4 text-primary-500" />
+                          <span className="text-xs text-ink-400 font-medium">Tổng lượt xem</span>
+                        </div>
+                        <p className="text-2xl font-bold font-mono text-ink-900 dark:text-ink-50">{stats.totalViews ?? 0}</p>
+                      </div>
+                      <div className="bg-ink-50 dark:bg-ink-800 rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Heart className="h-4 w-4 text-red-500" />
+                          <span className="text-xs text-ink-400 font-medium">Tổng lượt thích</span>
+                        </div>
+                        <p className="text-2xl font-bold font-mono text-ink-900 dark:text-ink-50">{stats.favoriteCount ?? 0}</p>
+                      </div>
+                    </div>
 
-                  {/* Views by hour bar chart */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <BarChart2 className="h-4 w-4 text-primary-500" />
-                      <h4 className="text-sm font-semibold text-ink-900 dark:text-ink-50">Lượt xem theo giờ</h4>
+                    {/* Views by day chart */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <TrendingUp className="h-4 w-4 text-primary-500" />
+                        <h4 className="text-sm font-semibold text-ink-900 dark:text-ink-50">Lượt xem theo ngày</h4>
+                      </div>
+                      <LineChart data={
+                        Object.entries(stats.viewsByDay ?? {})
+                          .sort(([a], [b]) => a.localeCompare(b))
+                          .map(([, count]) => ({ count }))
+                      } />
                     </div>
-                    <BarChart data={
-                      Object.entries(stats.viewsByHour ?? {})
-                        .sort(([a], [b]) => Number(a) - Number(b))
-                        .map(([, count]) => ({ count }))
-                    } />
-                  </div>
-                </>
-              )}
-            </div>
+
+                    {/* Views by hour bar chart */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <BarChart2 className="h-4 w-4 text-primary-500" />
+                        <h4 className="text-sm font-semibold text-ink-900 dark:text-ink-50">Lượt xem theo giờ</h4>
+                      </div>
+                      <BarChart data={
+                        Object.entries(stats.viewsByHour ?? {})
+                          .sort(([a], [b]) => Number(a) - Number(b))
+                          .map(([, count]) => ({ count }))
+                      } />
+                    </div>
+                  </>
+                )}
+              </div>
+            </motion.div>
           </motion.div>
         </>
       ) : null}
@@ -281,6 +292,18 @@ function ExtendModal({ post, onClose, onExtended }) {
   );
 }
 
+const ROOM_TYPE_LABEL = {
+  PHONG_TRO: 'Phòng trọ',
+  CHUNG_CU_MINI: 'Chung cư mini',
+  O_GHEP: 'Ở ghép',
+  HOMESTAY: 'Homestay',
+};
+
+function fmtPrice(v) {
+  if (v == null || v === '' || Number(v) === 0) return null;
+  return Number(v).toLocaleString('vi-VN');
+}
+
 // ── Create post modal ──────────────────────────────────────
 function CreatePostModal({ isOpen, onClose, onCreated }) {
   const toast = useToast();
@@ -307,6 +330,8 @@ function CreatePostModal({ isOpen, onClose, onCreated }) {
   }, [isOpen]);
 
   const selectedRoom = rooms.find((r) => String(r.id) === roomId);
+  const thumbnail = selectedRoom?.images?.find((i) => i.thumbnail)?.imageUrl
+    ?? selectedRoom?.images?.[0]?.imageUrl;
 
   const handleCreate = async () => {
     if (!roomId) { toast.error('Vui lòng chọn phòng.'); return; }
@@ -332,12 +357,30 @@ function CreatePostModal({ isOpen, onClose, onCreated }) {
     }
   };
 
+  const amenities = selectedRoom ? [
+    selectedRoom.hasAc        && { icon: Wind,       label: 'Điều hoà' },
+    selectedRoom.hasFridge    && { icon: Refrigerator, label: 'Tủ lạnh' },
+    selectedRoom.hasPrivateWc && { icon: Flame,       label: 'WC riêng' },
+    selectedRoom.hasSecurity  && { icon: ShieldCheck, label: 'Bảo vệ' },
+  ].filter(Boolean) : [];
+
+  const fees = selectedRoom ? [
+    { icon: Wifi,     label: 'Wifi',      value: fmtPrice(selectedRoom.wifiFee),                  unit: '/tháng' },
+    { icon: Zap,      label: 'Điện',      value: fmtPrice(selectedRoom.electricityPricePerUnit),   unit: '/số' },
+    { icon: Droplets, label: 'Nước',      value: fmtPrice(selectedRoom.waterPricePerUnit),         unit: '/m³' },
+    { icon: Home,     label: 'Dịch vụ',   value: fmtPrice(selectedRoom.serviceFee),               unit: '/tháng' },
+  ].filter((f) => f.value) : [];
+
+  const address = selectedRoom
+    ? [selectedRoom.address, selectedRoom.ward, selectedRoom.district, selectedRoom.city].filter(Boolean).join(', ')
+    : '';
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title="Tạo bài đăng mới"
-      size="sm"
+      size="lg"
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>Huỷ</Button>
@@ -346,6 +389,7 @@ function CreatePostModal({ isOpen, onClose, onCreated }) {
       }
     >
       <div className="space-y-5 py-2">
+        {/* Room selector */}
         <div>
           <label className="block text-sm font-medium text-ink-700 dark:text-ink-200 mb-1.5">Chọn phòng</label>
           {loadingRooms ? (
@@ -363,34 +407,110 @@ function CreatePostModal({ isOpen, onClose, onCreated }) {
           )}
         </div>
 
+        {/* Room detail preview */}
         {selectedRoom && (
-          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl bg-ink-50 dark:bg-ink-800 p-3 flex items-center gap-3">
-            <Home className="h-4 w-4 text-primary-500 shrink-0" />
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-ink-900 dark:text-ink-50 truncate">{selectedRoom.title}</p>
-              <p className="text-xs text-ink-400">{Number(selectedRoom.price ?? 0).toLocaleString('vi-VN')} VNĐ/tháng</p>
+          <motion.div
+            key={selectedRoom.id}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl border border-ink-200 dark:border-ink-700 overflow-hidden"
+          >
+            {/* Thumbnail */}
+            <div className="relative h-44 bg-ink-100 dark:bg-ink-800">
+              {thumbnail
+                ? <img src={thumbnail} alt="" className="h-full w-full object-cover" />
+                : <div className="h-full w-full flex items-center justify-center"><Home className="h-10 w-10 text-ink-300" /></div>}
+              <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent px-4 pb-3 pt-8">
+                <p className="text-white font-semibold text-base leading-tight">{selectedRoom.title}</p>
+                <p className="text-white/80 text-xs mt-0.5">{ROOM_TYPE_LABEL[selectedRoom.roomType] ?? selectedRoom.roomType}</p>
+              </div>
+              {selectedRoom.avgRating > 0 && (
+                <div className="absolute top-3 right-3 flex items-center gap-1 bg-black/50 rounded-lg px-2 py-1 text-white text-xs">
+                  <Star className="h-3 w-3 fill-accent-400 text-accent-400" />
+                  {selectedRoom.avgRating.toFixed(1)}
+                  <span className="text-white/60">({selectedRoom.reviewCount})</span>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 space-y-4">
+              {/* Price + area */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xl font-bold text-primary-500">{Number(selectedRoom.price ?? 0).toLocaleString('vi-VN')}</span>
+                  <span className="text-sm text-ink-400 ml-1">VNĐ/tháng</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-sm text-ink-500 dark:text-ink-300">
+                  <Ruler className="h-4 w-4" />
+                  {selectedRoom.areaMq ?? '?'} m²
+                </div>
+              </div>
+
+              {/* Address */}
+              {address && (
+                <div className="flex items-start gap-2 text-sm text-ink-500 dark:text-ink-300">
+                  <MapPin className="h-4 w-4 shrink-0 mt-0.5 text-ink-400" />
+                  <span className="leading-snug">{address}</span>
+                </div>
+              )}
+
+              {/* Amenities */}
+              {amenities.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {amenities.map(({ icon: Icon, label }) => (
+                    <span key={label} className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 text-xs font-medium">
+                      <Icon className="h-3.5 w-3.5" />
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Fees */}
+              {fees.length > 0 && (
+                <div className="grid grid-cols-2 gap-2">
+                  {fees.map(({ icon: Icon, label, value, unit }) => (
+                    <div key={label} className="flex items-center gap-2 rounded-xl bg-ink-50 dark:bg-ink-800 px-3 py-2">
+                      <Icon className="h-3.5 w-3.5 text-ink-400 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-[10px] text-ink-400 leading-none mb-0.5">{label}</p>
+                        <p className="text-xs font-semibold text-ink-800 dark:text-ink-100 truncate">{value} VNĐ{unit}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Deposit */}
+              {fmtPrice(selectedRoom.deposit) && (
+                <p className="text-xs text-ink-400">
+                  Đặt cọc: <span className="font-semibold text-ink-700 dark:text-ink-200">{fmtPrice(selectedRoom.deposit)} VNĐ</span>
+                </p>
+              )}
             </div>
           </motion.div>
         )}
 
-        <div>
-          <label className="block text-sm font-medium text-ink-700 dark:text-ink-200 mb-1.5">Đơn vị thời gian</label>
-          <select
-            value={durationType}
-            onChange={(e) => setDurationType(e.target.value)}
-            className="w-full h-12 rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-900 text-ink-900 dark:text-ink-50 px-4 text-sm outline-none focus:border-primary-500 transition-colors"
-          >
-            {DURATION_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
+        {/* Duration */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-ink-700 dark:text-ink-200 mb-1.5">Đơn vị thời gian</label>
+            <select
+              value={durationType}
+              onChange={(e) => setDurationType(e.target.value)}
+              className="w-full h-12 rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-900 text-ink-900 dark:text-ink-50 px-4 text-sm outline-none focus:border-primary-500 transition-colors"
+            >
+              {DURATION_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+          </div>
+          <Input
+            label="Số lượng"
+            type="number"
+            min="1"
+            value={durationValue}
+            onChange={(e) => setDurationValue(e.target.value)}
+          />
         </div>
-
-        <Input
-          label="Số lượng"
-          type="number"
-          min="1"
-          value={durationValue}
-          onChange={(e) => setDurationValue(e.target.value)}
-        />
 
         <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 p-3 text-xs text-amber-700 dark:text-amber-400">
           Sau khi tạo bài đăng, bạn sẽ được chuyển đến trang thanh toán VNPay. Bài đăng sẽ hiển thị sau khi thanh toán thành công và được admin duyệt.
@@ -404,7 +524,7 @@ function CreatePostModal({ isOpen, onClose, onCreated }) {
 function PostCard({ post, onDelete, onExtend, onStats }) {
   const id = post.id ?? post.postId;
   const status = post.status;
-  const badge = STATUS_BADGE[status] ?? STATUS_BADGE.EXPIRED;
+  const badge = STATUS_BADGE[status] ?? STATUS_BADGE.HIDDEN;
   const thumbnail = post.thumbnailUrl ?? post.room?.images?.[0]?.imageUrl;
 
   return (
@@ -422,21 +542,40 @@ function PostCard({ post, onDelete, onExtend, onStats }) {
 
       <div className="flex gap-4 p-4">
         {/* Thumbnail */}
-        <div className="h-20 w-24 rounded-xl overflow-hidden bg-ink-100 dark:bg-ink-700 shrink-0">
+        <div className="h-24 w-28 rounded-xl overflow-hidden bg-ink-100 dark:bg-ink-700 shrink-0">
           {thumbnail
             ? <img src={thumbnail} alt="" className="h-full w-full object-cover" />
-            : <div className="h-full w-full flex items-center justify-center"><FileText className="h-6 w-6 text-ink-300" /></div>}
+            : <div className="h-full w-full flex items-center justify-center"><Home className="h-6 w-6 text-ink-300" /></div>}
         </div>
 
         {/* Info */}
         <div className="flex-1 min-w-0 space-y-1.5">
           <div className="flex items-start gap-2 justify-between">
-            <h3 className="font-semibold text-ink-900 dark:text-ink-50 text-sm truncate">{post.roomTitle ?? '—'}</h3>
+            <h3 className="font-semibold text-ink-900 dark:text-ink-50 text-sm leading-snug line-clamp-2">{post.roomTitle ?? '—'}</h3>
             <span className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${badge.cls}`}>{badge.label}</span>
           </div>
+
+          {post.price != null && (
+            <div className="flex items-center gap-1 text-xs font-semibold text-primary-500">
+              <DollarSign className="h-3.5 w-3.5" />
+              {Number(post.price).toLocaleString('vi-VN')} VNĐ/tháng
+            </div>
+          )}
+
+          {post.address && (
+            <div className="flex items-center gap-1 text-xs text-ink-400 truncate">
+              <MapPin className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{post.address}</span>
+            </div>
+          )}
+
           <div className="flex items-center gap-3 text-xs text-ink-400">
-            <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />{fmtDate(post.startDate)} – {fmtDate(post.endDate)}</span>
+            <span className="flex items-center gap-1">
+              <Calendar className="h-3.5 w-3.5" />
+              {fmtDate(post.startDate)} – {fmtDate(post.endDate)}
+            </span>
           </div>
+
           <div className="flex items-center gap-3 text-xs text-ink-400">
             <span className="flex items-center gap-1"><Eye className="h-3.5 w-3.5" />{post.viewCount ?? 0}</span>
             <span className="flex items-center gap-1"><Heart className="h-3.5 w-3.5" />{post.favoriteCount ?? 0}</span>
