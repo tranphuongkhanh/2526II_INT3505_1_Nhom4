@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
 import {
   Search,
@@ -337,6 +337,19 @@ function Footer() {
 
 export function PublicLayout() {
   const location = useLocation();
+  const { role, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-base">
+        <div className="h-10 w-10 rounded-full border-2 border-primary-500/30 border-t-primary-500 animate-spin" />
+      </div>
+    );
+  }
+
+  if (role === 'OWNER') return <Navigate to="/owner" replace />;
+  if (role === 'ADMIN') return <Navigate to="/admin" replace />;
+
   return (
     <div className="min-h-screen flex flex-col bg-base">
       <Navbar />
