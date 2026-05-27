@@ -127,7 +127,12 @@ function ConvItem({ conv, isActive, onClick }) {
 export default function ChatPopup() {
   const { isAuthenticated } = useAuth();
   const { pathname } = useLocation();
-  if (!isAuthenticated || pathname.startsWith('/chat')) return null;
+  if (
+    !isAuthenticated ||
+    pathname.startsWith('/chat') ||
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/owner')
+  ) return null;
   return <ChatPopupInner />;
 }
 

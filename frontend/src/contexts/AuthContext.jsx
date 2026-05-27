@@ -21,11 +21,16 @@ export function AuthProvider({ children }) {
       .then((me) => {
         if (!cancelled) setUser(me);
       })
-      .catch(() => {
+      .catch((err) => {
         if (!cancelled) {
-          tokenStorage.clear();
-          setToken(null);
-          setUser(null);
+          // Only clear the token on auth errors (401/403), not transient network errors
+          const status = err?.response?.status;
+          if (status === 401 || status === 403) {
+            tokenStorage.clear();
+            setToken(null);
+            setUser(null);
+          }
+          // On network failure (no response), keep the token so the user stays logged in
         }
       })
       .finally(() => {
