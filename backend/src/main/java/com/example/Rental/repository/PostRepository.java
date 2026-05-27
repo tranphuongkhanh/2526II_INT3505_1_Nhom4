@@ -16,7 +16,7 @@ import com.example.Rental.enums.PostStatus;
 import com.example.Rental.enums.RoomType;
 
 public interface PostRepository extends JpaRepository<Post, Long> {
-    Page<Post> findByCreatedById(Long userId, Pageable pageable);
+    Page<Post> findByCreatedByIdAndStatusNot(Long userId, PostStatus status, Pageable pageable);
     List<Post> findByStatusOrderByCreatedAtDesc(PostStatus status);
 
     @Query("SELECT p FROM Post p JOIN FETCH p.room r WHERE p.status = 'APPROVED' AND p.endDate > CURRENT_TIMESTAMP")

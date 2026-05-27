@@ -345,11 +345,7 @@ function CreatePostModal({ isOpen, onClose, onCreated }) {
         durationValue: Number(durationValue),
       });
       onCreated?.(result);
-      if (result?.paymentUrl) {
-        window.location.href = result.paymentUrl;
-        return;
-      }
-      toast.success('Đã tạo bài đăng. Vui lòng thanh toán.');
+      toast.success('Đã gửi yêu cầu đăng bài. Vui lòng chờ Admin duyệt.');
       onClose();
     } catch (err) {
       toast.error(err.displayMessage ?? 'Tạo bài đăng thất bại.');
@@ -385,7 +381,7 @@ function CreatePostModal({ isOpen, onClose, onCreated }) {
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>Huỷ</Button>
-          <Button onClick={handleCreate} loading={loading}>Tạo & Thanh toán</Button>
+          <Button onClick={handleCreate} loading={loading}>Gửi yêu cầu đăng</Button>
         </>
       }
     >
@@ -514,7 +510,7 @@ function CreatePostModal({ isOpen, onClose, onCreated }) {
         </div>
 
         <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 p-3 text-xs text-amber-700 dark:text-amber-400">
-          Sau khi tạo bài đăng, bạn sẽ được chuyển đến trang thanh toán VNPay. Bài đăng sẽ hiển thị sau khi thanh toán thành công và được admin duyệt.
+          Bài đăng sẽ được gửi cho Admin duyệt. Sau khi được duyệt, bạn có thể vào mục "Lịch sử thanh toán" để tiến hành thanh toán phí đăng bài.
         </div>
       </div>
     </Modal>

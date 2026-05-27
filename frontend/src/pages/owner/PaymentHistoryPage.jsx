@@ -98,7 +98,8 @@ function TypeBadge({ type }) {
 
 // ── Status badge ──────────────────────────────────────────
 function PayStatusBadge({ status }) {
-  const isPaid = status === 'PAID' || status === 'COMPLETED';
+  const s = (status || '').toUpperCase();
+  const isPaid = s === 'PAID' || s === 'COMPLETED';
   return (
     <span
       className={[
@@ -115,6 +116,9 @@ function PayStatusBadge({ status }) {
 
 // ── Payment row ───────────────────────────────────────────
 function PaymentRow({ payment, index }) {
+  const isExtension = !!payment.extensionId;
+  const computedType = isExtension ? 'EXTENSION' : 'NEW';
+
   return (
     <motion.tr
       initial={{ opacity: 0, x: -8 }}
@@ -130,13 +134,29 @@ function PaymentRow({ payment, index }) {
         </span>
       </td>
       <td className="py-3.5 px-3 text-sm">
-        <TypeBadge type={payment.type} />
+        <TypeBadge type={computedType} />
       </td>
       <td className="py-3.5 px-3 text-sm font-semibold text-ink-900 dark:text-ink-50 text-right">
         {fmt(payment.amount)}
       </td>
       <td className="py-3.5 px-3 text-sm text-right">
         <PayStatusBadge status={payment.status} />
+        {(payment.status || '').toUpperCase() === 'PENDING' && (
+          payment.post?.status === 'APPROVED' || isExtension ? (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); payment.onRetry?.(payment.id); }}
+              disabled={payment.retrying}
+              className="block mt-1.5 ml-auto text-xs font-medium text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 hover:underline disabled:opacity-50"
+            >
+              {payment.retrying ? 'Đang tải...' : 'Thanh toán ngay'}
+            </button>
+          ) : (
+            <span className="block mt-1.5 ml-auto text-xs font-medium text-ink-400">
+              Chờ Admin duyệt bài
+            </span>
+          )
+        )}
       </td>
       <td className="py-3.5 px-3 text-sm text-ink-400 text-right whitespace-nowrap">
         {fmtDate(payment.createdAt ?? payment.date ?? payment.paidAt)}
@@ -164,6 +184,23 @@ export default function PaymentHistoryPage() {
   const [dateTo, setDateTo] = useState('');
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get('paymentStatus');
+    if (status) {
+      if (status === 'success') {
+        toast.success('Thanh toán thành công!');
+      } else if (status === 'failed') {
+        toast.error('Thanh toán thất bại hoặc đã bị huỷ!');
+      } else if (status === 'invalid_signature') {
+        toast.error('Chữ ký giao dịch không hợp lệ!');
+      } else if (status === 'already_paid') {
+        toast.error('Đơn này đã được thanh toán trước đó!');
+      } else {
+        toast.error('Có lỗi xảy ra trong quá trình thanh toán!');
+      }
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
     paymentApi
       .getMyPayments()
       .then((r) => {
@@ -175,8 +212,9 @@ export default function PaymentHistoryPage() {
   }, []);
 
   const filtered = payments.filter((p) => {
-    if (statusTab === 'PAID' && p.status !== 'PAID' && p.status !== 'COMPLETED') return false;
-    if (statusTab === 'PENDING' && (p.status === 'PAID' || p.status === 'COMPLETED')) return false;
+    const s = (p.status || '').toUpperCase();
+    if (statusTab === 'PAID' && s !== 'PAID' && s !== 'COMPLETED') return false;
+    if (statusTab === 'PENDING' && (s === 'PAID' || s === 'COMPLETED')) return false;
     const date = new Date(p.createdAt ?? p.date ?? p.paidAt ?? 0);
     if (dateFrom && date < new Date(dateFrom)) return false;
     if (dateTo && date > new Date(dateTo + 'T23:59:59')) return false;
@@ -184,12 +222,34 @@ export default function PaymentHistoryPage() {
   });
 
   const totalPaid = payments
-    .filter((p) => p.status === 'PAID' || p.status === 'COMPLETED')
+    .filter((p) => {
+      const s = (p.status || '').toUpperCase();
+      return s === 'PAID' || s === 'COMPLETED';
+    })
     .reduce((s, p) => s + (Number(p.amount) || 0), 0);
 
   const totalPending = payments
-    .filter((p) => p.status !== 'PAID' && p.status !== 'COMPLETED')
+    .filter((p) => {
+      const s = (p.status || '').toUpperCase();
+      return s !== 'PAID' && s !== 'COMPLETED';
+    })
     .reduce((s, p) => s + (Number(p.amount) || 0), 0);
+
+  const handleRetry = async (id) => {
+    setPayments((prev) => prev.map((p) => p.id === id ? { ...p, retrying: true } : p));
+    try {
+      const res = await paymentApi.retry(id);
+      if (res?.paymentUrl) {
+        window.location.href = res.paymentUrl;
+      } else {
+        toast.error('Không thể tạo link thanh toán.');
+      }
+    } catch (err) {
+      toast.error(err.displayMessage || 'Có lỗi xảy ra khi tạo link thanh toán.');
+    } finally {
+      setPayments((prev) => prev.map((p) => p.id === id ? { ...p, retrying: false } : p));
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -293,7 +353,7 @@ export default function PaymentHistoryPage() {
             </thead>
             <tbody>
               {filtered.map((payment, i) => (
-                <PaymentRow key={payment.id} payment={payment} index={i} />
+                <PaymentRow key={payment.id} payment={{ ...payment, onRetry: handleRetry }} index={i} />
               ))}
             </tbody>
           </table>

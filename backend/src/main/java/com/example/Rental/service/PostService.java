@@ -190,7 +190,7 @@ public class PostService {
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy user với email: " + email));
 
         // 2. Lấy danh sách bài đăng của user này
-        Page<Post> posts = postRepository.findByCreatedById(owner.getId(), pageable);
+        Page<Post> posts = postRepository.findByCreatedByIdAndStatusNot(owner.getId(), PostStatus.DELETED, pageable);
 
         // 3. Map sang DTO
         return posts.map(post -> {
@@ -366,7 +366,7 @@ public class PostService {
         }
 
         // 4. Thực hiện xóa mềm (Đổi trạng thái)
-        post.setStatus(PostStatus.HIDDEN);
+        post.setStatus(PostStatus.DELETED);
         
         // Cập nhật ngày kết thúc về hiện tại để bài viết lập tức hết hạn
         post.setEndDate(LocalDateTime.now());

@@ -42,6 +42,7 @@ public class SecurityConfig {
                     "/api/v1/payments/vnpay-return",
                     "/api/v1/public/**"
                 ).permitAll()
+                .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             );

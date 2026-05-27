@@ -7,7 +7,8 @@ import { useAuth } from '../contexts/AuthContext';
 import Avatar from '../components/ui/Avatar';
 import { springs } from '../lib/animations';
 
-const POLL_INTERVAL = 5000;
+import { socketService } from '../lib/socket';
+
 const MSG_LIMIT = 30;
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
@@ -156,7 +157,10 @@ export default function ChatPage() {
   const pollRef = useRef(null);
   const loadingMoreRef = useRef(false);
 
-  // ── Load conversations ──────────────────────────────────────────────────────
+  const activeConvIdRef = useRef(activeConvId);
+  useEffect(() => {
+    activeConvIdRef.current = activeConvId;
+  }, [activeConvId]);
 
   const loadConversations = useCallback(async () => {
     try {
@@ -169,9 +173,62 @@ export default function ChatPage() {
 
   useEffect(() => {
     loadConversations();
-    pollRef.current = setInterval(loadConversations, POLL_INTERVAL);
-    return () => clearInterval(pollRef.current);
-  }, [loadConversations]);
+    
+    socketService.connect(() => {
+      socketService.subscribe('/user/queue/messages', (msg) => {
+        const currentActiveConvId = activeConvIdRef.current;
+        
+        if (msg.type === 'READ_RECEIPT') {
+          // If we receive a read receipt for the current conversation, mark our sent messages as read
+          if (String(msg.conversationId) === String(currentActiveConvId)) {
+            setMessages(prev => prev.map(m => ({ ...m, isRead: true })));
+          }
+          return;
+        }
+
+        if (String(msg.conversationId) === String(currentActiveConvId)) {
+          setMessages((prev) => {
+            if (prev.find((m) => String(m.id) === String(msg.id))) return prev;
+            if (String(msg.senderId) === String(user?.id)) return prev;
+            return [msg, ...prev];
+          });
+          chatApi.markRead(msg.conversationId).catch(() => {});
+        }
+        
+        setConversations((prev) => {
+          let found = false;
+          const next = prev.map(c => {
+            if (String(c.id) === String(msg.conversationId)) {
+              found = true;
+              return {
+                ...c,
+                lastMessage: msg.content,
+                lastMessageContent: msg.content,
+                lastMessageAt: msg.createdAt,
+                unreadCount: (String(c.id) !== String(currentActiveConvId) && String(msg.senderId) !== String(user?.id)) 
+                  ? (c.unreadCount || 0) + 1 
+                  : c.unreadCount
+              };
+            }
+            return c;
+          });
+          if (!found) {
+            loadConversations();
+          }
+          return next.sort((a, b) => {
+            const timeA = a.lastMessageAt || a.updatedAt || 0;
+            const timeB = b.lastMessageAt || b.updatedAt || 0;
+            return new Date(timeB) - new Date(timeA);
+          });
+        });
+      });
+    });
+
+    return () => {
+      socketService.unsubscribe('/user/queue/messages');
+      // socketService.disconnect();
+    };
+  }, [loadConversations, user?.id]);
 
   // ── Load messages ───────────────────────────────────────────────────────────
 
