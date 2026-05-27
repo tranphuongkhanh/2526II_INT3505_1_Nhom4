@@ -15,6 +15,7 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     Page<Review> findByTargetUserIdAndStatus(Long userId, ReviewStatus status, Pageable pageable);
     Page<Review> findByStatus(ReviewStatus status, Pageable pageable);
     boolean existsByContractIdAndReviewType(Long contractId, com.example.Rental.enums.ReviewType reviewType);
+    java.util.Optional<Review> findByContractIdAndReviewType(Long contractId, com.example.Rental.enums.ReviewType reviewType);
 
     long countByStatus(ReviewStatus status);
 }
