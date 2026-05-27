@@ -7,6 +7,7 @@ import com.example.Rental.enums.BillStatus;
 import com.example.Rental.repository.RentalContractRepository;
 import com.example.Rental.repository.UtilityBillRepository;
 import com.example.Rental.repository.RoomRepository;
+import com.example.Rental.enums.NotificationType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,13 +22,16 @@ public class UtilityBillService {
     private final UtilityBillRepository utilityBillRepository;
     private final RentalContractRepository rentalContractRepository;
     private final RoomRepository roomRepository;
+    private final NotificationService notificationService;
 
     public UtilityBillService(UtilityBillRepository utilityBillRepository,
                               RentalContractRepository rentalContractRepository,
-                              RoomRepository roomRepository) {
+                              RoomRepository roomRepository,
+                              NotificationService notificationService) {
         this.utilityBillRepository = utilityBillRepository;
         this.rentalContractRepository = rentalContractRepository;
         this.roomRepository = roomRepository;
+        this.notificationService = notificationService;
     }
 
     public List<UtilityBill> listByContract(Long contractId) {
@@ -100,7 +104,19 @@ public class UtilityBillService {
                 .status(BillStatus.UNPAID)
                 .build();
 
-        return utilityBillRepository.save(bill);
+        UtilityBill savedBill = utilityBillRepository.save(bill);
+
+        // Gửi thông báo WebSocket realtime về hóa đơn mới cho Renter
+        notificationService.createAndSendNotification(
+                contract.getRenter(),
+                NotificationType.NEW_BILL,
+                "Hóa đơn dịch vụ mới",
+                "Bạn có hóa đơn điện nước mới tháng " + billingMonth + " cho phòng '" + room.getTitle() + "'. Tổng tiền: " + total + " VND.",
+                "bill",
+                savedBill.getId()
+        );
+
+        return savedBill;
     }
 
     public UtilityBill getById(Long billId) {

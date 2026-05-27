@@ -26,4 +26,6 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     // Cho các lần cuộn trang tiếp theo (có lọc)
     List<Notification> findByUserIdAndTypeInAndIdLessThanOrderByIdDesc(Long userId, List<NotificationType> types, Long cursor, Pageable pageable);
+
+    boolean existsByUserIdAndTypeAndRelatedEntityId(Long userId, NotificationType type, Long relatedEntityId);
 }

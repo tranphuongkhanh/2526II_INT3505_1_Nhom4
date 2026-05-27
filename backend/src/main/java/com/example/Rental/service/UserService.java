@@ -12,6 +12,7 @@ import com.example.Rental.dto.response.UserResponse;
 import com.example.Rental.entity.User;
 import com.example.Rental.enums.UserRole;
 import com.example.Rental.enums.UserStatus;
+import com.example.Rental.enums.NotificationType;
 import com.example.Rental.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     public User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -96,6 +98,28 @@ public class UserService {
         user.setStatus(UserStatus.valueOf(statusStr.toUpperCase()));
         User saved = userRepository.save(user);
         log.info("Admin updated status of user {} to {}", id, statusStr);
+
+        // Gửi thông báo WebSocket realtime
+        if (saved.getStatus() == UserStatus.ACTIVE) {
+            notificationService.createAndSendNotification(
+                    saved,
+                    NotificationType.ACCOUNT_APPROVED,
+                    "Tài khoản đã được duyệt",
+                    "Tài khoản của bạn đã được quản trị viên duyệt thành công.",
+                    "user",
+                    saved.getId()
+            );
+        } else if (saved.getStatus() == UserStatus.BANNED) {
+            notificationService.createAndSendNotification(
+                    saved,
+                    NotificationType.ACCOUNT_BANNED,
+                    "Tài khoản đã bị khóa",
+                    "Tài khoản của bạn đã bị khóa bởi quản trị viên.",
+                    "user",
+                    saved.getId()
+            );
+        }
+
         return mapToResponse(saved);
     }
 
@@ -134,6 +158,28 @@ public class UserService {
         user.setStatus(status);
         User saved = userRepository.save(user);
         log.info("User {} status updated to {}", user.getEmail(), status);
+
+        // Gửi thông báo WebSocket realtime
+        if (saved.getStatus() == UserStatus.ACTIVE) {
+            notificationService.createAndSendNotification(
+                    saved,
+                    NotificationType.ACCOUNT_APPROVED,
+                    "Tài khoản đã được duyệt",
+                    "Tài khoản của bạn đã được quản trị viên duyệt thành công.",
+                    "user",
+                    saved.getId()
+            );
+        } else if (saved.getStatus() == UserStatus.BANNED) {
+            notificationService.createAndSendNotification(
+                    saved,
+                    NotificationType.ACCOUNT_BANNED,
+                    "Tài khoản đã bị khóa",
+                    "Tài khoản của bạn đã bị khóa bởi quản trị viên.",
+                    "user",
+                    saved.getId()
+            );
+        }
+
         return mapToResponse(saved);
     }
 }

@@ -31,6 +31,7 @@ import com.example.Rental.entity.RoomImage;
 import com.example.Rental.entity.User;
 import com.example.Rental.enums.PaymentStatus;
 import com.example.Rental.enums.PostStatus;
+import com.example.Rental.enums.NotificationType;
 import com.example.Rental.exception.EntityNotFoundException;
 import com.example.Rental.repository.FavoriteRepository;
 import com.example.Rental.repository.PaymentRepository;
@@ -53,6 +54,7 @@ public class PostService {
     private final PaymentRepository paymentRepository;
     private final PostExtensionRepository postExtensionRepository;
     private final FavoriteRepository favoriteRepository;
+    private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
     public Page<PostSummaryResponse> searchPosts(PostSearchRequest request) {
@@ -426,6 +428,29 @@ public class PostService {
         }
 
         postRepository.save(post);
+
+        // Gửi thông báo WebSocket realtime
+        Room room = post.getRoom();
+        if (post.getStatus() == PostStatus.APPROVED) {
+            notificationService.createAndSendNotification(
+                    post.getCreatedBy(),
+                    NotificationType.POST_APPROVED,
+                    "Bài đăng của bạn đã được duyệt",
+                    "Bài đăng cho phòng '" + room.getTitle() + "' đã được duyệt thành công.",
+                    "post",
+                    post.getId()
+            );
+        } else if (post.getStatus() == PostStatus.REJECTED) {
+            notificationService.createAndSendNotification(
+                    post.getCreatedBy(),
+                    NotificationType.POST_REJECTED,
+                    "Bài đăng của bạn bị từ chối",
+                    "Bài đăng cho phòng '" + room.getTitle() + "' bị từ chối. Lý do: " + post.getRejectReason(),
+                    "post",
+                    post.getId()
+            );
+        }
+
         return mapToAdminPostResponse(post);
     }
 
