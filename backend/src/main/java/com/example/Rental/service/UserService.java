@@ -3,6 +3,7 @@ package com.example.Rental.service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -181,5 +182,12 @@ public class UserService {
         }
 
         return mapToResponse(saved);
+    }
+
+    public List<UserResponse> searchRenters(String q) {
+        if (q == null || q.isBlank()) return List.of();
+        Pageable limit = PageRequest.of(0, 8, Sort.by("fullName"));
+        return userRepository.searchRenters(q.trim(), limit)
+                .stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 }

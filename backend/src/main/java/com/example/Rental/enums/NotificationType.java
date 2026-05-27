@@ -9,5 +9,7 @@ public enum NotificationType {
     REPORT_RESOLVED,
     ACCOUNT_APPROVED,
     ACCOUNT_BANNED,
-    NEW_BILL
+    NEW_BILL,
+    CONTRACT_CREATED,
+    CONTRACT_SIGNED
 }

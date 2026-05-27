@@ -8,6 +8,7 @@ import com.example.Rental.dto.request.UserStatusUpdateRequest;
 import com.example.Rental.dto.response.ApiResponse;
 import com.example.Rental.dto.response.UserListResponse;
 import com.example.Rental.dto.response.UserResponse;
+import java.util.List;
 import com.example.Rental.service.UserService;
 import com.example.Rental.enums.UserRole;
 import com.example.Rental.enums.UserStatus;
@@ -24,6 +25,12 @@ import java.util.Collection;
 @RequiredArgsConstructor
 public class UserController {
     private final UserService userService;
+
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<List<UserResponse>>> searchRenters(@RequestParam String q) {
+        List<UserResponse> results = userService.searchRenters(q);
+        return ResponseEntity.ok(ApiResponse.ok("Search results", results));
+    }
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserResponse>> getProfile() {

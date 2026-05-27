@@ -94,6 +94,27 @@ public class ConversationService {
         return mapToResponse(conversation, currentUser);
     }
 
+    // 4. Xoá hội thoại nếu chưa có tin nhắn nào
+    @Transactional
+    public void deleteIfEmpty(String email, Long conversationId) {
+        User currentUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy hội thoại"));
+
+        if (!conversation.getUser1().getId().equals(currentUser.getId()) &&
+            !conversation.getUser2().getId().equals(currentUser.getId())) {
+            throw new AccessDeniedException("Bạn không có quyền xoá hội thoại này");
+        }
+
+        if (conversation.getLastMessagePreview() != null) {
+            throw new IllegalStateException("Không thể xoá hội thoại đã có tin nhắn");
+        }
+
+        conversationRepository.delete(conversation);
+    }
+
     // --- Helper Method: Ánh xạ chuẩn xác "Người kia" là ai ---
     private ConversationResponse mapToResponse(Conversation conversation, User currentUser) {
         // Nếu mình là user1 thì đối phương là user2, và ngược lại
