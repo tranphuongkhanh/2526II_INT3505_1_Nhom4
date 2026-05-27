@@ -23,6 +23,9 @@ import com.example.Rental.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+// ... (imports are merged below)
+
 @Service
 @RequiredArgsConstructor
 public class MessageService {
@@ -30,6 +33,7 @@ public class MessageService {
     private final MessageRepository messageRepository;
     private final ConversationRepository conversationRepository;
     private final UserRepository userRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     // 1. Lấy danh sách tin nhắn (Cursor-based)
     @Transactional(readOnly = true)
@@ -78,7 +82,15 @@ public class MessageService {
         
         conversationRepository.save(conversation);
 
-        return mapToResponse(message);
+        MessageResponse response = mapToResponse(message);
+        
+        // Broadcast via WebSocket
+        User recipient = conversation.getUser1().getId().equals(currentUser.getId()) ? conversation.getUser2() : conversation.getUser1();
+        messagingTemplate.convertAndSendToUser(recipient.getEmail(), "/queue/messages", response);
+        // Also send to the sender's other potential sessions
+        messagingTemplate.convertAndSendToUser(currentUser.getEmail(), "/queue/messages", response);
+
+        return response;
     }
 
     // 3. Đánh dấu đã đọc
@@ -86,10 +98,19 @@ public class MessageService {
     public void markAsRead(String email, Long conversationId) {
         User currentUser = getUser(email);
         // Kiểm tra quyền
-        getValidConversation(conversationId, currentUser.getId());
+        Conversation conversation = getValidConversation(conversationId, currentUser.getId());
         
         // Update database (Chỉ update tin của đối phương gửi)
-        messageRepository.markMessagesAsRead(conversationId, currentUser.getId());
+        int updatedCount = messageRepository.markMessagesAsRead(conversationId, currentUser.getId());
+        
+        if (updatedCount > 0) {
+            User partner = conversation.getUser1().getId().equals(currentUser.getId()) ? conversation.getUser2() : conversation.getUser1();
+            MessageResponse readReceipt = MessageResponse.builder()
+                    .type("READ_RECEIPT")
+                    .conversationId(conversationId)
+                    .build();
+            messagingTemplate.convertAndSendToUser(partner.getEmail(), "/queue/messages", readReceipt);
+        }
     }
 
     // --- Helper Methods ---
@@ -113,10 +134,12 @@ public class MessageService {
     private MessageResponse mapToResponse(Message message) {
         return MessageResponse.builder()
                 .id(message.getId())
+                .type("MESSAGE")
                 .senderId(message.getSender().getId())
                 .content(message.getContent())
                 .isRead(message.getIsRead())
                 .createdAt(message.getCreatedAt())
+                .conversationId(message.getConversation().getId())
                 .build();
     }
 }
