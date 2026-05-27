@@ -18,11 +18,11 @@ import {
   GraduationCap,
 } from 'lucide-react';
 
+import { useAuth } from '../contexts/AuthContext';
 import RoomCard from '../components/RoomCard';
 import Skeleton from '../components/ui/Skeleton';
 import StarRating from '../components/ui/StarRating';
-import { postApi } from '../lib/api';
-import { useToast } from '../components/ui/Toast';
+import { postApi, publicApi } from '../lib/api';
 import {
   fadeUp,
   slideRight,
@@ -91,50 +91,6 @@ function useMagneticButton(maxOffset = 6) {
 // ═══════════════════════════════════════════════════════════
 // SECTION 1 — Hero
 // ═══════════════════════════════════════════════════════════
-
-function SpotlightCursor() {
-  const ref = useRef(null);
-  const targetRef = useRef({ x: 0, y: 0 });
-  const currentRef = useRef({ x: 0, y: 0 });
-  const rafRef = useRef(null);
-  const reduceMotion = useReducedMotion();
-
-  useEffect(() => {
-    if (reduceMotion) return undefined;
-    targetRef.current = { x: window.innerWidth / 2, y: window.innerHeight / 3 };
-    currentRef.current = { ...targetRef.current };
-
-    const onMove = (e) => {
-      targetRef.current = { x: e.clientX, y: e.clientY };
-    };
-    window.addEventListener('mousemove', onMove);
-
-    const tick = () => {
-      const t = targetRef.current;
-      const c = currentRef.current;
-      c.x += (t.x - c.x) * 0.08; // lerp factor 0.08
-      c.y += (t.y - c.y) * 0.08;
-      if (ref.current) {
-        ref.current.style.background = `radial-gradient(circle 400px at ${c.x}px ${c.y}px, rgba(20,145,155,0.15), transparent 70%)`;
-      }
-      rafRef.current = requestAnimationFrame(tick);
-    };
-    rafRef.current = requestAnimationFrame(tick);
-
-    return () => {
-      window.removeEventListener('mousemove', onMove);
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, [reduceMotion]);
-
-  return (
-    <div
-      ref={ref}
-      aria-hidden="true"
-      className="pointer-events-none fixed inset-0 z-0 hidden md:block"
-    />
-  );
-}
 
 function MeshBackground() {
   return (
@@ -227,18 +183,33 @@ function MagneticPrimaryCTA() {
 }
 
 function OutlinedSecondaryCTA() {
+  const { role } = useAuth();
+  const navigate = useNavigate();
+
+  if (role === 'RENTER') return null;
+
+  const handleClick = () => {
+    if (role === 'OWNER') {
+      navigate('/owner/posts');
+    } else if (role === 'ADMIN') {
+      navigate('/admin');
+    } else {
+      navigate('/register');
+    }
+  };
+
   return (
     <motion.div
       whileHover={{ scale: 1.03 }}
       whileTap={{ scale: 0.97 }}
       transition={springs.snappy}
     >
-      <Link
-        to="/register"
+      <button
+        onClick={handleClick}
         className="inline-flex h-14 items-center justify-center px-8 rounded-2xl border-2 border-white/80 text-white text-base font-semibold hover:bg-white hover:text-primary-700 transition-colors"
       >
         Đăng phòng cho thuê
-      </Link>
+      </button>
     </motion.div>
   );
 }
@@ -337,7 +308,6 @@ function HeroSection() {
     <section className="relative min-h-screen flex flex-col text-white overflow-hidden">
       <MeshBackground />
       <FloatingShapes />
-      <SpotlightCursor />
 
       <div className="relative z-10 flex-1 flex items-center">
         <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-20 lg:py-24 text-center">
@@ -416,15 +386,8 @@ function HeroSection() {
 // SECTION 2 — Stats
 // ═══════════════════════════════════════════════════════════
 
-const STATS = [
-  { value: 500, suffix: '+', label: 'Phòng trọ' },
-  { value: 2000, suffix: '+', label: 'Sinh viên' },
-  { value: 150, suffix: '+', label: 'Chủ trọ' },
-  { value: 98, suffix: '%', label: 'Hài lòng' },
-];
-
-function StatItem({ stat, start, delay }) {
-  const value = useCountUp(stat.value, { duration: 1500, start });
+function StatItem({ value, suffix = '', label, start, delay }) {
+  const count = useCountUp(value ?? 0, { duration: 1500, start: start && value != null });
   return (
     <motion.div
       initial={{ opacity: 0, y: 18 }}
@@ -433,11 +396,11 @@ function StatItem({ stat, start, delay }) {
       className="flex-1 text-center px-2"
     >
       <p className="font-display text-3xl md:text-5xl font-extrabold text-primary-500 tabular-nums">
-        {value}
-        <span>{stat.suffix}</span>
+        {value == null ? '···' : count}
+        <span>{suffix}</span>
       </p>
       <p className="mt-1 text-xs md:text-sm uppercase tracking-wider text-ink-400 font-medium">
-        {stat.label}
+        {label}
       </p>
     </motion.div>
   );
@@ -446,15 +409,28 @@ function StatItem({ stat, start, delay }) {
 function StatsSection() {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, amount: 0.4 });
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    publicApi.getStatistics().then(setStats).catch(() => {});
+  }, []);
+
+  const items = [
+    { label: 'Phòng trọ',  value: stats?.totalRooms,    suffix: '+' },
+    { label: 'Sinh viên',  value: stats?.totalRenters,   suffix: '+' },
+    { label: 'Chủ trọ',   value: stats?.totalOwners,    suffix: '+' },
+    { label: 'Bài đăng',  value: stats?.totalActivePosts, suffix: '+' },
+  ];
+
   return (
-    <section className="relative bg-white dark:bg-ink-900 pt-24 pb-12">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+    <section className="relative bg-white dark:bg-ink-900 pb-12">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 -mt-20 relative z-10">
         <div
           ref={ref}
           className="rounded-3xl bg-white dark:bg-ink-800 border border-ink-100 dark:border-ink-700 shadow-soft py-8 md:py-10 px-4 md:px-8 flex items-stretch divide-x divide-ink-100 dark:divide-ink-700"
         >
-          {STATS.map((s, i) => (
-            <StatItem key={s.label} stat={s} start={inView} delay={i * 0.2} />
+          {items.map((s, i) => (
+            <StatItem key={s.label} value={s.value} suffix={s.suffix} label={s.label} start={inView} delay={i * 0.2} />
           ))}
         </div>
       </div>
@@ -465,113 +441,6 @@ function StatsSection() {
 // ═══════════════════════════════════════════════════════════
 // SECTION 3 — Featured listings
 // ═══════════════════════════════════════════════════════════
-
-const FALLBACK_LISTINGS = [
-  {
-    id: 'fallback-1',
-    title: 'Phòng đầy đủ nội thất gần ĐH Bách Khoa',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=800&q=70',
-    price: 3500000,
-    district: 'Hai Bà Trưng',
-    city: 'Hà Nội',
-    area: 22,
-    type: 'Phòng đơn',
-    amenities: ['wifi', 'ac', 'fridge', 'parking', 'secure'],
-    rating: 4.7,
-    reviewCount: 32,
-  },
-  {
-    id: 'fallback-2',
-    title: 'Studio mới, ban công thoáng, gần ĐH Ngoại Thương',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=70',
-    price: 5200000,
-    district: 'Đống Đa',
-    city: 'Hà Nội',
-    area: 28,
-    type: 'Studio',
-    amenities: ['wifi', 'ac', 'fridge', 'parking'],
-    rating: 4.9,
-    reviewCount: 58,
-  },
-  {
-    id: 'fallback-3',
-    title: 'Phòng ghép giá tốt, an ninh 24/7',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1554995207-c18c203602cb?auto=format&fit=crop&w=800&q=70',
-    price: 2100000,
-    district: 'Cầu Giấy',
-    city: 'Hà Nội',
-    area: 18,
-    type: 'Phòng ghép',
-    amenities: ['wifi', 'ac', 'parking', 'secure'],
-    rating: 4.5,
-    reviewCount: 21,
-  },
-  {
-    id: 'fallback-4',
-    title: 'Căn hộ mini full nội thất, Quận 1',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=70',
-    price: 6800000,
-    district: 'Quận 1',
-    city: 'TP. Hồ Chí Minh',
-    area: 32,
-    type: 'Căn hộ',
-    amenities: ['wifi', 'ac', 'fridge', 'parking', 'secure'],
-    rating: 4.8,
-    reviewCount: 41,
-  },
-  {
-    id: 'fallback-5',
-    title: 'Phòng trọ sạch đẹp, gần ĐH Quốc Gia HCM',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=800&q=70',
-    price: 2800000,
-    district: 'Thủ Đức',
-    city: 'TP. Hồ Chí Minh',
-    area: 20,
-    type: 'Phòng đơn',
-    amenities: ['wifi', 'ac', 'fridge'],
-    rating: 4.6,
-    reviewCount: 17,
-  },
-  {
-    id: 'fallback-6',
-    title: 'Phòng có gác lửng, view thoáng — Quận Bình Thạnh',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=800&q=70',
-    price: 3900000,
-    district: 'Bình Thạnh',
-    city: 'TP. Hồ Chí Minh',
-    area: 25,
-    type: 'Phòng đơn',
-    amenities: ['wifi', 'ac', 'fridge', 'parking'],
-    rating: 4.7,
-    reviewCount: 29,
-  },
-  {
-    id: 'fallback-7',
-    title: 'Phòng cao cấp, đầy đủ tiện nghi, gần ĐH FPT',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&w=800&q=70',
-    price: 4500000,
-    district: 'Nam Từ Liêm',
-    city: 'Hà Nội',
-    area: 26,
-    type: 'Studio',
-    amenities: ['wifi', 'ac', 'fridge', 'parking', 'secure'],
-    rating: 4.8,
-    reviewCount: 36,
-  },
-  {
-    id: 'fallback-8',
-    title: 'Phòng giá rẻ, gần chợ và bệnh viện',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=800&q=70',
-    price: 1900000,
-    district: 'Hà Đông',
-    city: 'Hà Nội',
-    area: 16,
-    type: 'Phòng đơn',
-    amenities: ['wifi', 'fridge', 'parking'],
-    rating: 4.4,
-    reviewCount: 12,
-  },
-];
 
 // Scroll-reveal wrapper around the shared RoomCard
 function RevealCard({ listing, index }) {
@@ -594,27 +463,22 @@ function RevealCard({ listing, index }) {
 function FeaturedListings() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [errored, setErrored] = useState(false);
-  const toast = useToast();
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setError(false);
     postApi
       .search({ size: 8 })
       .then((res) => {
         if (cancelled) return;
         const raw = res?.items ?? [];
-        if (Array.isArray(raw) && raw.length > 0) {
-          setItems(raw.slice(0, 8));
-        } else {
-          setItems(FALLBACK_LISTINGS);
-        }
+        setItems(Array.isArray(raw) ? raw.slice(0, 8) : []);
       })
       .catch(() => {
         if (cancelled) return;
-        setErrored(true);
-        setItems(FALLBACK_LISTINGS);
+        setError(true);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -623,12 +487,6 @@ function FeaturedListings() {
       cancelled = true;
     };
   }, []);
-
-  useEffect(() => {
-    if (errored) {
-      toast.info('Đang hiển thị phòng trọ mẫu — chưa kết nối được máy chủ.');
-    }
-  }, [errored, toast]);
 
   return (
     <section className="bg-base py-20">
@@ -656,6 +514,14 @@ function FeaturedListings() {
             {Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} variant="card" />
             ))}
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <p className="text-ink-400 text-sm">Không thể tải danh sách phòng. Vui lòng thử lại sau.</p>
+          </div>
+        ) : items.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <p className="text-ink-400 text-sm">Chưa có phòng nào được đăng.</p>
           </div>
         ) : (
           <>

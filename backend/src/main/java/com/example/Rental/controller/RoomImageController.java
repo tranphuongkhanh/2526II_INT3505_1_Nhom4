@@ -1,5 +1,6 @@
 package com.example.Rental.controller;
 
+import com.example.Rental.dto.response.RoomImageResponse;
 import com.example.Rental.entity.RoomImage;
 import com.example.Rental.entity.User;
 import com.example.Rental.exception.EntityNotFoundException;
@@ -31,9 +32,9 @@ public class RoomImageController {
     }
 
     @PostMapping
-    public ResponseEntity<RoomImage> uploadRoomImage(
+    public ResponseEntity<RoomImageResponse> uploadRoomImage(
             @PathVariable Long roomId,
-            @RequestParam("image") MultipartFile file, // Nhận file từ form-data với key là 'image'
+            @RequestParam("image") MultipartFile file,
             Principal principal) {
 
         Long ownerId = getCurrentOwnerId(principal);
@@ -43,7 +44,13 @@ public class RoomImageController {
         }
 
         RoomImage savedImage = roomImageService.uploadImage(roomId, ownerId, file);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedImage);
+        RoomImageResponse response = RoomImageResponse.builder()
+                .id(savedImage.getId())
+                .imageUrl(savedImage.getImageUrl())
+                .thumbnail(savedImage.getIsThumbnail())
+                .displayOrder(savedImage.getDisplayOrder())
+                .build();
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @DeleteMapping("/{imageId}")
@@ -59,7 +66,7 @@ public class RoomImageController {
     }
 
     @PatchMapping("/{imageId}/thumbnail")
-    public ResponseEntity<RoomImage> setThumbnail(
+    public ResponseEntity<RoomImageResponse> setThumbnail(
             @PathVariable Long roomId,
             @PathVariable Long imageId,
             Principal principal) {
@@ -67,6 +74,12 @@ public class RoomImageController {
         Long ownerId = getCurrentOwnerId(principal);
         RoomImage updatedImage = roomImageService.setThumbnail(roomId, imageId, ownerId);
 
-        return ResponseEntity.ok(updatedImage);
+        RoomImageResponse response = RoomImageResponse.builder()
+                .id(updatedImage.getId())
+                .imageUrl(updatedImage.getImageUrl())
+                .thumbnail(updatedImage.getIsThumbnail())
+                .displayOrder(updatedImage.getDisplayOrder())
+                .build();
+        return ResponseEntity.ok(response);
     }
 }

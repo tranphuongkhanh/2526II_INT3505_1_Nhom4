@@ -1,5 +1,7 @@
 package com.example.Rental.controller;
 
+import java.security.Principal;
+
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -39,15 +41,18 @@ public class PostController {
 
     @GetMapping("/{postId}")
     public ResponseEntity<ApiResponse<PostDetailResponse>> getPostDetail(
-            @PathVariable Long postId) {
-            
-        PostDetailResponse result = postService.getPostDetailAndIncrementView(postId);
-        
+            @PathVariable Long postId,
+            Principal principal) {
+
+        String viewerEmail = principal != null ? principal.getName() : null;
+        PostDetailResponse result = postService.getPostDetail(postId, viewerEmail);
+        postService.recordPostView(postId);
+
         ApiResponse<PostDetailResponse> response = new ApiResponse<>();
         response.setSuccess(true);
         response.setMessage("Chi tiết bài đăng");
         response.setData(result);
-        
+
         return ResponseEntity.ok(response);
     }
 }

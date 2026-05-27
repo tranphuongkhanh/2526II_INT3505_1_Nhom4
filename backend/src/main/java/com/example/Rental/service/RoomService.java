@@ -2,6 +2,7 @@ package com.example.Rental.service;
 
 import com.example.Rental.dto.request.RoomFilterRequest;
 import com.example.Rental.dto.request.RoomRequest;
+import com.example.Rental.dto.response.RoomImageResponse;
 import com.example.Rental.dto.response.RoomResponse;
 import com.example.Rental.entity.Room;
 import com.example.Rental.entity.User;
@@ -20,7 +21,11 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -60,9 +65,21 @@ public class RoomService {
                 .reviewCount(room.getReviewCount())
                 .createdAt(room.getCreatedAt())
                 .updatedAt(room.getUpdatedAt())
+                .images(room.getImages() != null
+                    ? room.getImages().stream()
+                        .sorted(Comparator.comparingInt(img -> img.getDisplayOrder() != null ? img.getDisplayOrder() : 0))
+                        .map(img -> RoomImageResponse.builder()
+                            .id(img.getId())
+                            .imageUrl(img.getImageUrl())
+                            .thumbnail(img.getIsThumbnail())
+                            .displayOrder(img.getDisplayOrder())
+                            .build())
+                        .collect(Collectors.toList())
+                    : Collections.emptyList())
                 .build();
     }
 
+    @Transactional(readOnly = true)
     public Page<RoomResponse> getAllRoomsByOwner(Long ownerId, RoomFilterRequest filter, int page, int size) {
         // Chuyển trang từ 1-index sang 0-index, mặc định sắp xếp phòng mới nhất lên đầu
         int pageNumber = page - 1;
@@ -87,8 +104,8 @@ public class RoomService {
                 .owner(owner)
                 .title(request.getTitle())
                 .description(request.getDescription())
-                .price(request.getPrice())
-                .areaMq(request.getAreaMq())
+                .price(request.getPrice() != null ? request.getPrice() : BigDecimal.ZERO)
+                .areaMq(request.getAreaMq() != null ? request.getAreaMq() : 0.0)
                 .roomType(request.getRoomType())
                 .address(request.getAddress())
                 .ward(request.getWard())
@@ -98,12 +115,12 @@ public class RoomService {
                 .hasFridge(request.getHasFridge())
                 .hasPrivateWc(request.getHasPrivateWc())
                 .hasSecurity(request.getHasSecurity())
-                .wifiFee(request.getWifiFee())
-                .waterPricePerUnit(request.getWaterPricePerUnit())
-                .electricityPricePerUnit(request.getElectricityPricePerUnit())
-                .serviceFee(request.getServiceFee())
-                .bikeParkingFee(request.getBikeParkingFee())
-                .deposit(request.getDeposit())
+                .wifiFee(request.getWifiFee() != null ? request.getWifiFee() : BigDecimal.ZERO)
+                .waterPricePerUnit(request.getWaterPricePerUnit() != null ? request.getWaterPricePerUnit() : BigDecimal.ZERO)
+                .electricityPricePerUnit(request.getElectricityPricePerUnit() != null ? request.getElectricityPricePerUnit() : BigDecimal.ZERO)
+                .serviceFee(request.getServiceFee() != null ? request.getServiceFee() : BigDecimal.ZERO)
+                .bikeParkingFee(request.getBikeParkingFee() != null ? request.getBikeParkingFee() : BigDecimal.ZERO)
+                .deposit(request.getDeposit() != null ? request.getDeposit() : BigDecimal.ZERO)
                 .rentalStatus(RentalStatus.AVAILABLE)
                 .avgRating(0.0)
                 .reviewCount(0)
@@ -123,6 +140,7 @@ public class RoomService {
         return room;
     }
 
+    @Transactional(readOnly = true)
     public RoomResponse getRoomDetail(Long roomId, Long ownerId) {
         Room room = getRoomEntity(roomId, ownerId);
         return fromEntity(room);
@@ -134,8 +152,8 @@ public class RoomService {
 
         room.setTitle(request.getTitle());
         room.setDescription(request.getDescription());
-        room.setPrice(request.getPrice());
-        room.setAreaMq(request.getAreaMq());
+        room.setPrice(request.getPrice() != null ? request.getPrice() : BigDecimal.ZERO);
+        room.setAreaMq(request.getAreaMq() != null ? request.getAreaMq() : 0.0);
         room.setRoomType(request.getRoomType());
         room.setAddress(request.getAddress());
         room.setWard(request.getWard());
@@ -145,12 +163,12 @@ public class RoomService {
         room.setHasFridge(request.getHasFridge());
         room.setHasPrivateWc(request.getHasPrivateWc());
         room.setHasSecurity(request.getHasSecurity());
-        room.setWifiFee(request.getWifiFee());
-        room.setWaterPricePerUnit(request.getWaterPricePerUnit());
-        room.setElectricityPricePerUnit(request.getElectricityPricePerUnit());
-        room.setServiceFee(request.getServiceFee());
-        room.setBikeParkingFee(request.getBikeParkingFee());
-        room.setDeposit(request.getDeposit());
+        room.setWifiFee(request.getWifiFee() != null ? request.getWifiFee() : BigDecimal.ZERO);
+        room.setWaterPricePerUnit(request.getWaterPricePerUnit() != null ? request.getWaterPricePerUnit() : BigDecimal.ZERO);
+        room.setElectricityPricePerUnit(request.getElectricityPricePerUnit() != null ? request.getElectricityPricePerUnit() : BigDecimal.ZERO);
+        room.setServiceFee(request.getServiceFee() != null ? request.getServiceFee() : BigDecimal.ZERO);
+        room.setBikeParkingFee(request.getBikeParkingFee() != null ? request.getBikeParkingFee() : BigDecimal.ZERO);
+        room.setDeposit(request.getDeposit() != null ? request.getDeposit() : BigDecimal.ZERO);
 
         Room updatedRoom = roomRepository.save(room);
         return fromEntity(updatedRoom);

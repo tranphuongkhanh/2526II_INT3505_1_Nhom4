@@ -112,6 +112,67 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   background: rgba(102, 197, 197, 0.6);
 }
 
+/* Dual range slider (overlay two inputs) — track transparent, thumb pickable */
+.range-input {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+}
+.range-input::-webkit-slider-runnable-track {
+  height: 100%;
+  background: transparent;
+}
+.range-input::-moz-range-track {
+  height: 100%;
+  background: transparent;
+}
+.range-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: #14919B;
+  border: 3px solid #ffffff;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.25);
+  cursor: grab;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.range-input::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgba(20, 145, 155, 0.45);
+}
+.range-input::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.2);
+}
+.range-input::-moz-range-thumb {
+  pointer-events: auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: #14919B;
+  border: 3px solid #ffffff;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.25);
+  cursor: grab;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.range-input::-moz-range-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgba(20, 145, 155, 0.45);
+}
+.range-input::-moz-range-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.2);
+}
+html.dark .range-input::-webkit-slider-thumb,
+html.dark .range-input::-moz-range-thumb {
+  background: #66C5C5;
+  border-color: #0f172a;
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

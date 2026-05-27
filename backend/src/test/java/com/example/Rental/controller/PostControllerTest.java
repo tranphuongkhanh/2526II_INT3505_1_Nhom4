@@ -47,7 +47,7 @@ public class PostControllerTest {
                 .viewCount(10)
                 .build();
 
-        Mockito.when(postService.getPostDetailAndIncrementView(postId)).thenReturn(mockResponse);
+        Mockito.when(postService.getPostDetail(Mockito.eq(postId), Mockito.any())).thenReturn(mockResponse);
 
         mockMvc.perform(get("/api/v1/posts/" + postId))
                 .andExpect(status().isOk())

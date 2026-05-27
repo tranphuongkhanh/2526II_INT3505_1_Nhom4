@@ -156,8 +156,8 @@ export default function MyReviewsPage() {
 
   useEffect(() => {
     Promise.all([
-      reviewApi.getMyWrittenReviews().catch(() => []),
-      reviewApi.getMyRenterReviews().catch(() => []),
+      reviewApi.getMyWrittenReviews(),
+      reviewApi.getMyRenterReviews(),
     ])
       .then(([written, renter]) => {
         const toArr = (d) =>

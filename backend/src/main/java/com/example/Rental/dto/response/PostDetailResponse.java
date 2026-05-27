@@ -46,4 +46,13 @@ public class PostDetailResponse {
 
     // Ảnh
     private List<String> imageUrls;
+
+    // Chủ nhà
+    private Long ownerId;
+    private String ownerName;
+    private String ownerPhone;
+    private String ownerAvatar;
+
+    // Trạng thái yêu thích (null nếu chưa đăng nhập)
+    private Boolean isFavorited;
 }

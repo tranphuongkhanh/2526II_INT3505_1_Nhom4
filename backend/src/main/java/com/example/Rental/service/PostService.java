@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +32,7 @@ import com.example.Rental.entity.User;
 import com.example.Rental.enums.PaymentStatus;
 import com.example.Rental.enums.PostStatus;
 import com.example.Rental.exception.EntityNotFoundException;
+import com.example.Rental.repository.FavoriteRepository;
 import com.example.Rental.repository.PaymentRepository;
 import com.example.Rental.repository.PostExtensionRepository;
 import com.example.Rental.repository.PostRepository;
@@ -50,6 +52,7 @@ public class PostService {
     private final RoomRepository roomRepository;
     private final PaymentRepository paymentRepository;
     private final PostExtensionRepository postExtensionRepository;
+    private final FavoriteRepository favoriteRepository;
 
     @Transactional(readOnly = true)
     public Page<PostSummaryResponse> searchPosts(PostSearchRequest request) {
@@ -63,33 +66,49 @@ public class PostService {
                 request.getRoomType(),
                 request.getCity(),
                 request.getDistrict(),
+                request.getMaxElectricityPrice(),
+                request.getMaxWaterPrice(),
+                request.getMaxServiceFee(),
+                request.getMaxWifiFee(),
                 pageable
         );
 
         return posts.map(this::mapToSummaryResponse);
     }
 
-    @Transactional
-    public PostDetailResponse getPostDetailAndIncrementView(Long postId) {
-        // 1. Tăng view count trong bảng posts
-        postRepository.incrementViewCount(postId);
-
-        // 2. Ghi log vào bảng post_views (Dành cho Guest nên viewer_id = null)
-        Post postRef = postRepository.getReferenceById(postId);
-        PostView viewLog = PostView.builder()
-                .post(postRef)
-                .viewedAt(LocalDateTime.now())
-                .build();
-        postViewRepository.save(viewLog);
-
-        // 3. Lấy thông tin bài đăng
-        Post post = postRepository.findById(postId)
+    @Transactional(readOnly = true)
+    public PostDetailResponse getPostDetail(Long postId, String viewerEmail) {
+        Post post = postRepository.findByIdWithDetails(postId)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy bài đăng ID: " + postId));
 
-        // 4. Map dữ liệu trả về (Cộng 1 view cho logic hiển thị realtime)
-        int currentViewCount = post.getViewCount() != null ? post.getViewCount() : 0;
-        post.setViewCount(currentViewCount + 1); 
-        return mapToDetailResponse(post);
+        // Cộng 1 view cho logic hiển thị realtime (việc ghi DB chạy async ở recordPostView)
+        post.setViewCount((post.getViewCount() == null ? 0 : post.getViewCount()) + 1);
+
+        Boolean isFavorited = null;
+        if (viewerEmail != null) {
+            isFavorited = userRepository.findByEmail(viewerEmail)
+                    .map(u -> favoriteRepository.existsByUserIdAndPostId(u.getId(), postId))
+                    .orElse(false);
+        }
+
+        return mapToDetailResponse(post, isFavorited);
+    }
+
+    @Async
+    @Transactional
+    public void recordPostView(Long postId) {
+        try {
+            postRepository.incrementViewCount(postId);
+
+            Post postRef = postRepository.getReferenceById(postId);
+            PostView viewLog = PostView.builder()
+                    .post(postRef)
+                    .viewedAt(LocalDateTime.now())
+                    .build();
+            postViewRepository.save(viewLog);
+        } catch (Exception ignored) {
+            // Không chặn user nếu tracking lỗi
+        }
     }
 
     // --- Helper methods để map Entity -> DTO ---
@@ -117,9 +136,10 @@ public class PostService {
                 .build();
     }
 
-    private PostDetailResponse mapToDetailResponse(Post post) {
+    private PostDetailResponse mapToDetailResponse(Post post, Boolean isFavorited) {
         Room room = post.getRoom();
-        
+        User owner = post.getCreatedBy();
+
         List<String> images = room.getImages().stream()
                 .map(RoomImage::getImageUrl)
                 .collect(Collectors.toList());
@@ -151,6 +171,11 @@ public class PostService {
                 .bikeParkingFee(room.getBikeParkingFee())
                 .deposit(room.getDeposit())
                 .imageUrls(images)
+                .ownerId(owner != null ? owner.getId() : null)
+                .ownerName(owner != null ? owner.getFullName() : null)
+                .ownerPhone(owner != null ? owner.getPhone() : null)
+                .ownerAvatar(owner != null ? owner.getAvatarUrl() : null)
+                .isFavorited(isFavorited)
                 .build();
     }
 
@@ -168,19 +193,36 @@ public class PostService {
         Page<Post> posts = postRepository.findByCreatedByIdAndStatusNot(owner.getId(), PostStatus.DELETED, pageable);
 
         // 3. Map sang DTO
-        return posts.map(post -> OwnerPostResponse.builder()
-                .id(post.getId())
-                .roomTitle(post.getRoom().getTitle())
-                .status(post.getStatus())
-                .rejectReason(post.getRejectReason())
-                .listingFee(post.getListingFee())
-                .startDate(post.getStartDate())
-                .endDate(post.getEndDate())
-                .viewCount(post.getViewCount())
-                .favoriteCount(post.getFavoriteCount())
-                .createdAt(post.getCreatedAt())
-                .build()
-        );
+        return posts.map(post -> {
+            Room room = post.getRoom();
+            String thumbnailUrl = room.getImages() == null ? null : room.getImages().stream()
+                    .filter(img -> Boolean.TRUE.equals(img.getIsThumbnail()))
+                    .map(RoomImage::getImageUrl)
+                    .findFirst()
+                    .orElse(room.getImages().stream()
+                            .map(RoomImage::getImageUrl)
+                            .findFirst()
+                            .orElse(null));
+            String address = java.util.stream.Stream.of(
+                    room.getAddress(), room.getDistrict(), room.getCity())
+                    .filter(s -> s != null && !s.isBlank())
+                    .collect(java.util.stream.Collectors.joining(", "));
+            return OwnerPostResponse.builder()
+                    .id(post.getId())
+                    .roomTitle(room.getTitle())
+                    .status(post.getStatus())
+                    .rejectReason(post.getRejectReason())
+                    .listingFee(post.getListingFee())
+                    .startDate(post.getStartDate())
+                    .endDate(post.getEndDate())
+                    .viewCount(post.getViewCount())
+                    .favoriteCount(post.getFavoriteCount())
+                    .createdAt(post.getCreatedAt())
+                    .thumbnailUrl(thumbnailUrl)
+                    .price(room.getPrice())
+                    .address(address.isBlank() ? null : address)
+                    .build();
+        });
     }
 
     @Transactional
@@ -389,9 +431,10 @@ public class PostService {
 
     // --- Helper Method ---
     private AdminPostResponse mapToAdminPostResponse(Post post) {
+        Room room = post.getRoom();
         return AdminPostResponse.builder()
                 .id(post.getId())
-                .roomTitle(post.getRoom().getTitle())
+                .roomTitle(room.getTitle())
                 .ownerName(post.getCreatedBy().getFullName())
                 .ownerEmail(post.getCreatedBy().getEmail())
                 .status(post.getStatus())
@@ -401,6 +444,36 @@ public class PostService {
                 .rejectReason(post.getRejectReason())
                 .approvedByEmail(post.getApprovedBy() != null ? post.getApprovedBy().getEmail() : null)
                 .approvedAt(post.getApprovedAt())
+                // Room details
+                .price(room.getPrice())
+                .deposit(room.getDeposit())
+                .areaMq(room.getAreaMq())
+                .roomType(room.getRoomType())
+                .description(room.getDescription())
+                .address(room.getAddress())
+                .ward(room.getWard())
+                .district(room.getDistrict())
+                .city(room.getCity())
+                .hasAc(room.getHasAc())
+                .hasFridge(room.getHasFridge())
+                .hasPrivateWc(room.getHasPrivateWc())
+                .hasSecurity(room.getHasSecurity())
+                .wifiFee(room.getWifiFee())
+                .electricityPricePerUnit(room.getElectricityPricePerUnit())
+                .waterPricePerUnit(room.getWaterPricePerUnit())
+                .serviceFee(room.getServiceFee())
+                .bikeParkingFee(room.getBikeParkingFee())
+                .images(room.getImages() != null
+                        ? room.getImages().stream()
+                                .sorted(java.util.Comparator.comparingInt(img -> img.getDisplayOrder() != null ? img.getDisplayOrder() : 0))
+                                .map(img -> com.example.Rental.dto.response.RoomImageResponse.builder()
+                                        .id(img.getId())
+                                        .imageUrl(img.getImageUrl())
+                                        .thumbnail(img.getIsThumbnail())
+                                        .displayOrder(img.getDisplayOrder())
+                                        .build())
+                                .collect(java.util.stream.Collectors.toList())
+                        : java.util.Collections.emptyList())
                 .build();
     }
 }

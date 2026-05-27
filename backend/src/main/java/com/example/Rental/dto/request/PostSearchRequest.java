@@ -14,6 +14,10 @@ public class PostSearchRequest {
     private RoomType roomType;
     private String city;
     private String district;
+    private BigDecimal maxElectricityPrice;
+    private BigDecimal maxWaterPrice;
+    private BigDecimal maxServiceFee;
+    private BigDecimal maxWifiFee;
     private Integer page = 0;
     private Integer size = 10;
 }

@@ -93,6 +93,12 @@ public class VNPayController {
                         case MONTH:
                             endDate = endDate.plusMonths(post.getDurationValue());
                             break;
+                        case QUARTER:
+                            endDate = endDate.plusMonths(post.getDurationValue() * 3L);
+                            break;
+                        case YEAR:
+                            endDate = endDate.plusYears(post.getDurationValue());
+                            break;
                     }
                     post.setEndDate(endDate);
                     postRepository.save(post);

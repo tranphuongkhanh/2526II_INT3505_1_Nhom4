@@ -56,23 +56,37 @@ public class RoomSpecification {
                 }
 
                 // Lọc theo tiện ích (Boolean)
-                if (filter.getHasWifi() != null) {
-                    predicates.add(cb.equal(root.get("hasWifi"), filter.getHasWifi()));
-                }
                 if (filter.getHasAc() != null) {
                     predicates.add(cb.equal(root.get("hasAc"), filter.getHasAc()));
                 }
                 if (filter.getHasFridge() != null) {
                     predicates.add(cb.equal(root.get("hasFridge"), filter.getHasFridge()));
                 }
-                if (filter.getHasParking() != null) {
-                    predicates.add(cb.equal(root.get("hasParking"), filter.getHasParking()));
-                }
                 if (filter.getHasPrivateWc() != null) {
                     predicates.add(cb.equal(root.get("hasPrivateWc"), filter.getHasPrivateWc()));
                 }
                 if (filter.getHasSecurity() != null) {
                     predicates.add(cb.equal(root.get("hasSecurity"), filter.getHasSecurity()));
+                }
+
+                // Lọc theo các phí dịch vụ tối đa
+                if (filter.getMaxWifiFee() != null) {
+                    predicates.add(cb.lessThanOrEqualTo(root.get("wifiFee"), filter.getMaxWifiFee()));
+                }
+                if (filter.getMaxWaterPricePerUnit() != null) {
+                    predicates.add(cb.lessThanOrEqualTo(root.get("waterPricePerUnit"), filter.getMaxWaterPricePerUnit()));
+                }
+                if (filter.getMaxElectricityPricePerUnit() != null) {
+                    predicates.add(cb.lessThanOrEqualTo(root.get("electricityPricePerUnit"), filter.getMaxElectricityPricePerUnit()));
+                }
+                if (filter.getMaxServiceFee() != null) {
+                    predicates.add(cb.lessThanOrEqualTo(root.get("serviceFee"), filter.getMaxServiceFee()));
+                }
+                if (filter.getMaxBikeParkingFee() != null) {
+                    predicates.add(cb.lessThanOrEqualTo(root.get("bikeParkingFee"), filter.getMaxBikeParkingFee()));
+                }
+                if (filter.getMaxDeposit() != null) {
+                    predicates.add(cb.lessThanOrEqualTo(root.get("deposit"), filter.getMaxDeposit()));
                 }
 
                 // Lọc theo đánh giá trung bình
