@@ -312,10 +312,13 @@ export default function PostModerationPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    let ignore = false;
+    setLoading(true);
     postApi.adminGetAll({ size: 500 })
-      .then((d) => setPosts(toArr(d)))
-      .catch(() => setPosts([]))
-      .finally(() => setLoading(false));
+      .then((d) => { if (!ignore) setPosts(toArr(d)); })
+      .catch(() => { /* keep whatever we have; don't wipe on transient errors */ })
+      .finally(() => { if (!ignore) setLoading(false); });
+    return () => { ignore = true; };
   }, []);
 
   const counts = {
@@ -332,11 +335,11 @@ export default function PostModerationPage() {
     try {
       await postApi.adminUpdateStatus(id, payload).catch(() => {});
       setStampInfo((prev) => ({ ...prev, [id]: type }));
-      setExpandedId(null);
       setTimeout(() => {
         setRemovingIds((prev) => new Set([...prev, id]));
         setTimeout(() => {
-          setPosts((prev) => prev.filter((p) => p.id !== id));
+          const newStatus = type === 'approve' ? 'APPROVED' : 'REJECTED';
+          setPosts((prev) => prev.map((p) => p.id !== id ? p : { ...p, status: newStatus }));
           setStampInfo((prev) => { const n = { ...prev }; delete n[id]; return n; });
           setRemovingIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
         }, 500);
