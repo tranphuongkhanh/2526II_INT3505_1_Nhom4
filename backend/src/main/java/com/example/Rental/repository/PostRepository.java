@@ -72,5 +72,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     void incrementViewCount(@Param("postId") Long postId);
 
     Page<Post> findByStatus(PostStatus status, Pageable pageable);
+
+    List<Post> findByStatusAndEndDateBetween(PostStatus status, java.time.LocalDateTime start, java.time.LocalDateTime end);
 }
 

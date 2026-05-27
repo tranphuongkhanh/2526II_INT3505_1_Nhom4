@@ -20,6 +20,7 @@ import com.example.Rental.exception.EntityNotFoundException;
 import com.example.Rental.repository.ConversationRepository;
 import com.example.Rental.repository.MessageRepository;
 import com.example.Rental.repository.UserRepository;
+import com.example.Rental.enums.NotificationType;
 
 import lombok.RequiredArgsConstructor;
 
@@ -34,6 +35,7 @@ public class MessageService {
     private final ConversationRepository conversationRepository;
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final NotificationService notificationService;
 
     // 1. Lấy danh sách tin nhắn (Cursor-based)
     @Transactional(readOnly = true)
@@ -89,6 +91,16 @@ public class MessageService {
         messagingTemplate.convertAndSendToUser(recipient.getEmail(), "/queue/messages", response);
         // Also send to the sender's other potential sessions
         messagingTemplate.convertAndSendToUser(currentUser.getEmail(), "/queue/messages", response);
+
+        // Tạo và gửi thông báo WebSocket realtime
+        notificationService.createAndSendNotification(
+                recipient,
+                NotificationType.NEW_MESSAGE,
+                "Tin nhắn mới từ " + currentUser.getFullName(),
+                currentUser.getFullName() + ": " + request.getContent(),
+                "message",
+                message.getId()
+        );
 
         return response;
     }

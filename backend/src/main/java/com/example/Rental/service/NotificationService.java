@@ -5,8 +5,11 @@ import com.example.Rental.dto.response.NotificationResponse;
 import com.example.Rental.entity.Notification;
 import com.example.Rental.enums.NotificationType;
 import com.example.Rental.exception.EntityNotFoundException;
+import com.example.Rental.entity.User;
 import com.example.Rental.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -17,10 +20,12 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     public CursorPageResponse<NotificationResponse> getUserNotifications(Long userId, Long cursor, int limit, List<NotificationType> types) {
         Pageable pageable = PageRequest.of(0, limit + 1);
@@ -90,5 +95,36 @@ public class NotificationService {
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy thông báo!"));
 
         notificationRepository.delete(notification);
+    }
+
+    @Transactional
+    public NotificationResponse createAndSendNotification(
+            User user,
+            NotificationType type,
+            String title,
+            String content,
+            String relatedEntityType,
+            Long relatedEntityId
+    ) {
+        Notification notification = Notification.builder()
+                .user(user)
+                .type(type)
+                .title(title)
+                .content(content)
+                .relatedEntityType(relatedEntityType)
+                .relatedEntityId(relatedEntityId)
+                .isRead(false)
+                .build();
+
+        notification = notificationRepository.save(notification);
+        NotificationResponse response = NotificationResponse.fromEntity(notification);
+
+        try {
+            messagingTemplate.convertAndSendToUser(user.getEmail(), "/queue/notifications", response);
+        } catch (Exception e) {
+            log.error("Failed to send WebSocket notification to user: {}", user.getEmail(), e);
+        }
+
+        return response;
     }
 }
