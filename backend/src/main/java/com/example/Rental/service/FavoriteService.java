@@ -12,6 +12,7 @@ import com.example.Rental.entity.Favorite;
 import com.example.Rental.entity.FavoriteId;
 import com.example.Rental.entity.Post;
 import com.example.Rental.entity.User;
+import com.example.Rental.exception.EntityNotFoundException;
 import com.example.Rental.repository.FavoriteRepository;
 import com.example.Rental.repository.PostRepository;
 import com.example.Rental.repository.UserRepository;
@@ -29,9 +30,9 @@ public class FavoriteService {
     @Transactional
     public void addFavorite(String email, Long postId) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Post not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Post not found"));
 
         // 1. Kiểm tra nếu đã lưu rồi thì ném lỗi ngay lập tức
         if (favoriteRepository.existsByUserIdAndPostId(user.getId(), postId)) {
@@ -57,9 +58,9 @@ public class FavoriteService {
     @Transactional
     public void removeFavorite(String email, Long postId) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Post not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Post not found"));
 
         FavoriteId favoriteId = new FavoriteId(user.getId(), postId);
         if (favoriteRepository.existsById(favoriteId)) {
@@ -76,7 +77,7 @@ public class FavoriteService {
     @Transactional(readOnly = true)
     public Page<Post> getUserFavorites(String email, Pageable pageable) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
         return favoriteRepository.findByUserId(user.getId(), pageable)
                 .map(Favorite::getPost);
     }
