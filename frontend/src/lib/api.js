@@ -247,6 +247,7 @@ export const ocrApi = {
 
 export const paymentApi = {
   getMyPayments: (params) => unwrap(api.get('/me/payments', { params })),
+  retry: (id) => unwrap(api.post(`/me/payments/${id}/retry`)),
 };
 
 export const publicApi = {

@@ -7,11 +7,15 @@ import com.example.Rental.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.security.Principal;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/me/payments")
@@ -37,5 +41,16 @@ public class PaymentController {
 
         PaymentListResponse resp = paymentService.listPayments(email, query);
         return ResponseEntity.ok(ApiResponse.ok("Payments retrieved successfully", resp));
+    }
+
+    @PostMapping("/{paymentId}/retry")
+    public ResponseEntity<ApiResponse<Map<String, String>>> retryPayment(
+            @PathVariable Long paymentId,
+            HttpServletRequest request,
+            Principal principal) {
+        String email = principal.getName();
+        String ipAddress = request.getRemoteAddr();
+        Map<String, String> result = paymentService.retryPayment(email, paymentId, ipAddress);
+        return ResponseEntity.ok(ApiResponse.ok("Payment URL generated", result));
     }
 }

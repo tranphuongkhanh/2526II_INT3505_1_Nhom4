@@ -28,40 +28,43 @@ public class VNPayController {
     private final PaymentRepository paymentRepository;
     private final PostRepository postRepository;
 
+    @org.springframework.beans.factory.annotation.Value("${app.frontend.url:http://localhost:5173}")
+    private String frontendUrl;
+
     @GetMapping("/vnpay-return")
-    public ResponseEntity<ApiResponse<Object>> vnpayReturn(@RequestParam Map<String, String> params) {
-        ApiResponse<Object> response = new ApiResponse<>();
+    public ResponseEntity<Void> vnpayReturn(@RequestParam Map<String, String> params) {
+        String redirectUrl = frontendUrl + "/owner/payments";
         
         try {
             boolean isVerified = vnPayService.verifyPayment(params);
             if (!isVerified) {
-                response.setSuccess(false);
-                response.setMessage("Chữ ký không hợp lệ!");
-                return ResponseEntity.badRequest().body(response);
+                return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
+                        .location(java.net.URI.create(redirectUrl + "?paymentStatus=invalid_signature"))
+                        .build();
             }
 
             String vnp_ResponseCode = params.get("vnp_ResponseCode");
             String vnp_TxnRef = params.get("vnp_TxnRef"); // format: paymentId_random
             
             if (!"00".equals(vnp_ResponseCode)) {
-                response.setSuccess(false);
-                response.setMessage("Thanh toán thất bại hoặc bị hủy!");
-                return ResponseEntity.ok(response);
+                return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
+                        .location(java.net.URI.create(redirectUrl + "?paymentStatus=failed"))
+                        .build();
             }
 
             Long paymentId = Long.parseLong(vnp_TxnRef.split("_")[0]);
             Payment payment = paymentRepository.findById(paymentId).orElse(null);
 
             if (payment == null) {
-                response.setSuccess(false);
-                response.setMessage("Không tìm thấy đơn thanh toán!");
-                return ResponseEntity.badRequest().body(response);
+                return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
+                        .location(java.net.URI.create(redirectUrl + "?paymentStatus=not_found"))
+                        .build();
             }
 
             if (payment.getStatus() == PaymentStatus.PAID) {
-                response.setSuccess(true);
-                response.setMessage("Đơn này đã được thanh toán trước đó!");
-                return ResponseEntity.ok(response);
+                return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
+                        .location(java.net.URI.create(redirectUrl + "?paymentStatus=already_paid"))
+                        .build();
             }
 
             // Mark as PAID
@@ -105,14 +108,14 @@ public class VNPayController {
                 }
             }
 
-            response.setSuccess(true);
-            response.setMessage("Thanh toán thành công!");
-            return ResponseEntity.ok(response);
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
+                    .location(java.net.URI.create(redirectUrl + "?paymentStatus=success"))
+                    .build();
 
         } catch (Exception e) {
-            response.setSuccess(false);
-            response.setMessage("Lỗi xử lý thanh toán: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(response);
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
+                    .location(java.net.URI.create(redirectUrl + "?paymentStatus=error"))
+                    .build();
         }
     }
 }

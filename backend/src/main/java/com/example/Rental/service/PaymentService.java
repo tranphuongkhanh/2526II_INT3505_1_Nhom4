@@ -23,6 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.HashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +32,25 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final UserRepository userRepository;
+    private final VNPayService vnPayService;
+
+    @Transactional
+    public Map<String, String> retryPayment(String email, Long paymentId, String ipAddress) {
+        User owner = userRepository.findByEmail(email).orElseThrow(() -> new EntityNotFoundException("User not found"));
+        Payment payment = paymentRepository.findById(paymentId).orElseThrow(() -> new EntityNotFoundException("Payment not found"));
+        
+        if (!payment.getOwner().getId().equals(owner.getId())) {
+            throw new AccessDeniedException("Not your payment");
+        }
+        if (payment.getStatus() != PaymentStatus.PENDING) {
+            throw new IllegalStateException("Payment is not pending");
+        }
+        
+        String url = vnPayService.createPaymentUrl(payment, ipAddress);
+        Map<String, String> response = new HashMap<>();
+        response.put("paymentUrl", url);
+        return response;
+    }
 
     @Transactional(readOnly = true)
     public PaymentListResponse listPayments(String email, PaymentQueryRequest query) {
@@ -67,6 +88,7 @@ public class PaymentService {
                 .post(PaymentResponse.PostDto.builder()
                         .id(p.getPost().getId())
                         .roomId(p.getPost().getRoom() != null ? p.getPost().getRoom().getId() : null)
+                        .status(p.getPost().getStatus().name())
                         .build())
                 .build()
         ).collect(Collectors.toList());

@@ -31,6 +31,7 @@ public class PaymentResponse {
     public static class PostDto {
         private Long id;
         private Long roomId;
+        private String status;
     }
 }
 
