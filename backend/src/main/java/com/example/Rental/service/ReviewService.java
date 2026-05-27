@@ -18,7 +18,7 @@ import com.example.Rental.enums.ReviewStatus;
 import com.example.Rental.enums.ReviewType;
 import com.example.Rental.enums.UserStatus;
 import com.example.Rental.exception.EntityNotFoundException;
-import com.example.Rental.exception.UnauthorizedException;
+import org.springframework.security.access.AccessDeniedException;
 import com.example.Rental.repository.RentalContractRepository;
 import com.example.Rental.repository.ReviewRepository;
 import com.example.Rental.repository.RoomRepository;
@@ -54,11 +54,11 @@ public class ReviewService {
             }
 
             if (!contract.getRenter().getId().equals(user.getId())) {
-                throw new UnauthorizedException("You are not the renter of this contract");
+                throw new AccessDeniedException("You are not the renter of this contract");
             }
         } else {
             contract = contractRepository.findFirstByRenterIdAndRoomIdOrderByCreatedAtDesc(user.getId(), roomId)
-                    .orElseThrow(() -> new UnauthorizedException("You must have rented this room to review it"));
+                    .orElseThrow(() -> new AccessDeniedException("You must have rented this room to review it"));
         }
 
         if (reviewRepository.existsByContractIdAndReviewType(contract.getId(), ReviewType.RENTER_TO_ROOM)) {
@@ -91,7 +91,7 @@ public class ReviewService {
                 .orElseThrow(() -> new EntityNotFoundException("Contract not found"));
 
         if (!contract.getRoom().getOwner().getId().equals(user.getId())) {
-            throw new UnauthorizedException("You are not the owner of this room");
+            throw new AccessDeniedException("You are not the owner of this room");
         }
 
         if (contract.getStatus() != com.example.Rental.enums.ContractStatus.ENDED) {
@@ -166,7 +166,7 @@ public class ReviewService {
                 .orElseThrow(() -> new EntityNotFoundException("Review not found"));
 
         if (!review.getReviewer().getId().equals(user.getId())) {
-            throw new UnauthorizedException("You can only edit your own review");
+            throw new AccessDeniedException("You can only edit your own review");
         }
 
         review.setRating(request.getRating());
