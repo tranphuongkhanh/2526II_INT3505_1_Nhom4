@@ -17,6 +17,8 @@ import com.example.Rental.entity.User;
 import com.example.Rental.enums.ReviewStatus;
 import com.example.Rental.enums.ReviewType;
 import com.example.Rental.enums.UserStatus;
+import com.example.Rental.exception.EntityNotFoundException;
+import com.example.Rental.exception.UnauthorizedException;
 import com.example.Rental.repository.RentalContractRepository;
 import com.example.Rental.repository.ReviewRepository;
 import com.example.Rental.repository.RoomRepository;
@@ -36,21 +38,27 @@ public class ReviewService {
     @Transactional
     public void createRoomReview(Long roomId, ReviewRequest request, String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
         
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw new RuntimeException("User account is not active");
         }
 
-        RentalContract contract = contractRepository.findById(request.getContractId())
-                .orElseThrow(() -> new RuntimeException("Contract not found"));
+        RentalContract contract;
+        if (request.getContractId() != null) {
+            contract = contractRepository.findById(request.getContractId())
+                    .orElseThrow(() -> new EntityNotFoundException("Contract not found"));
 
-        if (!contract.getRoom().getId().equals(roomId)) {
-            throw new RuntimeException("Contract does not belong to this room");
-        }
+            if (!contract.getRoom().getId().equals(roomId)) {
+                throw new RuntimeException("Contract does not belong to this room");
+            }
 
-        if (!contract.getRenter().getId().equals(user.getId())) {
-            throw new RuntimeException("You are not the renter of this contract");
+            if (!contract.getRenter().getId().equals(user.getId())) {
+                throw new UnauthorizedException("You are not the renter of this contract");
+            }
+        } else {
+            contract = contractRepository.findFirstByRenterIdAndRoomIdOrderByCreatedAtDesc(user.getId(), roomId)
+                    .orElseThrow(() -> new UnauthorizedException("You must have rented this room to review it"));
         }
 
         if (reviewRepository.existsByContractIdAndReviewType(contract.getId(), ReviewType.RENTER_TO_ROOM)) {
@@ -73,17 +81,17 @@ public class ReviewService {
     @Transactional
     public void createRenterReview(Long contractId, RenterReviewRequest request, String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
         
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw new RuntimeException("User account is not active");
         }
 
         RentalContract contract = contractRepository.findById(contractId)
-                .orElseThrow(() -> new RuntimeException("Contract not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Contract not found"));
 
         if (!contract.getRoom().getOwner().getId().equals(user.getId())) {
-            throw new RuntimeException("You are not the owner of this room");
+            throw new UnauthorizedException("You are not the owner of this room");
         }
 
         if (contract.getStatus() != com.example.Rental.enums.ContractStatus.ENDED) {
@@ -133,10 +141,10 @@ public class ReviewService {
     @Transactional
     public void updateReviewStatus(Long reviewId, ReviewStatus status, String adminEmail) {
         User admin = userRepository.findByEmail(adminEmail)
-                .orElseThrow(() -> new RuntimeException("Admin not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Admin not found"));
 
         Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new RuntimeException("Review not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Review not found"));
 
         review.setStatus(status);
         review.setModeratedBy(admin);
@@ -152,13 +160,13 @@ public class ReviewService {
     @Transactional
     public void updateReview(Long reviewId, com.example.Rental.dto.request.ReviewUpdateRequest request, String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new RuntimeException("Review not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Review not found"));
 
         if (!review.getReviewer().getId().equals(user.getId())) {
-            throw new RuntimeException("You can only edit your own review");
+            throw new UnauthorizedException("You can only edit your own review");
         }
 
         review.setRating(request.getRating());
