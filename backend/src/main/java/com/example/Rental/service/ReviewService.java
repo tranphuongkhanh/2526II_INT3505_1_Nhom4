@@ -61,21 +61,30 @@ public class ReviewService {
                     .orElseThrow(() -> new AccessDeniedException("You must have rented this room to review it"));
         }
 
-        if (reviewRepository.existsByContractIdAndReviewType(contract.getId(), ReviewType.RENTER_TO_ROOM)) {
-            throw new RuntimeException("You have already reviewed this room for this contract");
+        java.util.Optional<Review> existingReview = reviewRepository.findByContractIdAndReviewType(contract.getId(), ReviewType.RENTER_TO_ROOM);
+
+        if (existingReview.isPresent()) {
+            Review review = existingReview.get();
+            review.setRating(request.getRating());
+            review.setComment(request.getComment());
+            review.setStatus(ReviewStatus.PENDING);
+            review.setModeratedBy(null);
+            review.setModeratedAt(null);
+            reviewRepository.saveAndFlush(review);
+            updateRoomAverageRating(review.getTargetRoom());
+        } else {
+            Review review = Review.builder()
+                    .reviewType(ReviewType.RENTER_TO_ROOM)
+                    .reviewer(user)
+                    .targetRoom(contract.getRoom())
+                    .contract(contract)
+                    .rating(request.getRating())
+                    .comment(request.getComment())
+                    .status(ReviewStatus.PENDING)
+                    .build();
+
+            reviewRepository.save(review);
         }
-
-        Review review = Review.builder()
-                .reviewType(ReviewType.RENTER_TO_ROOM)
-                .reviewer(user)
-                .targetRoom(contract.getRoom())
-                .contract(contract)
-                .rating(request.getRating())
-                .comment(request.getComment())
-                .status(ReviewStatus.PENDING)
-                .build();
-
-        reviewRepository.save(review);
     }
 
     @Transactional
@@ -98,21 +107,29 @@ public class ReviewService {
             throw new RuntimeException("You can only review the renter after the contract has ended");
         }
 
-        if (reviewRepository.existsByContractIdAndReviewType(contract.getId(), ReviewType.OWNER_TO_RENTER)) {
-            throw new RuntimeException("You have already reviewed this renter for this contract");
+        java.util.Optional<Review> existingReview = reviewRepository.findByContractIdAndReviewType(contract.getId(), ReviewType.OWNER_TO_RENTER);
+        
+        if (existingReview.isPresent()) {
+            Review review = existingReview.get();
+            review.setRating(request.getRating());
+            review.setComment(request.getComment());
+            review.setStatus(ReviewStatus.PENDING);
+            review.setModeratedBy(null);
+            review.setModeratedAt(null);
+            reviewRepository.save(review);
+        } else {
+            Review review = Review.builder()
+                    .reviewType(ReviewType.OWNER_TO_RENTER)
+                    .reviewer(user)
+                    .targetUser(contract.getRenter())
+                    .contract(contract)
+                    .rating(request.getRating())
+                    .comment(request.getComment())
+                    .status(ReviewStatus.PENDING)
+                    .build();
+
+            reviewRepository.save(review);
         }
-
-        Review review = Review.builder()
-                .reviewType(ReviewType.OWNER_TO_RENTER)
-                .reviewer(user)
-                .targetUser(contract.getRenter())
-                .contract(contract)
-                .rating(request.getRating())
-                .comment(request.getComment())
-                .status(ReviewStatus.PENDING)
-                .build();
-
-        reviewRepository.save(review);
     }
 
     @Transactional(readOnly = true)
