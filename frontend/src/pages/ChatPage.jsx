@@ -76,9 +76,12 @@ function MessageBubble({ message, isOwn }) {
         ].join(' ')}
       >
         <p className="whitespace-pre-wrap break-words leading-relaxed">{message.content}</p>
-        <p className={['text-[10px] mt-1', isOwn ? 'text-primary-100/80' : 'text-ink-400'].join(' ')}>
-          {formatTime(message.createdAt || message.sentAt)}
-        </p>
+        <div className={['flex items-center gap-1 mt-1 text-[10px]', isOwn ? 'text-primary-100/80 justify-end' : 'text-ink-400'].join(' ')}>
+          <span>{formatTime(message.createdAt || message.sentAt)}</span>
+          {isOwn && message.isRead && (
+            <span className="font-medium tracking-wide">· Đã xem</span>
+          )}
+        </div>
       </div>
     </motion.div>
   );
