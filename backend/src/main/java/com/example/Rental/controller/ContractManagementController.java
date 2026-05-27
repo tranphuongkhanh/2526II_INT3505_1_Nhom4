@@ -21,9 +21,13 @@ public class ContractManagementController {
 
     @PatchMapping("/{contractId}/end")
     public ResponseEntity<ApiResponse<ContractResponse>> endContract(@PathVariable Long contractId, Principal principal) {
-        String email = principal.getName();
-
-        ContractResponse resp = contractService.endContract(contractId, email);
+        ContractResponse resp = contractService.endContract(contractId, principal.getName());
         return ResponseEntity.ok(ApiResponse.ok("Contract ended", resp));
+    }
+
+    @PatchMapping("/{contractId}/sign")
+    public ResponseEntity<ApiResponse<ContractResponse>> signContract(@PathVariable Long contractId, Principal principal) {
+        ContractResponse resp = contractService.signContract(contractId, principal.getName());
+        return ResponseEntity.ok(ApiResponse.ok("Contract signed", resp));
     }
 }

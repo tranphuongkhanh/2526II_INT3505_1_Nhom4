@@ -11,7 +11,7 @@ import java.util.Optional;
 
 public interface RentalContractRepository extends JpaRepository<RentalContract, Long> {
     Optional<RentalContract> findByRoomIdAndStatus(Long roomId, ContractStatus status);
-    Optional<RentalContract> findFirstByRenterIdAndRoomIdOrderByCreatedAtDesc(Long renterId, Long roomId);
+    Optional<RentalContract> findFirstByRenterIdAndStatusOrderByCreatedAtDesc(Long renterId, ContractStatus status);
     List<RentalContract> findByRenterId(Long renterId);
     Page<RentalContract> findByRenterId(Long renterId, Pageable pageable);
     List<RentalContract> findByRoomId(Long roomId);

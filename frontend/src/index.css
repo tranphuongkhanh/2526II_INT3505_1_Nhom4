@@ -86,8 +86,18 @@
 
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: #14919B transparent;
+    scrollbar-color: #9CA3AF transparent;
   }
+}
+
+/* Hide number input spinners for a cleaner look */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
 }
 
 /* Scrollbar styling — webkit */
@@ -99,17 +109,17 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(20, 145, 155, 0.4);
+  background: rgba(156, 163, 175, 0.6);
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(20, 145, 155, 0.7);
+  background: rgba(156, 163, 175, 0.9);
 }
 html.dark ::-webkit-scrollbar-thumb {
-  background: rgba(102, 197, 197, 0.35);
+  background: rgba(107, 114, 128, 0.5);
 }
 html.dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(102, 197, 197, 0.6);
+  background: rgba(107, 114, 128, 0.8);
 }
 
 /* Dual range slider (overlay two inputs) — track transparent, thumb pickable */
@@ -131,46 +141,49 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   -webkit-appearance: none;
   appearance: none;
   pointer-events: auto;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 9999px;
-  background: #14919B;
-  border: 3px solid #ffffff;
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.25);
+  background: #ffffff;
+  border: 2px solid #14919B;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18), 0 0 0 3px rgba(20, 145, 155, 0.12);
   cursor: grab;
-  transition: transform 120ms ease, box-shadow 120ms ease;
+  margin-top: 5px;
+  transition: box-shadow 150ms ease, border-color 150ms ease;
 }
 .range-input::-webkit-slider-thumb:hover {
-  transform: scale(1.15);
-  box-shadow: 0 2px 8px rgba(20, 145, 155, 0.45);
+  border-color: #0D6E6E;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.22), 0 0 0 5px rgba(20, 145, 155, 0.15);
 }
 .range-input::-webkit-slider-thumb:active {
   cursor: grabbing;
-  transform: scale(1.2);
+  border-color: #0D6E6E;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.22), 0 0 0 6px rgba(20, 145, 155, 0.2);
 }
 .range-input::-moz-range-thumb {
   pointer-events: auto;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 9999px;
-  background: #14919B;
-  border: 3px solid #ffffff;
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.25);
+  background: #ffffff;
+  border: 2px solid #14919B;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18), 0 0 0 3px rgba(20, 145, 155, 0.12);
   cursor: grab;
-  transition: transform 120ms ease, box-shadow 120ms ease;
+  margin-top: 5px;
+  transition: box-shadow 150ms ease, border-color 150ms ease;
 }
 .range-input::-moz-range-thumb:hover {
-  transform: scale(1.15);
-  box-shadow: 0 2px 8px rgba(20, 145, 155, 0.45);
+  border-color: #0D6E6E;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.22), 0 0 0 5px rgba(20, 145, 155, 0.15);
 }
 .range-input::-moz-range-thumb:active {
   cursor: grabbing;
-  transform: scale(1.2);
 }
 html.dark .range-input::-webkit-slider-thumb,
 html.dark .range-input::-moz-range-thumb {
-  background: #66C5C5;
-  border-color: #0f172a;
+  background: #0f172a;
+  border-color: #66C5C5;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 0 3px rgba(102, 197, 197, 0.15);
 }
 
 /* Reduced motion */

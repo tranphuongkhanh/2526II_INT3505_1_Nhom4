@@ -10,6 +10,8 @@ import lombok.Data;
 public class MessageResponse {
     private Long id;
     private Long senderId;
+    private String senderName;
+    private String senderAvatarUrl;
     private String type; // e.g. "MESSAGE" or "READ_RECEIPT"
     private String content;
     private Boolean isRead;

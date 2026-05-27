@@ -51,6 +51,7 @@ public class RentalContract {
     private BigDecimal waterPrice;
 
     @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "varchar(255)")
     private ContractStatus status = ContractStatus.ACTIVE;
 
     @CreationTimestamp

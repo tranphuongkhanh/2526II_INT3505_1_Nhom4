@@ -83,6 +83,7 @@ export const userApi = {
     fd.append('avatar', file);
     return unwrap(api.post('/users/me/avatar', fd, { headers: { 'Content-Type': 'multipart/form-data' } }));
   },
+  searchRenters: (q) => unwrap(api.get('/users/search', { params: { q } })),
 };
 
 export const roomApi = {
@@ -148,6 +149,8 @@ export const chatApi = {
     unwrap(api.post(`/conversations/${conversationId}/messages`, payload)),
   markRead: (conversationId) =>
     unwrap(api.put(`/conversations/${conversationId}/read`)),
+  deleteIfEmpty: (conversationId) =>
+    unwrap(api.delete(`/conversations/${conversationId}`)),
 };
 
 export const favoriteApi = {
@@ -188,7 +191,8 @@ export const reportApi = {
 };
 
 export const notificationApi = {
-  getAll: () => unwrap(api.get('/notifications')),
+  // Cursor-paginated list. Returns { items, nextCursor }.
+  list: (params) => unwrap(api.get('/notifications', { params })),
   getUnreadCount: () => unwrap(api.get('/notifications/unread-count')),
   markRead: (id) => unwrap(api.patch(`/notifications/${id}/read`)),
   markAllRead: () => unwrap(api.patch('/notifications/read-all')),
@@ -209,7 +213,9 @@ export const contractApi = {
   getByRoom: (roomId, params) =>
     unwrap(api.get(`/rooms/${roomId}/contracts`, { params })),
   getMyContracts: (params) => unwrap(api.get('/me/contracts', { params })),
+  getCurrentRent: () => unwrap(api.get('/me/current-rent')),
   end: (id) => unwrap(api.patch(`/contracts/${id}/end`)),
+  sign: (id) => unwrap(api.patch(`/contracts/${id}/sign`)),
 };
 
 export const billApi = {

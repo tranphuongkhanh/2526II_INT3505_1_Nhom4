@@ -25,6 +25,12 @@ public class ContractResponse {
     @JsonProperty("renter_id")
     private Long renterId;
 
+    @JsonProperty("renter_name")
+    private String renterName;
+
+    @JsonProperty("renter_phone")
+    private String renterPhone;
+
     @JsonProperty("status")
     private String status;
 
@@ -45,4 +51,25 @@ public class ContractResponse {
 
     @JsonProperty("created_at")
     private LocalDateTime createdAt;
+
+    @JsonProperty("room_title")
+    private String roomTitle;
+
+    @JsonProperty("room_address")
+    private String roomAddress;
+
+    @JsonProperty("room_ward")
+    private String roomWard;
+
+    @JsonProperty("room_district")
+    private String roomDistrict;
+
+    @JsonProperty("room_city")
+    private String roomCity;
+
+    @JsonProperty("owner_name")
+    private String ownerName;
+
+    @JsonProperty("owner_phone")
+    private String ownerPhone;
 }

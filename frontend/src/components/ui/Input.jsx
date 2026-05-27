@@ -26,7 +26,8 @@ export function Input({
   const isPassword = type === 'password';
   const effectiveType = isPassword && revealed ? 'text' : type;
   const filled = value !== undefined && value !== null && String(value).length > 0;
-  const floated = focused || filled;
+  const alwaysFloat = type === 'date' || type === 'time' || type === 'datetime-local' || type === 'month' || type === 'week';
+  const floated = focused || filled || alwaysFloat;
 
   const borderColor = error
     ? 'border-error focus-within:border-error'

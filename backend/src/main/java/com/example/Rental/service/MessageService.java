@@ -148,6 +148,8 @@ public class MessageService {
                 .id(message.getId())
                 .type("MESSAGE")
                 .senderId(message.getSender().getId())
+                .senderName(message.getSender().getFullName())
+                .senderAvatarUrl(message.getSender().getAvatarUrl())
                 .content(message.getContent())
                 .isRead(message.getIsRead())
                 .createdAt(message.getCreatedAt())

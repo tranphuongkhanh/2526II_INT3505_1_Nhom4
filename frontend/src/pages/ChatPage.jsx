@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Send, ChevronDown, ArrowLeft, MessageCircle, Loader2 } from 'lucide-react';
+import { Search, Send, ChevronDown, ArrowLeft, X, MessageCircle, Loader2 } from 'lucide-react';
 import { chatApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import Avatar from '../components/ui/Avatar';
@@ -88,11 +88,12 @@ function MessageBubble({ message, isOwn }) {
 
 function ConvItem({ conv, isActive, onClick }) {
   const otherName =
+    conv.partnerName ||
     conv.otherUserName ||
     conv.recipientName ||
     conv.title ||
     'Cuộc trò chuyện';
-  const otherAvatar = conv.otherUserAvatarUrl || conv.otherUserAvatar || conv.recipientAvatarUrl;
+  const otherAvatar = conv.partnerAvatar || conv.otherUserAvatarUrl || conv.otherUserAvatar || conv.recipientAvatarUrl;
   const lastMsg = conv.lastMessage || conv.lastMessageContent || '';
   const lastTime = conv.lastMessageAt || conv.updatedAt;
   const unread = conv.unreadCount || 0;
@@ -136,7 +137,16 @@ function ConvItem({ conv, isActive, onClick }) {
 export default function ChatPage() {
   const { conversationId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+
+  const handleExit = () => {
+    const fallback = role === 'OWNER' ? '/owner' : '/';
+    if (window.history.state?.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate(fallback);
+    }
+  };
 
   const [conversations, setConversations] = useState([]);
   const [activeConvId, setActiveConvId] = useState(conversationId || null);
@@ -145,6 +155,7 @@ export default function ChatPage() {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [loadingConversations, setLoadingConversations] = useState(true);
   const [hasMore, setHasMore] = useState(false);
   const [beforeCursor, setBeforeCursor] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -156,11 +167,13 @@ export default function ChatPage() {
   const textareaRef = useRef(null);
   const pollRef = useRef(null);
   const loadingMoreRef = useRef(false);
-
   const activeConvIdRef = useRef(activeConvId);
+
   useEffect(() => {
     activeConvIdRef.current = activeConvId;
   }, [activeConvId]);
+
+  // ── Load conversations ──────────────────────────────────────────────────────
 
   const loadConversations = useCallback(async () => {
     try {
@@ -168,16 +181,18 @@ export default function ChatPage() {
       setConversations(Array.isArray(data) ? data : data?.content || []);
     } catch {
       /* swallow poll errors */
+    } finally {
+      setLoadingConversations(false);
     }
   }, []);
 
   useEffect(() => {
     loadConversations();
-    
+
     socketService.connect(() => {
       socketService.subscribe('/user/queue/messages', (msg) => {
         const currentActiveConvId = activeConvIdRef.current;
-        
+
         if (msg.type === 'READ_RECEIPT') {
           // If we receive a read receipt for the current conversation, mark our sent messages as read
           if (String(msg.conversationId) === String(currentActiveConvId)) {
@@ -192,9 +207,9 @@ export default function ChatPage() {
             if (String(msg.senderId) === String(user?.id)) return prev;
             return [msg, ...prev];
           });
-          chatApi.markRead(msg.conversationId).catch(() => {});
+          chatApi.markRead(msg.conversationId).catch(() => { });
         }
-        
+
         setConversations((prev) => {
           let found = false;
           const next = prev.map(c => {
@@ -205,8 +220,8 @@ export default function ChatPage() {
                 lastMessage: msg.content,
                 lastMessageContent: msg.content,
                 lastMessageAt: msg.createdAt,
-                unreadCount: (String(c.id) !== String(currentActiveConvId) && String(msg.senderId) !== String(user?.id)) 
-                  ? (c.unreadCount || 0) + 1 
+                unreadCount: (String(c.id) !== String(currentActiveConvId) && String(msg.senderId) !== String(user?.id))
+                  ? (c.unreadCount || 0) + 1
                   : c.unreadCount
               };
             }
@@ -243,19 +258,22 @@ export default function ChatPage() {
     }
     try {
       const params = { limit: MSG_LIMIT };
-      if (cursor) params.before = cursor;
+      if (cursor) params.cursor = cursor;
       const data = await chatApi.getMessages(convId, params);
-      const msgs = Array.isArray(data) ? data : data?.content || data?.messages || [];
+      const msgs = Array.isArray(data)
+        ? data
+        : data?.items || data?.content || data?.messages || [];
       if (prepend) {
         setMessages((prev) => [...prev, ...msgs]);
       } else {
         setMessages(msgs);
       }
-      setHasMore(msgs.length === MSG_LIMIT);
-      if (msgs.length > 0) {
-        setBeforeCursor(msgs[msgs.length - 1].id);
+      const nextCursor = data?.nextCursor ?? null;
+      setHasMore(Boolean(nextCursor));
+      if (nextCursor) {
+        setBeforeCursor(nextCursor);
       }
-      chatApi.markRead(convId).catch(() => {});
+      chatApi.markRead(convId).catch(() => { });
     } catch {
       /* swallow */
     } finally {
@@ -285,9 +303,9 @@ export default function ChatPage() {
     if (inList) {
       setActiveConv(inList);
     } else {
-      chatApi.getConversationDetail(activeConvId).then(setActiveConv).catch(() => {});
+      chatApi.getConversationDetail(activeConvId).then(setActiveConv).catch(() => { });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeConvId, loadMessages]);
 
   const selectConversation = (conv) => {
@@ -369,16 +387,18 @@ export default function ChatPage() {
   // ── Derived ─────────────────────────────────────────────────────────────────
 
   const filteredConvs = conversations.filter((c) => {
-    const name = c.otherUserName || c.recipientName || c.title || '';
+    const name = c.partnerName || c.otherUserName || c.recipientName || c.title || '';
     return name.toLowerCase().includes(search.toLowerCase());
   });
 
   const otherName =
+    activeConv?.partnerName ||
     activeConv?.otherUserName ||
     activeConv?.recipientName ||
     activeConv?.title ||
     'Cuộc trò chuyện';
   const otherAvatar =
+    activeConv?.partnerAvatar ||
     activeConv?.otherUserAvatarUrl ||
     activeConv?.otherUserAvatar ||
     activeConv?.recipientAvatarUrl;
@@ -395,7 +415,17 @@ export default function ChatPage() {
         ].join(' ')}
       >
         <div className="p-4 border-b border-ink-100 dark:border-ink-700">
-          <h1 className="text-lg font-semibold text-ink-900 dark:text-ink-50 mb-3">Tin nhắn</h1>
+          <div className="flex items-center justify-between mb-3">
+            <h1 className="text-lg font-semibold text-ink-900 dark:text-ink-50">Tin nhắn</h1>
+            <button
+              type="button"
+              onClick={handleExit}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-400 hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors"
+              aria-label="Thoát"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400" />
             <input
@@ -408,7 +438,12 @@ export default function ChatPage() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-2">
-          {filteredConvs.length === 0 ? (
+          {loadingConversations ? (
+            <div className="flex flex-col items-center justify-center py-10 gap-2">
+              <Loader2 className="h-6 w-6 animate-spin text-primary-500" />
+              <p className="text-sm text-ink-400">Đang tải cuộc trò chuyện...</p>
+            </div>
+          ) : filteredConvs.length === 0 ? (
             <div className="text-center py-10">
               <MessageCircle className="h-10 w-10 mx-auto mb-2 text-ink-300 dark:text-ink-600" />
               <p className="text-sm text-ink-400">Chưa có cuộc trò chuyện nào</p>
@@ -460,8 +495,9 @@ export default function ChatPage() {
             {typing ? <TypingIndicator /> : null}
 
             {loadingMessages ? (
-              <div className="flex justify-center py-12">
+              <div className="flex flex-col items-center justify-center py-12 gap-2">
                 <Loader2 className="h-6 w-6 animate-spin text-primary-500" />
+                <p className="text-sm text-ink-400">Đang tải tin nhắn...</p>
               </div>
             ) : messages.length === 0 ? (
               <p className="text-center text-sm text-ink-400 py-12">

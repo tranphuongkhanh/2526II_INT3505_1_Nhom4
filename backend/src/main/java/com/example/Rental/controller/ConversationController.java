@@ -4,6 +4,7 @@ import java.security.Principal;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -90,7 +91,18 @@ public class ConversationController {
         return ResponseEntity.ok(ApiResponse.ok("Gửi tin nhắn thành công", result));
     }
 
-    // 6. Đánh dấu đã đọc
+    // 6. Xoá hội thoại nếu chưa có tin nhắn
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Object>> deleteIfEmpty(
+            @PathVariable Long id,
+            Principal principal) {
+
+        String email = principal.getName();
+        conversationService.deleteIfEmpty(email, id);
+        return ResponseEntity.ok(ApiResponse.ok("Đã xoá hội thoại", null));
+    }
+
+    // 7. Đánh dấu đã đọc
     @PutMapping("/{id}/read")
     public ResponseEntity<ApiResponse<Object>> markMessagesAsRead(
             @PathVariable Long id,

@@ -3,6 +3,7 @@ package com.example.Rental.controller;
 import com.example.Rental.dto.request.ContractQueryRequest;
 import com.example.Rental.dto.response.ApiResponse;
 import com.example.Rental.dto.response.ContractListResponse;
+import com.example.Rental.dto.response.ContractResponse;
 import com.example.Rental.service.ContractService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -32,5 +33,12 @@ public class MeContractController {
         ContractQueryRequest query = ContractQueryRequest.builder().page(page).limit(limit).build();
         ContractListResponse resp = contractService.listContractsForRenter(email, query);
         return ResponseEntity.ok(ApiResponse.ok("Contracts retrieved", resp));
+    }
+
+    @GetMapping("/current-rent")
+    public ResponseEntity<ApiResponse<ContractResponse>> currentRent(Principal principal) {
+        String email = principal.getName();
+        ContractResponse resp = contractService.getCurrentRent(email);
+        return ResponseEntity.ok(ApiResponse.ok("Current rent retrieved", resp));
     }
 }

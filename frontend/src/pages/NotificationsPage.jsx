@@ -1,28 +1,29 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckCircle, XCircle, Clock, MessageCircle, Star,
   Shield, UserCheck, UserX, Receipt, Bell, CheckCheck,
-  Trash2, Loader2,
+  Trash2, Loader2, FileText, PenLine,
 } from 'lucide-react';
-import { notificationApi } from '../lib/api';
-import { useToast } from '../components/ui/Toast';
 import Button from '../components/ui/Button';
 import { springs } from '../lib/animations';
+import { useNotifications } from '../contexts/NotificationContext';
 
 // ─── Type config ──────────────────────────────────────────────────────────────
 
 const TYPE_CONFIG = {
-  BOOKING_APPROVED:  { icon: CheckCircle,   color: 'text-success',     bg: 'bg-green-100 dark:bg-green-900/30' },
-  BOOKING_REJECTED:  { icon: XCircle,       color: 'text-error',       bg: 'bg-red-100 dark:bg-red-900/30' },
-  BOOKING_PENDING:   { icon: Clock,         color: 'text-warning',     bg: 'bg-amber-100 dark:bg-amber-900/30' },
-  MESSAGE:           { icon: MessageCircle, color: 'text-info',        bg: 'bg-blue-100 dark:bg-blue-900/30' },
-  REVIEW:            { icon: Star,          color: 'text-accent-500',  bg: 'bg-amber-100 dark:bg-amber-900/30' },
-  ADMIN:             { icon: Shield,        color: 'text-primary-500', bg: 'bg-primary-50 dark:bg-primary-900/30' },
-  USER_VERIFIED:     { icon: UserCheck,     color: 'text-success',     bg: 'bg-green-100 dark:bg-green-900/30' },
-  USER_BANNED:       { icon: UserX,         color: 'text-error',       bg: 'bg-red-100 dark:bg-red-900/30' },
-  PAYMENT:           { icon: Receipt,       color: 'text-primary-500', bg: 'bg-primary-50 dark:bg-primary-900/30' },
+  POST_APPROVED:    { icon: CheckCircle,   color: 'text-success',     bg: 'bg-green-100 dark:bg-green-900/30' },
+  POST_REJECTED:    { icon: XCircle,       color: 'text-error',       bg: 'bg-red-100 dark:bg-red-900/30' },
+  POST_EXPIRING:    { icon: Clock,         color: 'text-warning',     bg: 'bg-amber-100 dark:bg-amber-900/30' },
+  NEW_MESSAGE:      { icon: MessageCircle, color: 'text-info',        bg: 'bg-blue-100 dark:bg-blue-900/30' },
+  REVIEW_APPROVED:  { icon: Star,          color: 'text-accent-500',  bg: 'bg-amber-100 dark:bg-amber-900/30' },
+  REPORT_RESOLVED:  { icon: Shield,        color: 'text-primary-500', bg: 'bg-primary-50 dark:bg-primary-900/30' },
+  ACCOUNT_APPROVED: { icon: UserCheck,     color: 'text-success',     bg: 'bg-green-100 dark:bg-green-900/30' },
+  ACCOUNT_BANNED:   { icon: UserX,         color: 'text-error',       bg: 'bg-red-100 dark:bg-red-900/30' },
+  NEW_BILL:         { icon: Receipt,       color: 'text-primary-500', bg: 'bg-primary-50 dark:bg-primary-900/30' },
+  CONTRACT_CREATED: { icon: FileText,      color: 'text-primary-500', bg: 'bg-primary-50 dark:bg-primary-900/30' },
+  CONTRACT_SIGNED:  { icon: PenLine,       color: 'text-success',     bg: 'bg-green-100 dark:bg-green-900/30' },
 };
 
 const DEFAULT_CONFIG = { icon: Bell, color: 'text-ink-400', bg: 'bg-ink-100 dark:bg-ink-800' };
@@ -45,13 +46,18 @@ function formatNotifTime(ts) {
 function resolveLink(notif) {
   const id = notif.relatedEntityId;
   switch (notif.type) {
-    case 'MESSAGE': return id ? `/chat/${id}` : '/chat';
-    case 'REVIEW': return id ? `/posts/${id}` : null;
-    case 'BOOKING_APPROVED':
-    case 'BOOKING_REJECTED':
-    case 'BOOKING_PENDING': return '/my-contracts';
-    case 'PAYMENT': return '/my-contracts';
-    default: return notif.link || null;
+    case 'NEW_MESSAGE': return id ? `/chat/${id}` : '/chat';
+    case 'REVIEW_APPROVED': return id ? `/posts/${id}` : null;
+    case 'POST_APPROVED':
+    case 'POST_REJECTED':
+    case 'POST_EXPIRING': return id ? `/posts/${id}` : '/owner/posts';
+    case 'NEW_BILL':
+    case 'CONTRACT_CREATED':
+    case 'CONTRACT_SIGNED': return '/my-contracts';
+    case 'REPORT_RESOLVED': return '/my-reports';
+    case 'ACCOUNT_APPROVED':
+    case 'ACCOUNT_BANNED': return '/profile';
+    default: return null;
   }
 }
 
@@ -87,7 +93,7 @@ function NotificationItem({ notif, index, markingAll, onRead, onDismiss }) {
           className={[
             'relative cursor-pointer select-none',
             'border-b border-ink-100 dark:border-ink-700 last:border-b-0',
-            notif.read
+            notif.isRead
               ? 'bg-white dark:bg-ink-900'
               : 'bg-primary-50 dark:bg-primary-900/20 border-l-2 border-primary-500',
           ].join(' ')}
@@ -99,21 +105,28 @@ function NotificationItem({ notif, index, markingAll, onRead, onDismiss }) {
             </div>
 
             <div className="flex-1 min-w-0">
-              <p
-                className={[
-                  'text-sm leading-snug',
-                  notif.read
-                    ? 'text-ink-600 dark:text-ink-200'
-                    : 'font-medium text-ink-900 dark:text-ink-50',
-                ].join(' ')}
-              >
-                {notif.message || notif.content || notif.title}
-              </p>
+              {notif.title ? (
+                <p
+                  className={[
+                    'text-sm leading-snug',
+                    notif.isRead
+                      ? 'text-ink-600 dark:text-ink-200'
+                      : 'font-semibold text-ink-900 dark:text-ink-50',
+                  ].join(' ')}
+                >
+                  {notif.title}
+                </p>
+              ) : null}
+              {notif.content ? (
+                <p className="text-sm text-ink-500 dark:text-ink-300 mt-0.5 leading-snug">
+                  {notif.content}
+                </p>
+              ) : null}
               <p className="text-xs text-ink-400 mt-1">{formatNotifTime(notif.createdAt)}</p>
             </div>
 
             {/* Unread dot — shrinks out on mark-all */}
-            {!notif.read ? (
+            {!notif.isRead ? (
               <AnimatePresence>
                 {!markingAll ? (
                   <motion.div
@@ -142,66 +155,35 @@ const TABS = [
 ];
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const [markingAll, setMarkingAll] = useState(false);
-  const toast = useToast();
   const navigate = useNavigate();
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await notificationApi.getAll();
-      setNotifications(Array.isArray(data) ? data : []);
-    } catch {
-      toast.error('Không thể tải thông báo');
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const {
+    notifications,
+    unreadCount,
+    hasMore,
+    loading,
+    markRead,
+    markAllRead,
+    dismiss,
+    loadMore,
+  } = useNotifications();
 
   const handleRead = async (notif) => {
-    if (!notif.read) {
-      notificationApi.markRead(notif.id).catch(() => {});
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === notif.id ? { ...n, read: true } : n))
-      );
-    }
+    if (!notif.isRead) markRead(notif.id);
     const link = resolveLink(notif);
     if (link) navigate(link);
   };
 
-  const handleDismiss = async (id) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-    notificationApi.delete(id).catch(() => {
-      toast.error('Không thể xoá thông báo');
-      load();
-    });
-  };
-
   const handleMarkAll = async () => {
     setMarkingAll(true);
-    try {
-      await notificationApi.markAllRead();
-      // Brief delay so the dot-shrink animation is visible before they disappear
-      setTimeout(() => {
-        setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-        setMarkingAll(false);
-      }, notifications.filter((n) => !n.read).length * 20 + 200);
-    } catch {
-      toast.error('Không thể đánh dấu tất cả đã đọc');
-      setMarkingAll(false);
-    }
+    const count = notifications.filter((n) => !n.isRead).length;
+    await markAllRead();
+    setTimeout(() => setMarkingAll(false), count * 20 + 200);
   };
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
   const filtered =
-    activeTab === 'unread' ? notifications.filter((n) => !n.read) : notifications;
+    activeTab === 'unread' ? notifications.filter((n) => !n.isRead) : notifications;
 
   return (
     <div className="mx-auto max-w-2xl px-4 sm:px-6 py-8">
@@ -268,7 +250,7 @@ export default function NotificationsPage() {
       </div>
 
       {/* Content */}
-      {loading ? (
+      {loading && notifications.length === 0 ? (
         <div className="flex justify-center py-16">
           <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
         </div>
@@ -280,20 +262,29 @@ export default function NotificationsPage() {
           </p>
         </div>
       ) : (
-        <div className="rounded-2xl overflow-hidden border border-ink-100 dark:border-ink-700">
-          <AnimatePresence initial={false}>
-            {filtered.map((notif, i) => (
-              <NotificationItem
-                key={notif.id}
-                notif={notif}
-                index={i}
-                markingAll={markingAll}
-                onRead={handleRead}
-                onDismiss={handleDismiss}
-              />
-            ))}
-          </AnimatePresence>
-        </div>
+        <>
+          <div className="rounded-2xl overflow-hidden border border-ink-100 dark:border-ink-700">
+            <AnimatePresence initial={false}>
+              {filtered.map((notif, i) => (
+                <NotificationItem
+                  key={notif.id}
+                  notif={notif}
+                  index={i}
+                  markingAll={markingAll}
+                  onRead={handleRead}
+                  onDismiss={dismiss}
+                />
+              ))}
+            </AnimatePresence>
+          </div>
+          {hasMore && activeTab === 'all' ? (
+            <div className="flex justify-center mt-4">
+              <Button variant="ghost" size="sm" loading={loading} onClick={loadMore}>
+                Tải thêm
+              </Button>
+            </div>
+          ) : null}
+        </>
       )}
     </div>
   );

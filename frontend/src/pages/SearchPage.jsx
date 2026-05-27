@@ -264,11 +264,14 @@ function PriceRange({ min, max, onCommit }) {
 
   return (
     <div>
-      <div className="relative h-6">
-        <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-1 rounded-full bg-ink-200 dark:bg-ink-700" />
+      <div className="relative h-7">
+        <div className="absolute top-1/2 -translate-y-1/2 left-[9px] right-[9px] h-[3px] rounded-full bg-ink-200 dark:bg-ink-700" />
         <div
-          className="absolute top-1/2 -translate-y-1/2 h-1 rounded-full bg-primary-500"
-          style={{ left: `${pct(localMin)}%`, right: `${100 - pct(localMax)}%` }}
+          className="absolute top-1/2 -translate-y-1/2 h-[3px] rounded-full bg-primary-500"
+          style={{
+            left: `calc(9px + (100% - 18px) * ${pct(localMin)} / 100)`,
+            right: `calc(9px + (100% - 18px) * ${100 - pct(localMax)} / 100)`,
+          }}
         />
         <input
           type="range"
@@ -343,9 +346,6 @@ function PriceRange({ min, max, onCommit }) {
 
 function FilterSidebar({ filters, update, reset, anyActive, onClose }) {
   const selectedCity = CITIES.find((c) => c.name === filters.city) || null;
-  const [localKeyword, setLocalKeyword] = useState(filters.keyword);
-
-  useEffect(() => { setLocalKeyword(filters.keyword); }, [filters.keyword]);
 
   const toggle = (list, item) => {
     const set = new Set(list);
@@ -354,13 +354,10 @@ function FilterSidebar({ filters, update, reset, anyActive, onClose }) {
     return Array.from(set);
   };
 
-  const commitKeyword = (val) => {
-    update({ keyword: val.trim() });
-  };
-
   return (
-    <aside className="bg-white dark:bg-ink-900 lg:bg-transparent lg:dark:bg-transparent p-5 lg:p-0 h-full overflow-y-auto lg:h-auto lg:overflow-visible pb-24 lg:pb-0">
-      <div className="flex items-center justify-between mb-3">
+    <aside className="bg-white dark:bg-ink-900 lg:bg-transparent lg:dark:bg-transparent p-5 lg:p-0">
+      {/* Header row — shown in mobile drawer only (desktop header is rendered by the parent) */}
+      <div className="flex lg:hidden items-center justify-between mb-3">
         <h2 className="font-semibold text-ink-900 dark:text-ink-50">Bộ lọc</h2>
         <div className="flex items-center gap-2">
           {anyActive ? (
@@ -376,7 +373,7 @@ function FilterSidebar({ filters, update, reset, anyActive, onClose }) {
             <button
               type="button"
               onClick={onClose}
-              className="lg:hidden inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-400 hover:bg-ink-100 dark:hover:bg-ink-800"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-400 hover:bg-ink-100 dark:hover:bg-ink-800"
               aria-label="Đóng bộ lọc"
             >
               <X className="h-4 w-4" />
@@ -384,33 +381,16 @@ function FilterSidebar({ filters, update, reset, anyActive, onClose }) {
           ) : null}
         </div>
       </div>
-
-      {/* Keyword search */}
-      <div className="border-b border-ink-100 dark:border-ink-700 py-4">
-        <label className="block text-sm font-semibold text-ink-900 dark:text-ink-50 mb-2">Từ khoá</label>
-        <div className="relative">
-          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400 pointer-events-none" />
-          <input
-            type="text"
-            value={localKeyword}
-            placeholder="Tên phòng, địa chỉ..."
-            onChange={(e) => setLocalKeyword(e.target.value)}
-            onBlur={(e) => commitKeyword(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && commitKeyword(localKeyword)}
-            className="w-full h-10 pl-9 pr-8 rounded-lg bg-ink-50 dark:bg-ink-800 border border-transparent focus:border-primary-500 text-sm text-ink-900 dark:text-ink-50 outline-none transition-colors"
-          />
-          {localKeyword ? (
-            <button
-              type="button"
-              onClick={() => { setLocalKeyword(''); commitKeyword(''); }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-ink-400 hover:text-ink-600 dark:hover:text-ink-200"
-              aria-label="Xoá từ khoá"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          ) : null}
-        </div>
-      </div>
+      {/* Desktop: "Xoá tất cả" sits below the header row rendered by the parent */}
+      {anyActive ? (
+        <button
+          type="button"
+          onClick={reset}
+          className="hidden lg:block mb-3 text-xs font-medium text-error hover:underline"
+        >
+          Xoá tất cả
+        </button>
+      ) : null}
 
       <FilterSection title="Khu vực">
         <div className="space-y-2">
@@ -675,6 +655,10 @@ export function SearchPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
+  const [localKeyword, setLocalKeyword] = useState(filters.keyword);
+  useEffect(() => { setLocalKeyword(filters.keyword); }, [filters.keyword]);
+  const commitKeyword = (val) => update({ keyword: val.trim() });
+
   const anyActive =
     Boolean(filters.keyword || filters.city || filters.district) ||
     filters.roomTypes.length > 0 ||
@@ -757,7 +741,7 @@ export function SearchPage() {
       >
         {/* ── Desktop sidebar ── */}
         <div className="hidden lg:block">
-          <div className="sticky top-24 max-h-[calc(100vh-6rem)] overflow-hidden">
+          <div className="sticky top-24 max-h-[calc(100vh-6rem)] flex flex-col">
             {sidebarCollapsed ? (
               <button
                 type="button"
@@ -770,15 +754,18 @@ export function SearchPage() {
               </button>
             ) : (
               <div className="flex flex-col h-full min-h-0">
-                <button
-                  type="button"
-                  onClick={() => setSidebarCollapsed(true)}
-                  className="shrink-0 self-end mb-2 inline-flex items-center gap-1 text-xs font-medium text-ink-400 hover:text-primary-500 transition-colors"
-                  aria-label="Thu gọn bộ lọc"
-                >
-                  Thu gọn
-                  <ChevronLeft className="h-3.5 w-3.5" />
-                </button>
+                <div className="shrink-0 flex items-center justify-between mb-2">
+                  <h2 className="font-semibold text-ink-900 dark:text-ink-50">Bộ lọc</h2>
+                  <button
+                    type="button"
+                    onClick={() => setSidebarCollapsed(true)}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-ink-400 hover:text-primary-500 transition-colors"
+                    aria-label="Thu gọn bộ lọc"
+                  >
+                    Thu gọn
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                  </button>
+                </div>
                 <div className="flex-1 min-h-0 overflow-y-auto pr-1 scrollbar-thin">
                   <FilterSidebar
                     filters={filters}
@@ -794,6 +781,30 @@ export function SearchPage() {
 
         {/* ── Results ── */}
         <div ref={resultsRef} className="min-w-0">
+          {/* Keyword search bar */}
+          <div className="relative mb-4">
+            <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400 pointer-events-none" />
+            <input
+              type="text"
+              value={localKeyword}
+              placeholder="Tìm theo tên phòng, địa chỉ..."
+              onChange={(e) => setLocalKeyword(e.target.value)}
+              onBlur={(e) => commitKeyword(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && commitKeyword(localKeyword)}
+              className="w-full h-11 pl-10 pr-10 rounded-xl bg-white dark:bg-ink-900 border border-ink-200 dark:border-ink-700 focus:border-primary-500 dark:focus:border-primary-500 text-sm text-ink-900 dark:text-ink-50 outline-none transition-colors shadow-soft"
+            />
+            {localKeyword ? (
+              <button
+                type="button"
+                onClick={() => { setLocalKeyword(''); commitKeyword(''); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded text-ink-400 hover:text-ink-600 dark:hover:text-ink-200"
+                aria-label="Xoá từ khoá"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            ) : null}
+          </div>
+
           {/* Action bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-ink-100 dark:border-ink-700">
             <div className="flex items-baseline gap-2">
@@ -953,16 +964,18 @@ export function SearchPage() {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={springs.smooth}
-              className="lg:hidden fixed inset-y-0 left-0 z-50 w-80 max-w-[85vw] shadow-elevated"
+              className="lg:hidden fixed inset-y-0 left-0 z-50 w-80 max-w-[85vw] shadow-elevated flex flex-col overflow-hidden bg-white dark:bg-ink-900"
             >
-              <FilterSidebar
-                filters={filters}
-                update={update}
-                reset={reset}
-                anyActive={anyActive}
-                onClose={() => setSidebarOpen(false)}
-              />
-              <div className="absolute bottom-0 inset-x-0 p-4 bg-white dark:bg-ink-900 border-t border-ink-100 dark:border-ink-700">
+              <div className="flex-1 overflow-y-auto overscroll-contain scrollbar-thin">
+                <FilterSidebar
+                  filters={filters}
+                  update={update}
+                  reset={reset}
+                  anyActive={anyActive}
+                  onClose={() => setSidebarOpen(false)}
+                />
+              </div>
+              <div className="shrink-0 p-4 border-t border-ink-100 dark:border-ink-700">
                 <Button fullWidth onClick={() => setSidebarOpen(false)} icon={Check}>
                   Áp dụng
                 </Button>
