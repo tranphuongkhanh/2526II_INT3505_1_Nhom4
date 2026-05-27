@@ -14,6 +14,7 @@ import com.example.Rental.entity.Report;
 import com.example.Rental.entity.User;
 import com.example.Rental.enums.ReportStatus;
 import com.example.Rental.enums.UserStatus;
+import com.example.Rental.exception.EntityNotFoundException;
 import com.example.Rental.repository.PostRepository;
 import com.example.Rental.repository.ReportRepository;
 import com.example.Rental.repository.UserRepository;
@@ -31,14 +32,14 @@ public class ReportService {
     @Transactional
     public void createReport(Long postId, ReportRequest request, String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw new RuntimeException("User account is not active");
         }
 
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Post not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Post not found"));
 
         if (reportRepository.existsByReporterIdAndPostIdAndStatus(user.getId(), post.getId(), ReportStatus.PENDING)) {
             throw new RuntimeException("You have already reported this post. Please wait for an admin to review.");
@@ -57,7 +58,7 @@ public class ReportService {
     @Transactional(readOnly = true)
     public Page<Report> getUserReports(String email, Pageable pageable) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         return reportRepository.findByReporterId(user.getId(), pageable);
     }
@@ -73,16 +74,16 @@ public class ReportService {
     @Transactional(readOnly = true)
     public Report getReportById(Long reportId) {
         return reportRepository.findById(reportId)
-                .orElseThrow(() -> new RuntimeException("Report not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Report not found"));
     }
 
     @Transactional
     public void updateReportStatus(Long reportId, ReportStatusUpdateRequest request, String adminEmail) {
         User admin = userRepository.findByEmail(adminEmail)
-                .orElseThrow(() -> new RuntimeException("Admin not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Admin not found"));
 
         Report report = reportRepository.findById(reportId)
-                .orElseThrow(() -> new RuntimeException("Report not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Report not found"));
 
         if (report.getStatus() != ReportStatus.PENDING) {
             throw new RuntimeException("Report is already resolved or rejected");
