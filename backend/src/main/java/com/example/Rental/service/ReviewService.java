@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,11 +15,11 @@ import com.example.Rental.entity.RentalContract;
 import com.example.Rental.entity.Review;
 import com.example.Rental.entity.Room;
 import com.example.Rental.entity.User;
+import com.example.Rental.enums.NotificationType;
 import com.example.Rental.enums.ReviewStatus;
 import com.example.Rental.enums.ReviewType;
 import com.example.Rental.enums.UserStatus;
 import com.example.Rental.exception.EntityNotFoundException;
-import org.springframework.security.access.AccessDeniedException;
 import com.example.Rental.repository.RentalContractRepository;
 import com.example.Rental.repository.ReviewRepository;
 import com.example.Rental.repository.RoomRepository;
@@ -34,6 +35,7 @@ public class ReviewService {
     private final RentalContractRepository contractRepository;
     private final UserRepository userRepository;
     private final RoomRepository roomRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public void createRoomReview(Long roomId, ReviewRequest request, String email) {
@@ -171,6 +173,18 @@ public class ReviewService {
 
         if (review.getReviewType() == ReviewType.RENTER_TO_ROOM) {
             updateRoomAverageRating(review.getTargetRoom());
+        }
+
+        // Gửi thông báo WebSocket realtime khi review được duyệt
+        if (status == ReviewStatus.APPROVED) {
+            notificationService.createAndSendNotification(
+                    review.getReviewer(),
+                    NotificationType.REVIEW_APPROVED,
+                    "Đánh giá của bạn đã được duyệt",
+                    "Đánh giá của bạn cho " + (review.getReviewType() == ReviewType.RENTER_TO_ROOM ? "phòng '" + review.getTargetRoom().getTitle() + "'" : "người thuê '" + review.getTargetUser().getFullName() + "'") + " đã được duyệt thành công.",
+                    "review",
+                    review.getId()
+            );
         }
     }
 

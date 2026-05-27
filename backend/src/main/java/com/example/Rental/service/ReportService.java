@@ -12,6 +12,7 @@ import com.example.Rental.dto.request.ReportStatusUpdateRequest;
 import com.example.Rental.entity.Post;
 import com.example.Rental.entity.Report;
 import com.example.Rental.entity.User;
+import com.example.Rental.enums.NotificationType;
 import com.example.Rental.enums.ReportStatus;
 import com.example.Rental.enums.UserStatus;
 import com.example.Rental.exception.EntityNotFoundException;
@@ -28,6 +29,7 @@ public class ReportService {
     private final ReportRepository reportRepository;
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public void createReport(Long postId, ReportRequest request, String email) {
@@ -95,5 +97,17 @@ public class ReportService {
         report.setHandledAt(LocalDateTime.now());
 
         reportRepository.save(report);
+
+        // Gửi thông báo WebSocket realtime khi report được giải quyết
+        if (request.getStatus() == ReportStatus.RESOLVED) {
+            notificationService.createAndSendNotification(
+                    report.getReporter(),
+                    NotificationType.REPORT_RESOLVED,
+                    "Báo cáo của bạn đã được giải quyết",
+                    "Báo cáo của bạn về bài đăng '" + report.getPost().getRoom().getTitle() + "' đã được giải quyết. Kết quả: " + report.getResolution(),
+                    "report",
+                    report.getId()
+            );
+        }
     }
 }
