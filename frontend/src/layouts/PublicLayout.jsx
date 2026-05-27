@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
 import {
-  Search,
   Bell,
   Menu,
   X,
@@ -35,33 +34,13 @@ const BrandIcon = {
   ),
 };
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import { useToast } from '../components/ui/Toast';
 import ThemeToggle from '../components/ui/ThemeToggle';
 import Avatar from '../components/ui/Avatar';
+import ChatPopup from '../components/ui/ChatPopup';
 import { springs } from '../lib/animations';
 
-function NavbarSearch() {
-  const navigate = useNavigate();
-  const [q, setQ] = useState('');
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        navigate(`/posts${q ? `?q=${encodeURIComponent(q)}` : ''}`);
-      }}
-      className="relative hidden md:block w-64"
-    >
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400" />
-      <input
-        type="text"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Tìm phòng trọ…"
-        className="w-full h-10 rounded-full bg-ink-100 dark:bg-ink-800 pl-9 pr-4 text-sm text-ink-900 dark:text-ink-50 placeholder-ink-400 outline-none focus:ring-2 focus:ring-primary-500/40"
-      />
-    </form>
-  );
-}
 
 function AvatarDropdown() {
   const { user, logout } = useAuth();
@@ -156,6 +135,24 @@ function AvatarDropdown() {
   );
 }
 
+function NotificationBell() {
+  const { unreadCount } = useNotifications();
+  return (
+    <Link
+      to="/notifications"
+      className="relative inline-flex h-10 w-10 items-center justify-center rounded-full text-ink-600 dark:text-ink-200 hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors"
+      aria-label="Thông báo"
+    >
+      <Bell className="h-5 w-5" />
+      {unreadCount > 0 ? (
+        <span className="absolute top-1 right-1 inline-flex items-center justify-center h-4 min-w-[16px] rounded-full bg-error text-white text-[10px] font-bold px-1 ring-2 ring-white dark:ring-ink-900">
+          {unreadCount > 99 ? '99+' : unreadCount}
+        </span>
+      ) : null}
+    </Link>
+  );
+}
+
 function Navbar() {
   const { isAuthenticated } = useAuth();
   const [scrolled, setScrolled] = useState(false);
@@ -193,25 +190,22 @@ function Navbar() {
           RoomHub
         </Link>
 
-        <NavbarSearch />
-
         <nav className="hidden md:flex items-center gap-6 ml-2">
           <NavLink to="/posts" className={navLink}>
             Tìm phòng
           </NavLink>
+          {isAuthenticated && (
+            <NavLink to="/current-rent" className={navLink}>
+              Phòng đang thuê
+            </NavLink>
+          )}
         </nav>
 
         <div className="ml-auto flex items-center gap-1.5">
           <ThemeToggle />
           {isAuthenticated ? (
             <>
-              <Link
-                to="/notifications"
-                className="relative inline-flex h-10 w-10 items-center justify-center rounded-full text-ink-600 dark:text-ink-200 hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors"
-                aria-label="Thông báo"
-              >
-                <Bell className="h-5 w-5" />
-              </Link>
+              <NotificationBell />
               <AvatarDropdown />
             </>
           ) : (
@@ -259,6 +253,15 @@ function Navbar() {
               >
                 Tìm phòng
               </NavLink>
+              {isAuthenticated && (
+                <NavLink
+                  to="/current-rent"
+                  onClick={() => setMobileOpen(false)}
+                  className="block py-2 text-base font-medium text-ink-900 dark:text-ink-50"
+                >
+                  Phòng đang thuê
+                </NavLink>
+              )}
               {!isAuthenticated ? (
                 <div className="flex gap-2 pt-2">
                   <Link
@@ -356,6 +359,7 @@ export function PublicLayout() {
         <Outlet />
       </main>
       <Footer />
+      <ChatPopup />
     </div>
   );
 }

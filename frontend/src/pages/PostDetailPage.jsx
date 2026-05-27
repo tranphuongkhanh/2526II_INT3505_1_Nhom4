@@ -528,7 +528,8 @@ function ContactCard({ post, sentinelRef, onReport }) {
     setChatPending(true);
     try {
       const conv = await chatApi.createConversation({ partnerId: post.ownerId });
-      navigate(`/chat/${conv.id}`);
+      const isNew = !conv.lastMessagePreview;
+      navigate(`/chat/${conv.id}`, { state: { ephemeralConvId: isNew ? conv.id : null } });
     } catch (err) {
       toast.error(err.displayMessage || 'Không thể tạo cuộc trò chuyện, vui lòng thử lại.');
     } finally {

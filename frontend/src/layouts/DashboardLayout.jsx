@@ -12,6 +12,7 @@ import {
   Users,
   Flag,
   Star,
+  MessageCircle,
   ChevronsLeft,
   ChevronsRight,
   Menu,
@@ -20,6 +21,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import { useToast } from '../components/ui/Toast';
 import ThemeToggle from '../components/ui/ThemeToggle';
 import Avatar from '../components/ui/Avatar';
@@ -33,6 +35,7 @@ const OWNER_ITEMS = [
   { to: '/owner/bills', label: 'Hoá đơn', icon: Receipt },
   { to: '/owner/vehicles', label: 'Xe', icon: Car },
   { to: '/owner/payments', label: 'Thanh toán', icon: Wallet },
+  { to: '/chat', label: 'Tin nhắn', icon: MessageCircle },
 ];
 
 const ADMIN_ITEMS = [
@@ -251,6 +254,24 @@ function TopbarAvatar() {
   );
 }
 
+function NotificationBell() {
+  const { unreadCount } = useNotifications();
+  return (
+    <Link
+      to="/notifications"
+      className="relative inline-flex h-10 w-10 items-center justify-center rounded-full text-ink-600 dark:text-ink-200 hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors"
+      aria-label="Thông báo"
+    >
+      <Bell className="h-5 w-5" />
+      {unreadCount > 0 ? (
+        <span className="absolute top-1 right-1 inline-flex items-center justify-center h-4 min-w-[16px] rounded-full bg-error text-white text-[10px] font-bold px-1 ring-2 ring-white dark:ring-ink-900">
+          {unreadCount > 99 ? '99+' : unreadCount}
+        </span>
+      ) : null}
+    </Link>
+  );
+}
+
 export function DashboardLayout() {
   const { role } = useAuth();
   const location = useLocation();
@@ -315,13 +336,16 @@ export function DashboardLayout() {
             <Breadcrumb />
           </div>
           <ThemeToggle />
-          <Link
-            to="/notifications"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-ink-600 dark:text-ink-200 hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors"
-            aria-label="Thông báo"
-          >
-            <Bell className="h-5 w-5" />
-          </Link>
+          {role !== 'ADMIN' && (
+            <Link
+              to="/chat"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-ink-600 dark:text-ink-200 hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors"
+              aria-label="Tin nhắn"
+            >
+              <MessageCircle className="h-5 w-5" />
+            </Link>
+          )}
+          <NotificationBell />
           <TopbarAvatar />
         </header>
 

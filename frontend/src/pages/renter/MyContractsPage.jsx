@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Receipt, ChevronDown, ChevronRight } from 'lucide-react';
+import { FileText, Receipt, ChevronDown, ChevronRight, PenLine } from 'lucide-react';
 import { contractApi, billApi } from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -8,6 +8,7 @@ import { Badge } from '../../components/ui/Badge';
 import { springs, easings } from '../../lib/animations';
 
 const CONTRACT_STATUS = {
+  PENDING_RENTER_SIGNATURE: { label: 'Chờ bạn ký', variant: 'warning' },
   ACTIVE: { label: 'Đang thuê', variant: 'active' },
   ENDED: { label: 'Đã kết thúc', variant: 'info' },
   TERMINATED: { label: 'Đã chấm dứt', variant: 'rejected' },
@@ -172,9 +173,19 @@ function BillTable({ contractId }) {
   );
 }
 
-function ContractCard({ contract, isSelected, onSelect }) {
+function ContractCard({ contract, isSelected, onSelect, onSign }) {
   const [billsOpen, setBillsOpen] = useState(false);
-  const meta = CONTRACT_STATUS[contract.status] ?? { label: contract.status, variant: 'info' };
+  const [signing, setSigning] = useState(false);
+  const status = (contract.status ?? '').toUpperCase();
+  const meta = CONTRACT_STATUS[status] ?? { label: contract.status, variant: 'info' };
+  const isPending = status === 'PENDING_RENTER_SIGNATURE';
+
+  const handleSign = async (e) => {
+    e.stopPropagation();
+    setSigning(true);
+    try { await onSign(contract.id); }
+    finally { setSigning(false); }
+  };
 
   return (
     <div
@@ -245,23 +256,32 @@ function ContractCard({ contract, isSelected, onSelect }) {
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setBillsOpen((o) => !o);
-          }}
-          className="mt-4 flex items-center gap-1.5 text-sm font-medium text-primary-500 hover:text-primary-700 transition-colors"
-        >
-          <Receipt className="h-4 w-4" />
-          Xem hoá đơn
-          <motion.span
-            animate={{ rotate: billsOpen ? 180 : 0 }}
-            transition={springs.snappy}
-          >
-            <ChevronDown className="h-4 w-4" />
-          </motion.span>
-        </button>
+        <div className="mt-4 flex items-center gap-3 flex-wrap">
+          {isPending && (
+            <button
+              type="button"
+              onClick={handleSign}
+              disabled={signing}
+              className="flex items-center gap-1.5 rounded-lg bg-primary-500 hover:bg-primary-600 disabled:opacity-60 px-4 py-1.5 text-sm font-semibold text-white transition-colors"
+            >
+              <PenLine className="h-4 w-4" />
+              {signing ? 'Đang ký...' : 'Ký xác nhận hợp đồng'}
+            </button>
+          )}
+          {!isPending && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setBillsOpen((o) => !o); }}
+              className="flex items-center gap-1.5 text-sm font-medium text-primary-500 hover:text-primary-700 transition-colors"
+            >
+              <Receipt className="h-4 w-4" />
+              Xem hoá đơn
+              <motion.span animate={{ rotate: billsOpen ? 180 : 0 }} transition={springs.snappy}>
+                <ChevronDown className="h-4 w-4" />
+              </motion.span>
+            </button>
+          )}
+        </div>
       </div>
 
       <AnimatePresence initial={false}>
@@ -288,6 +308,16 @@ export default function MyContractsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState(null);
   const toast = useToast();
+
+  const handleSign = useCallback(async (contractId) => {
+    try {
+      const updated = await contractApi.sign(contractId);
+      setContracts((prev) => prev.map((c) => c.id === contractId ? { ...c, status: updated.status ?? 'active' } : c));
+      toast.success('Hợp đồng đã được ký thành công!');
+    } catch (err) {
+      toast.error(err.displayMessage ?? 'Ký hợp đồng thất bại.');
+    }
+  }, [toast]);
 
   useEffect(() => {
     contractApi
@@ -324,6 +354,7 @@ export default function MyContractsPage() {
               contract={c}
               isSelected={selectedId === c.id}
               onSelect={() => setSelectedId(c.id)}
+              onSign={handleSign}
             />
           ))}
         </div>

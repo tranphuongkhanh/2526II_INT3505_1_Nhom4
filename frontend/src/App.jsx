@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import { ToastProvider } from './components/ui/Toast';
 import ProtectedRoute from './routes/ProtectedRoute';
 import RoleRoute from './routes/RoleRoute';
@@ -24,6 +25,7 @@ import FavoritesPage from './pages/renter/FavoritesPage';
 import MyReportsPage from './pages/renter/MyReportsPage';
 import MyContractsPage from './pages/renter/MyContractsPage';
 import MyReviewsPage from './pages/renter/MyReviewsPage';
+import CurrentRentPage from './pages/renter/CurrentRentPage';
 import OwnerDashboardPage from './pages/owner/OwnerDashboardPage';
 import RoomManagementPage from './pages/owner/RoomManagementPage';
 import PostManagementPage from './pages/owner/PostManagementPage';
@@ -48,6 +50,7 @@ export default function App() {
       <BrowserRouter>
         <AuthProvider>
           <ToastProvider>
+           <NotificationProvider>
             <Routes>
               {/* Public + shared shell */}
               <Route element={<PublicLayout />}>
@@ -93,6 +96,14 @@ export default function App() {
                   element={
                     <ProtectedShell>
                       <MyContractsPage />
+                    </ProtectedShell>
+                  }
+                />
+                <Route
+                  path="current-rent"
+                  element={
+                    <ProtectedShell>
+                      <CurrentRentPage />
                     </ProtectedShell>
                   }
                 />
@@ -167,6 +178,7 @@ export default function App() {
               {/* 404 */}
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
+           </NotificationProvider>
           </ToastProvider>
         </AuthProvider>
       </BrowserRouter>

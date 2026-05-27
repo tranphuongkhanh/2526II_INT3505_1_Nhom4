@@ -5,16 +5,23 @@ class WebSocketService {
   constructor() {
     this.client = null;
     this.subscriptions = new Map();
+    this.pendingCallbacks = [];
   }
 
   connect(onConnect) {
-    if (this.client && this.client.active) {
-      if (onConnect) onConnect();
+    if (this.client) {
+      if (this.client.connected) {
+        if (onConnect) onConnect();
+      } else if (onConnect) {
+        this.pendingCallbacks.push(onConnect);
+      }
       return;
     }
 
     const token = tokenStorage.get();
     if (!token) return;
+
+    if (onConnect) this.pendingCallbacks.push(onConnect);
 
     // Use ws:// or wss:// depending on API URL
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
@@ -29,7 +36,10 @@ class WebSocketService {
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
       onConnect: () => {
-        if (onConnect) onConnect();
+        const callbacks = this.pendingCallbacks.splice(0);
+        callbacks.forEach((cb) => {
+          try { cb(); } catch (e) { console.error(e); }
+        });
       },
       onStompError: (frame) => {
         console.error('Broker reported error: ' + frame.headers['message']);
@@ -44,8 +54,8 @@ class WebSocketService {
   }
 
   subscribe(destination, callback) {
-    if (!this.client || !this.client.active) {
-      console.warn('Cannot subscribe: STOMP client is not active.');
+    if (!this.client || !this.client.connected) {
+      console.warn('Cannot subscribe: STOMP client is not connected.');
       return null;
     }
 
@@ -77,6 +87,7 @@ class WebSocketService {
       this.client = null;
     }
     this.subscriptions.clear();
+    this.pendingCallbacks = [];
   }
 }
 
