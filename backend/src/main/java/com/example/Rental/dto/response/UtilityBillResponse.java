@@ -25,6 +25,9 @@ public class UtilityBillResponse {
     private BigDecimal waterUnitPrice;
     private BigDecimal waterAmount;
     private BigDecimal rentAmount;
+    private BigDecimal serviceFee;
+    private BigDecimal wifiFee;
+    private BigDecimal bikeParkingFee;
     private BigDecimal extraFee;
     private String extraNote;
     private BigDecimal totalAmount;

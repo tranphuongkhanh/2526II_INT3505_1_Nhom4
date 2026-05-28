@@ -173,6 +173,7 @@ export const reviewApi = {
     unwrap(api.get(`/users/${userId}/renter-reviews`, { params })),
   getMyWrittenReviews: (params) => unwrap(api.get('/users/me/reviews', { params })),
   getMyRenterReviews: (params) => unwrap(api.get('/users/me/renter-reviews', { params })),
+  getFeed: (params) => unwrap(api.get('/reviews', { params })),
   updateReview: (reviewId, payload) =>
     unwrap(api.patch(`/reviews/${reviewId}`, payload)),
   adminGetAll: (params) => unwrap(api.get('/admin/reviews', { params })),

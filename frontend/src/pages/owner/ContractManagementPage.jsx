@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Home, ScrollText, DollarSign, Zap, Droplets, Hand,
-  FileText, User, Users, MapPin, Calendar, Banknote, ShieldCheck, Building2,
+  FileText, User, Users, MapPin, Calendar, Banknote, ShieldCheck, Building2, Star,
 } from 'lucide-react';
-import { roomApi, contractApi, userApi } from '../../lib/api';
+import { roomApi, contractApi, userApi, reviewApi } from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { springs } from '../../lib/animations';
@@ -12,6 +12,7 @@ import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Input from '../../components/ui/Input';
 import Skeleton from '../../components/ui/Skeleton';
+import StarRating from '../../components/ui/StarRating';
 
 const fmt = (n) =>
   n != null
@@ -126,9 +127,74 @@ const STATUS_META = {
   ended:                    { label: 'ENDED',          color: 'bg-ink-100 text-ink-500 dark:bg-ink-700 dark:text-ink-400' },
 };
 
+function ReviewRenterModal({ contract, onClose }) {
+  const toast = useToast();
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [pending, setPending] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!rating) { toast.warning('Vui lòng chọn số sao.'); return; }
+    setPending(true);
+    try {
+      await reviewApi.createRenterReview({
+        contractId: contract.id,
+        rating,
+        comment: comment.trim(),
+      });
+      toast.success('Đánh giá của bạn đã được gửi và đang chờ duyệt!');
+      onClose();
+    } catch (err) {
+      toast.error(err.displayMessage || 'Không thể gửi đánh giá, vui lòng thử lại.');
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const renterName =
+    contract.renter_name ?? contract.renterName ?? `Khách thuê #${contract.renter_id ?? contract.renterId ?? '—'}`;
+
+  return (
+    <Modal isOpen onClose={onClose} title="Đánh giá người thuê" size="sm">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="rounded-xl border border-ink-100 dark:border-ink-700 bg-ink-50/60 dark:bg-ink-800/40 px-3 py-2.5">
+          <p className="text-xs text-ink-400">Người thuê</p>
+          <p className="text-sm font-semibold text-ink-900 dark:text-ink-50 truncate">{renterName}</p>
+        </div>
+
+        <div className="flex flex-col items-center gap-2 py-2">
+          <p className="text-sm text-ink-600 dark:text-ink-200">Thái độ &amp; ý thức thuê</p>
+          <StarRating value={rating} onChange={setRating} size="lg" />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-ink-900 dark:text-ink-50 mb-1.5">
+            Nhận xét
+          </label>
+          <textarea
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            rows={4}
+            maxLength={1000}
+            placeholder="Chia sẻ trải nghiệm của bạn về người thuê này..."
+            className="w-full px-3 py-2.5 rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-900 text-ink-900 dark:text-ink-50 placeholder-ink-400 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-500/40 transition"
+          />
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={onClose} type="button">Hủy</Button>
+          <Button type="submit" loading={pending}>Gửi đánh giá</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 function ContractCard({ contract, onEnd }) {
   const [localStatus, setLocalStatus] = useState((contract.status ?? '').toLowerCase());
   const [ending, setEnding] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   const handleEnd = async () => {
     setEnding(true);
@@ -192,18 +258,36 @@ function ContractCard({ contract, onEnd }) {
         </span>
       </div>
 
-      {active && (
-        <div className="mt-4 flex justify-end">
+      {(active || localStatus === 'ended') && (
+        <div className="mt-4 flex justify-end gap-2">
           <Button
             variant="ghost"
             size="sm"
-            loading={ending}
-            onClick={handleEnd}
-            className="text-error hover:bg-red-50 dark:hover:bg-red-900/20"
+            icon={Star}
+            onClick={() => setReviewOpen(true)}
+            className="text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20"
           >
-            Kết thúc hợp đồng
+            Đánh giá người thuê
           </Button>
+          {active && (
+            <Button
+              variant="ghost"
+              size="sm"
+              loading={ending}
+              onClick={handleEnd}
+              className="text-error hover:bg-red-50 dark:hover:bg-red-900/20"
+            >
+              Kết thúc hợp đồng
+            </Button>
+          )}
         </div>
+      )}
+
+      {reviewOpen && (
+        <ReviewRenterModal
+          contract={contract}
+          onClose={() => setReviewOpen(false)}
+        />
       )}
     </motion.div>
   );

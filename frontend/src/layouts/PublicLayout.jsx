@@ -12,6 +12,7 @@ import {
   Phone,
   MapPin,
   Search,
+  FileText,
 } from 'lucide-react';
 import { favoriteApi } from '../lib/api';
 
@@ -70,6 +71,7 @@ function AvatarDropdown() {
     { label: 'Hồ sơ', icon: UserIcon, to: '/profile' },
     { label: 'Yêu thích', icon: Heart, to: '/favorites' },
     { label: 'Phòng đang thuê', icon: Home, to: '/current-rent' },
+    { label: 'Quản lí hợp đồng', icon: FileText, to: '/my-contracts' },
   ];
 
   return (
@@ -241,6 +243,9 @@ function Navbar() {
           <nav className="hidden md:flex items-center gap-6 mx-4">
             <NavLink to="/posts" className={navLink}>
               Tìm phòng
+            </NavLink>
+            <NavLink to="/reviews-forum" className={navLink}>
+              Bảng tin đánh giá
             </NavLink>
           </nav>
           <ThemeToggle />
