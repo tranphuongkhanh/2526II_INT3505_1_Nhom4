@@ -36,6 +36,5 @@ build/
 .claude/
 
 .env
-# Ignore application properties containing secrets
-application.properties
+# (Removed application.properties because it now uses ${...} variables instead of raw secrets)
 .idea
