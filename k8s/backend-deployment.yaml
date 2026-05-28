@@ -21,6 +21,9 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: backend-secrets
           # Define environment variables if needed
           env:
             - name: SPRING_PROFILES_ACTIVE
