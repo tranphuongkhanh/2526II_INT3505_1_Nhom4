@@ -1,0 +1,53 @@
+name: Deploy to K3s
+
+on:
+  push:
+    branches:
+      - main
+      - nhi_branch
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend image
+        run: |
+          # Chuyển repository owner thành chữ thường (bắt buộc đối với GHCR)
+          REPO_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          docker build -t ghcr.io/$REPO_LOWER/rental-backend:latest ./backend
+          docker push ghcr.io/$REPO_LOWER/rental-backend:latest
+
+      - name: Copy K8s manifests to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "k8s/"
+          target: "~/"
+
+      - name: Deploy to K3s via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            # K3s sử dụng containerd thay vì docker, và có file k3s.yaml phân quyền root
+            sudo kubectl apply -f ~/k8s/backend-deployment.yaml
+            sudo kubectl rollout restart deployment backend || true
