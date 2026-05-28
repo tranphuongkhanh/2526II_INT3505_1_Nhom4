@@ -24,6 +24,7 @@ import { useToast } from '../components/ui/Toast';
 import ThemeToggle from '../components/ui/ThemeToggle';
 import Avatar from '../components/ui/Avatar';
 import NotificationsDropdown from '../components/ui/NotificationsDropdown';
+import ChatPopup from '../components/ui/ChatPopup';
 import { springs } from '../lib/animations';
 
 const OWNER_ITEMS = [
@@ -317,15 +318,6 @@ export function DashboardLayout() {
             <Breadcrumb />
           </div>
           <ThemeToggle />
-          {role !== 'ADMIN' && (
-            <Link
-              to="/chat"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-ink-600 dark:text-ink-200 hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors"
-              aria-label="Tin nhắn"
-            >
-              <MessageCircle className="h-5 w-5" />
-            </Link>
-          )}
           <NotificationsDropdown role={role} />
           <TopbarAvatar />
         </header>
@@ -334,6 +326,7 @@ export function DashboardLayout() {
           <Outlet />
         </main>
       </div>
+      {role !== 'ADMIN' && <ChatPopup />}
     </div>
   );
 }
