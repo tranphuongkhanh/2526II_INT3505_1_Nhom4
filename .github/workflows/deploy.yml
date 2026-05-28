@@ -52,6 +52,11 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT || 22 }}
           script: |
+            # Tạo secret cho backend từ GitHub Secrets
+            echo "${{ secrets.ENV_FILE }}" > ~/k8s/.env
+            sudo kubectl create secret generic backend-secrets --from-env-file=~/k8s/.env --dry-run=client -o yaml | sudo kubectl apply -f -
+            rm ~/k8s/.env
+            
             # K3s sử dụng containerd thay vì docker, và có file k3s.yaml phân quyền root
-            sudo kubectl apply -f ~/k8s/backend-deployment.yaml
+            sudo kubectl apply -f ~/k8s/
             sudo kubectl rollout restart deployment backend || true

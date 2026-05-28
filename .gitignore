@@ -39,7 +39,7 @@ build/
 .claude/settings.json
 
 # Ignore application properties containing secrets
-backend/src/main/resources/application.properties
+# (Removed application.properties because it now uses ${...} variables instead of raw secrets)
 .env
 
 ### Frontend (Node.js/Vue/React) ###
