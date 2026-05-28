@@ -52,6 +52,17 @@ export function AuthProvider({ children }) {
     return me;
   }, []);
 
+  const loginWithGoogle = useCallback(async (credential, selectedRole) => {
+    const result = await authApi.loginWithGoogle({ credential, role: selectedRole });
+    const nextToken = result?.token || result?.accessToken || result?.data?.token;
+    if (!nextToken) throw new Error('Phản hồi đăng nhập không hợp lệ.');
+    tokenStorage.set(nextToken);
+    setToken(nextToken);
+    const me = await userApi.getMe();
+    setUser(me);
+    return me;
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await authApi.logout();
@@ -75,10 +86,11 @@ export function AuthProvider({ children }) {
       isLoading,
       isAuthenticated: Boolean(token && user),
       login,
+      loginWithGoogle,
       logout,
       updateUser,
     }),
-    [user, token, isLoading, login, logout, updateUser]
+    [user, token, isLoading, login, loginWithGoogle, logout, updateUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
