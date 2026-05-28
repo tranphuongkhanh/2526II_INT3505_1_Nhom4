@@ -1,5 +1,6 @@
 package com.example.Rental.service;
 
+import com.example.Rental.config.CacheConstants;
 import com.example.Rental.dto.response.SystemStatisticsResponse;
 import com.example.Rental.enums.PostStatus;
 import com.example.Rental.enums.ReportStatus;
@@ -8,6 +9,7 @@ import com.example.Rental.enums.UserRole;
 import com.example.Rental.enums.UserStatus;
 import com.example.Rental.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +27,7 @@ public class AdminStatisticsService {
     private final ReportRepository reportRepository;
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheConstants.STATISTICS, key = "'system'")
     public SystemStatisticsResponse getSystemStatistics() {
         long totalUsers = userRepository.count();
         long totalRooms = roomRepository.countByDeletedAtIsNull();

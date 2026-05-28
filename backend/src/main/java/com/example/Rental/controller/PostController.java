@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.Rental.dto.request.PostSearchRequest;
 import com.example.Rental.dto.response.ApiResponse;
+import com.example.Rental.dto.response.PageCacheWrapper;
 import com.example.Rental.dto.response.PostDetailResponse;
 import com.example.Rental.dto.response.PostSummaryResponse;
 import com.example.Rental.service.PostService;
@@ -29,7 +30,8 @@ public class PostController {
     public ResponseEntity<ApiResponse<Page<PostSummaryResponse>>> searchPosts(
             @ModelAttribute PostSearchRequest request) {
         
-        Page<PostSummaryResponse> result = postService.searchPosts(request);
+        PageCacheWrapper<PostSummaryResponse> wrapper = postService.searchPosts(request);
+        Page<PostSummaryResponse> result = wrapper.toPage();
         
         ApiResponse<Page<PostSummaryResponse>> response = new ApiResponse<>();
         response.setSuccess(true);

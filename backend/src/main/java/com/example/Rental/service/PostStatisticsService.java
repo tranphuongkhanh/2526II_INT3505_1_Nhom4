@@ -1,5 +1,6 @@
 package com.example.Rental.service;
 
+import com.example.Rental.config.CacheConstants;
 import com.example.Rental.dto.response.PostStatisticsResponse;
 import com.example.Rental.entity.Post;
 import com.example.Rental.entity.PostView;
@@ -9,6 +10,7 @@ import com.example.Rental.repository.PostRepository;
 import com.example.Rental.repository.PostViewRepository;
 import com.example.Rental.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +30,7 @@ public class PostStatisticsService {
     private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheConstants.POST_STATISTICS, key = "#postId")
     public PostStatisticsResponse getPostStatistics(Long postId, String ownerEmail) {
         User owner = userRepository.findByEmail(ownerEmail)
                 .orElseThrow(() -> new EntityNotFoundException("User không tồn tại"));
