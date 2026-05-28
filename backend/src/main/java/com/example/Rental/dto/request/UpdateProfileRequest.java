@@ -14,4 +14,7 @@ public class UpdateProfileRequest {
     // Only owner can update these fields
     private String citizenId;
     private String permanentAddress;
+    private String bankCode;
+    private String bankAccountNumber;
+    private String bankAccountName;
 }

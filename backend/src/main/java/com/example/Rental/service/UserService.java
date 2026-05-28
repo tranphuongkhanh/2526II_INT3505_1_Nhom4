@@ -69,6 +69,16 @@ public class UserService {
             if (request.getPermanentAddress() != null) {
                 user.setPermanentAddress(request.getPermanentAddress());
             }
+
+            if (request.getBankCode() != null) {
+                user.setBankCode(request.getBankCode().isBlank() ? null : request.getBankCode());
+            }
+            if (request.getBankAccountNumber() != null) {
+                user.setBankAccountNumber(request.getBankAccountNumber().isBlank() ? null : request.getBankAccountNumber());
+            }
+            if (request.getBankAccountName() != null) {
+                user.setBankAccountName(request.getBankAccountName().isBlank() ? null : request.getBankAccountName());
+            }
         }
 
         User saved = userRepository.save(user);
@@ -87,6 +97,9 @@ public class UserService {
                 .citizenId(user.getCitizenId())
                 .permanentAddress(user.getPermanentAddress())
                 .avatarUrl(user.getAvatarUrl())
+                .bankCode(user.getBankCode())
+                .bankAccountNumber(user.getBankAccountNumber())
+                .bankAccountName(user.getBankAccountName())
                 .role(user.getRole().name())
                 .status(user.getStatus().name())
                 .createdAt(user.getCreatedAt())
