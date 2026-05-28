@@ -16,8 +16,8 @@ spec:
     spec:
       containers:
         - name: backend
-          # TODO: Thay thế bằng repo Docker Hub của bạn (ví dụ: mydockerhub/rental-backend:latest)
-          image: DOCKER_USERNAME/rental-backend:latest
+          # TODO: Thay thế REPO_OWNER bằng tên tài khoản GitHub của bạn (viết thường). Ví dụ: tranphuongkhanh
+          image: ghcr.io/tranphuongkhanh/rental-backend:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

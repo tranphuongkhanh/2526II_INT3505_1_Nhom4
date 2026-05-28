@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - nhi_branch
 
 jobs:
   build-and-deploy:
@@ -13,16 +14,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Login to Docker Hub
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKER_PASS }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push backend image
         run: |
-          docker build -t ${{ secrets.DOCKER_USER }}/rental-backend:latest ./backend
-          docker push ${{ secrets.DOCKER_USER }}/rental-backend:latest
+          # Chuyển repository owner thành chữ thường (bắt buộc đối với GHCR)
+          REPO_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          docker build -t ghcr.io/$REPO_LOWER/rental-backend:latest ./backend
+          docker push ghcr.io/$REPO_LOWER/rental-backend:latest
 
       - name: Deploy to K3s via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -33,9 +37,9 @@ jobs:
           # Mật khẩu (nếu dùng password thay vì SSH key)
           # password: ${{ secrets.SERVER_PASSWORD }}
           script: |
-            # Pull image mới nhất về server (để chắc chắn server lấy bản mới)
-            docker pull ${{ secrets.DOCKER_USER }}/rental-backend:latest
+            # Pull image mới nhất về server
+            REPO_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+            docker pull ghcr.io/$REPO_LOWER/rental-backend:latest
             
-            # Restart deployment trên Kubernetes (k3s) để apply image mới
-            # Giả định file deployment.yaml đã được apply trên cluster từ trước
+            # Restart deployment trên Kubernetes
             kubectl rollout restart deployment backend
