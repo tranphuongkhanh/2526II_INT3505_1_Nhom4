@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { springs } from '../../lib/animations';
+import GoogleLoginButton from '../../components/auth/GoogleLoginButton';
 
 const redirectFor = (role) => {
   if (role === 'OWNER') return '/owner';
@@ -163,6 +164,10 @@ export function LoginPage() {
         <div className="flex-1 h-px bg-ink-100 dark:bg-ink-700" />
         <span className="text-xs uppercase tracking-wider text-ink-400">hoặc</span>
         <div className="flex-1 h-px bg-ink-100 dark:bg-ink-700" />
+      </div>
+
+      <div className="mb-6">
+        <GoogleLoginButton role="RENTER" />
       </div>
 
       <p className="text-center text-sm text-ink-600 dark:text-ink-200">

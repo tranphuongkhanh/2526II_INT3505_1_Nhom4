@@ -20,6 +20,7 @@ import Input from '../../components/ui/Input';
 import { useToast } from '../../components/ui/Toast';
 import { authApi } from '../../lib/api';
 import { springs } from '../../lib/animations';
+import GoogleLoginButton from '../../components/auth/GoogleLoginButton';
 import {
   PasswordStrengthBar,
   SuccessCheckmark,
@@ -345,6 +346,17 @@ export function RegisterPage() {
               >
                 {role === 'OWNER' ? 'Tiếp theo' : 'Đăng ký'}
               </Button>
+
+              {role === 'RENTER' && (
+                <>
+                  <div className="my-4 flex items-center gap-3">
+                    <div className="flex-1 h-px bg-ink-100 dark:bg-ink-700" />
+                    <span className="text-xs uppercase tracking-wider text-ink-400">hoặc</span>
+                    <div className="flex-1 h-px bg-ink-100 dark:bg-ink-700" />
+                  </div>
+                  <GoogleLoginButton role="RENTER" />
+                </>
+              )}
             </motion.div>
           ) : (
             <motion.div

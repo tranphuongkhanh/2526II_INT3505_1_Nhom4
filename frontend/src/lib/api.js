@@ -69,6 +69,7 @@ const unwrap = (promise) =>
 export const authApi = {
   register: (payload) => unwrap(api.post('/auth/register', payload)),
   login: (payload) => unwrap(api.post('/auth/login', payload)),
+  loginWithGoogle: (payload) => unwrap(api.post('/auth/google', payload)),
   logout: () => unwrap(api.post('/auth/logout')),
   forgotPassword: (email) => unwrap(api.post('/auth/forgot-password', { email })),
   resetPassword: (payload) => unwrap(api.post('/auth/reset-password', payload)),
