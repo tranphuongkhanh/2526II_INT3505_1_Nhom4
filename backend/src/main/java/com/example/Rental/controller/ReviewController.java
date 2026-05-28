@@ -63,6 +63,37 @@ public class ReviewController {
         return ResponseEntity.ok(ApiResponse.ok("Room reviews retrieved", response));
     }
 
+    @GetMapping("/reviews")
+    public ResponseEntity<ApiResponse<ReviewListResponse>> getReviewsFeed(
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false, defaultValue = "1") Integer page,
+            @RequestParam(required = false, defaultValue = "20") Integer limit) {
+        com.example.Rental.enums.ReviewType reviewType = null;
+        if (type != null && !type.isBlank()) {
+            try {
+                reviewType = com.example.Rental.enums.ReviewType.valueOf(type.toUpperCase());
+            } catch (IllegalArgumentException ignored) {
+                reviewType = null;
+            }
+        }
+
+        Pageable pageable = PageRequest.of(page - 1, limit);
+        Page<ReviewResponse> reviewPage = reviewService.getApprovedReviewsFeed(reviewType, pageable).toPage();
+
+        PaginationMetaResponse meta = PaginationMetaResponse.builder()
+                .total(reviewPage.getTotalElements())
+                .page(page)
+                .limit(limit)
+                .build();
+
+        ReviewListResponse response = ReviewListResponse.builder()
+                .items(reviewPage.getContent())
+                .meta(meta)
+                .build();
+
+        return ResponseEntity.ok(ApiResponse.ok("Reviews feed retrieved", response));
+    }
+
     @PostMapping("/rooms/{roomId}/reviews")
     public ResponseEntity<ApiResponse<Void>> createRoomReview(
             @PathVariable Long roomId,
@@ -107,6 +138,50 @@ public class ReviewController {
                 .build();
 
         return ResponseEntity.ok(ApiResponse.ok("Renter reviews retrieved", response));
+    }
+
+    @GetMapping("/users/me/reviews")
+    public ResponseEntity<ApiResponse<ReviewListResponse>> getMyWrittenReviews(
+            @RequestParam(required = false, defaultValue = "1") Integer page,
+            @RequestParam(required = false, defaultValue = "20") Integer limit,
+            Principal principal) {
+        Pageable pageable = PageRequest.of(page - 1, limit);
+        Page<ReviewResponse> reviewPage = reviewService.getMyWrittenReviews(principal.getName(), pageable).toPage();
+
+        PaginationMetaResponse meta = PaginationMetaResponse.builder()
+                .total(reviewPage.getTotalElements())
+                .page(page)
+                .limit(limit)
+                .build();
+
+        ReviewListResponse response = ReviewListResponse.builder()
+                .items(reviewPage.getContent())
+                .meta(meta)
+                .build();
+
+        return ResponseEntity.ok(ApiResponse.ok("My reviews retrieved", response));
+    }
+
+    @GetMapping("/users/me/renter-reviews")
+    public ResponseEntity<ApiResponse<ReviewListResponse>> getMyReceivedRenterReviews(
+            @RequestParam(required = false, defaultValue = "1") Integer page,
+            @RequestParam(required = false, defaultValue = "20") Integer limit,
+            Principal principal) {
+        Pageable pageable = PageRequest.of(page - 1, limit);
+        Page<ReviewResponse> reviewPage = reviewService.getMyReceivedRenterReviews(principal.getName(), pageable).toPage();
+
+        PaginationMetaResponse meta = PaginationMetaResponse.builder()
+                .total(reviewPage.getTotalElements())
+                .page(page)
+                .limit(limit)
+                .build();
+
+        ReviewListResponse response = ReviewListResponse.builder()
+                .items(reviewPage.getContent())
+                .meta(meta)
+                .build();
+
+        return ResponseEntity.ok(ApiResponse.ok("Reviews about me retrieved", response));
     }
 
     @PatchMapping("/reviews/{reviewId}")

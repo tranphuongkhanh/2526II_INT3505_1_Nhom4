@@ -61,16 +61,18 @@ public class CacheConfig {
     @Bean
     public RedisCacheManager cacheManager(RedisConnectionFactory factory) {
         RedisCacheConfiguration base = defaultCacheConfig();
-        Map<String, RedisCacheConfiguration> perCacheConfig = Map.of(
-                CacheConstants.STATISTICS,              base.entryTtl(Duration.ofMinutes(5)),
-                CacheConstants.POSTS_SEARCH,            base.entryTtl(Duration.ofMinutes(30)),
-                CacheConstants.POST_DETAIL,             base.entryTtl(Duration.ofMinutes(30)),
-                CacheConstants.POST_STATISTICS,         base.entryTtl(Duration.ofMinutes(30)),
-                CacheConstants.ROOM_REVIEWS,            base.entryTtl(Duration.ofHours(2)),
-                CacheConstants.RENTER_REVIEWS,          base.entryTtl(Duration.ofHours(2)),
-                CacheConstants.ROOM_DETAIL,             base.entryTtl(Duration.ofHours(1)),
-                CacheConstants.NOTIFICATION_UNREAD_COUNT, base.entryTtl(Duration.ofMinutes(15)),
-                CacheConstants.USER_PROFILE,            base.entryTtl(Duration.ofHours(1))
+        Map<String, RedisCacheConfiguration> perCacheConfig = Map.ofEntries(
+                Map.entry(CacheConstants.STATISTICS,              base.entryTtl(Duration.ofMinutes(5))),
+                Map.entry(CacheConstants.POSTS_SEARCH,            base.entryTtl(Duration.ofMinutes(30))),
+                Map.entry(CacheConstants.POST_DETAIL,             base.entryTtl(Duration.ofMinutes(30))),
+                Map.entry(CacheConstants.POST_STATISTICS,         base.entryTtl(Duration.ofMinutes(30))),
+                Map.entry(CacheConstants.ROOM_REVIEWS,            base.entryTtl(Duration.ofHours(2))),
+                Map.entry(CacheConstants.RENTER_REVIEWS,          base.entryTtl(Duration.ofHours(2))),
+                Map.entry(CacheConstants.REVIEWS_FEED,            base.entryTtl(Duration.ofMinutes(10))),
+                Map.entry(CacheConstants.MY_REVIEWS,              base.entryTtl(Duration.ofMinutes(30))),
+                Map.entry(CacheConstants.ROOM_DETAIL,             base.entryTtl(Duration.ofHours(1))),
+                Map.entry(CacheConstants.NOTIFICATION_UNREAD_COUNT, base.entryTtl(Duration.ofMinutes(15))),
+                Map.entry(CacheConstants.USER_PROFILE,            base.entryTtl(Duration.ofHours(1)))
         );
         return RedisCacheManager.builder(factory)
                 .cacheDefaults(base.entryTtl(Duration.ofMinutes(30)))

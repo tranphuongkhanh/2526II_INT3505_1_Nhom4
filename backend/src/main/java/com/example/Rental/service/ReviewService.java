@@ -46,7 +46,11 @@ public class ReviewService {
     private final NotificationService notificationService;
 
     @Transactional
-    @CacheEvict(cacheNames = CacheConstants.ROOM_REVIEWS, allEntries = true)
+    @Caching(evict = {
+        @CacheEvict(cacheNames = CacheConstants.ROOM_REVIEWS, allEntries = true),
+        @CacheEvict(cacheNames = CacheConstants.REVIEWS_FEED, allEntries = true),
+        @CacheEvict(cacheNames = CacheConstants.MY_REVIEWS, allEntries = true)
+    })
     public void createRoomReview(Long roomId, ReviewRequest request, String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
@@ -99,7 +103,11 @@ public class ReviewService {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = CacheConstants.RENTER_REVIEWS, allEntries = true)
+    @Caching(evict = {
+        @CacheEvict(cacheNames = CacheConstants.RENTER_REVIEWS, allEntries = true),
+        @CacheEvict(cacheNames = CacheConstants.REVIEWS_FEED, allEntries = true),
+        @CacheEvict(cacheNames = CacheConstants.MY_REVIEWS, allEntries = true)
+    })
     public void createRenterReview(Long contractId, RenterReviewRequest request, String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
@@ -113,10 +121,6 @@ public class ReviewService {
 
         if (!contract.getRoom().getOwner().getId().equals(user.getId())) {
             throw new AccessDeniedException("You are not the owner of this room");
-        }
-
-        if (contract.getStatus() != com.example.Rental.enums.ContractStatus.ENDED) {
-            throw new RuntimeException("You can only review the renter after the contract has ended");
         }
 
         java.util.Optional<Review> existingReview = reviewRepository.findByContractIdAndReviewType(contract.getId(), ReviewType.OWNER_TO_RENTER);
@@ -161,6 +165,38 @@ public class ReviewService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheConstants.MY_REVIEWS,
+               key = "'written:' + #email + ':' + #pageable.pageNumber + ':' + #pageable.pageSize")
+    public PageCacheWrapper<ReviewResponse> getMyWrittenReviews(String email, Pageable pageable) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        return PageCacheWrapper.of(
+                reviewRepository.findByReviewerIdOrderByCreatedAtDesc(user.getId(), pageable)
+                        .map(ReviewResponse::fromEntity));
+    }
+
+    @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheConstants.MY_REVIEWS,
+               key = "'received:' + #email + ':' + #pageable.pageNumber + ':' + #pageable.pageSize")
+    public PageCacheWrapper<ReviewResponse> getMyReceivedRenterReviews(String email, Pageable pageable) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        return PageCacheWrapper.of(
+                reviewRepository.findByTargetUserIdAndStatus(user.getId(), ReviewStatus.APPROVED, pageable)
+                        .map(ReviewResponse::fromEntity));
+    }
+
+    @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheConstants.REVIEWS_FEED,
+               key = "(#type != null ? #type.name() : 'ALL') + ':' + #pageable.pageNumber + ':' + #pageable.pageSize")
+    public PageCacheWrapper<ReviewResponse> getApprovedReviewsFeed(ReviewType type, Pageable pageable) {
+        Page<Review> page = (type == null)
+                ? reviewRepository.findByStatus(ReviewStatus.APPROVED, pageable)
+                : reviewRepository.findByStatusAndReviewType(ReviewStatus.APPROVED, type, pageable);
+        return PageCacheWrapper.of(page.map(ReviewResponse::fromEntity));
+    }
+
+    @Transactional(readOnly = true)
     public Page<Review> getPendingReviews(Pageable pageable) {
         return reviewRepository.findByStatus(ReviewStatus.PENDING, pageable);
     }
@@ -176,7 +212,9 @@ public class ReviewService {
     @Transactional
     @Caching(evict = {
         @CacheEvict(cacheNames = CacheConstants.ROOM_REVIEWS, allEntries = true),
-        @CacheEvict(cacheNames = CacheConstants.RENTER_REVIEWS, allEntries = true)
+        @CacheEvict(cacheNames = CacheConstants.RENTER_REVIEWS, allEntries = true),
+        @CacheEvict(cacheNames = CacheConstants.REVIEWS_FEED, allEntries = true),
+        @CacheEvict(cacheNames = CacheConstants.MY_REVIEWS, allEntries = true)
     })
     public void updateReviewStatus(Long reviewId, ReviewStatus status, String adminEmail) {
         User admin = userRepository.findByEmail(adminEmail)
@@ -217,10 +255,28 @@ public class ReviewService {
                     relatedType,
                     relatedId
             );
+
+            // Notify the target renter when an owner posts a review about them.
+            if (review.getReviewType() == ReviewType.OWNER_TO_RENTER && review.getTargetUser() != null) {
+                notificationService.createAndSendNotification(
+                        review.getTargetUser(),
+                        NotificationType.REVIEW_APPROVED,
+                        "Bạn có đánh giá mới từ chủ trọ",
+                        "Chủ trọ " + review.getReviewer().getFullName() + " vừa đánh giá bạn " + review.getRating() + " sao.",
+                        "review",
+                        review.getId()
+                );
+            }
         }
     }
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(cacheNames = CacheConstants.ROOM_REVIEWS, allEntries = true),
+        @CacheEvict(cacheNames = CacheConstants.RENTER_REVIEWS, allEntries = true),
+        @CacheEvict(cacheNames = CacheConstants.REVIEWS_FEED, allEntries = true),
+        @CacheEvict(cacheNames = CacheConstants.MY_REVIEWS, allEntries = true)
+    })
     public void updateReview(Long reviewId, com.example.Rental.dto.request.ReviewUpdateRequest request, String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
