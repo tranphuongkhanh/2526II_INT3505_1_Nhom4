@@ -26,6 +26,7 @@ import com.example.Rental.enums.ReviewStatus;
 import com.example.Rental.enums.ReviewType;
 import com.example.Rental.enums.UserStatus;
 import com.example.Rental.exception.EntityNotFoundException;
+import com.example.Rental.repository.PostRepository;
 import com.example.Rental.repository.RentalContractRepository;
 import com.example.Rental.repository.ReviewRepository;
 import com.example.Rental.repository.RoomRepository;
@@ -41,6 +42,7 @@ public class ReviewService {
     private final RentalContractRepository contractRepository;
     private final UserRepository userRepository;
     private final RoomRepository roomRepository;
+    private final PostRepository postRepository;
     private final NotificationService notificationService;
 
     @Transactional
@@ -195,13 +197,25 @@ public class ReviewService {
 
         // Gửi thông báo WebSocket realtime khi review được duyệt
         if (status == ReviewStatus.APPROVED) {
+            String relatedType = "review";
+            Long relatedId = review.getId();
+            if (review.getReviewType() == ReviewType.RENTER_TO_ROOM && review.getTargetRoom() != null) {
+                Long postId = postRepository
+                        .findFirstByRoomIdOrderByCreatedAtDesc(review.getTargetRoom().getId())
+                        .map(p -> p.getId())
+                        .orElse(null);
+                if (postId != null) {
+                    relatedType = "post";
+                    relatedId = postId;
+                }
+            }
             notificationService.createAndSendNotification(
                     review.getReviewer(),
                     NotificationType.REVIEW_APPROVED,
                     "Đánh giá của bạn đã được duyệt",
                     "Đánh giá của bạn cho " + (review.getReviewType() == ReviewType.RENTER_TO_ROOM ? "phòng '" + review.getTargetRoom().getTitle() + "'" : "người thuê '" + review.getTargetUser().getFullName() + "'") + " đã được duyệt thành công.",
-                    "review",
-                    review.getId()
+                    relatedType,
+                    relatedId
             );
         }
     }
