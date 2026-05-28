@@ -61,9 +61,7 @@ jobs:
           port: ${{ secrets.SERVER_PORT || 22 }}
           script: |
             # Tạo secret cho backend từ GitHub Secrets
-            cat << 'EOF' > ~/k8s/.env
-            ${{ secrets.ENV_FILE }}
-            EOF
+            echo "${{ secrets.ENV_FILE }}" > ~/k8s/.env
             sudo kubectl create secret generic backend-secrets --from-env-file=~/k8s/.env --dry-run=client -o yaml | sudo kubectl apply -f -
             rm ~/k8s/.env
 
