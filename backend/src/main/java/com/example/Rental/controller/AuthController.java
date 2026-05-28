@@ -14,6 +14,7 @@ import com.example.Rental.dto.request.LoginRequest;
 import com.example.Rental.dto.request.RegisterRequest;
 import com.example.Rental.dto.request.ResetPasswordRequest;
 import com.example.Rental.dto.request.ChangePasswordRequest;
+import com.example.Rental.dto.request.GoogleLoginRequest;
 
 import com.example.Rental.dto.response.ApiResponse;
 import com.example.Rental.dto.response.LoginResponse;
@@ -47,6 +48,14 @@ public class AuthController {
                 LoginResponse data = authService.login(request);
                 return ResponseEntity.ok(
                                 ApiResponse.ok("Login successfully", data));
+        }
+
+        @PostMapping("/google")
+        public ResponseEntity<ApiResponse<LoginResponse>> googleLogin(
+                        @Valid @RequestBody GoogleLoginRequest request) {
+                LoginResponse data = authService.loginWithGoogle(request);
+                return ResponseEntity.ok(
+                                ApiResponse.ok("Google authentication successful", data));
         }
 
         @PostMapping("/logout")
