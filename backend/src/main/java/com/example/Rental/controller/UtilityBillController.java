@@ -2,14 +2,16 @@ package com.example.Rental.controller;
 
 import com.example.Rental.dto.request.UtilityBillRequest;
 import com.example.Rental.dto.response.ApiResponse;
+import com.example.Rental.dto.response.UtilityBillResponse;
 import com.example.Rental.entity.UtilityBill;
 import com.example.Rental.service.UtilityBillService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
 import java.time.LocalDate;
-import com.example.Rental.dto.response.UtilityBillResponse;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -21,10 +23,9 @@ public class UtilityBillController {
         this.utilityBillService = utilityBillService;
     }
 
-    @GetMapping("/contracts/{contractId}/bills")
-    public ResponseEntity<ApiResponse<List<UtilityBillResponse>>> listByContract(@PathVariable Long contractId) {
-        List<UtilityBill> bills = utilityBillService.listByContract(contractId);
-        List<UtilityBillResponse> resp = bills.stream().map(b -> UtilityBillResponse.builder()
+    private UtilityBillResponse toResponse(UtilityBill b) {
+        com.example.Rental.entity.User owner = (b.getRoom() != null) ? b.getRoom().getOwner() : null;
+        return UtilityBillResponse.builder()
                 .id(b.getId())
                 .contractId(b.getContract().getId())
                 .roomId(b.getRoom().getId())
@@ -48,10 +49,20 @@ public class UtilityBillController {
                 .totalAmount(b.getTotalAmount())
                 .status(b.getStatus().name())
                 .paidAt(b.getPaidAt())
+                .paymentProofUrl(b.getPaymentProofUrl())
+                .proofSubmittedAt(b.getProofSubmittedAt())
+                .rejectionReason(b.getRejectionReason())
+                .ownerBankCode(owner != null ? owner.getBankCode() : null)
+                .ownerBankAccountNumber(owner != null ? owner.getBankAccountNumber() : null)
+                .ownerBankAccountName(owner != null ? owner.getBankAccountName() : null)
                 .createdAt(b.getCreatedAt())
-                .build())
-            .toList();
+                .build();
+    }
 
+    @GetMapping("/contracts/{contractId}/bills")
+    public ResponseEntity<ApiResponse<List<UtilityBillResponse>>> listByContract(@PathVariable Long contractId) {
+        List<UtilityBillResponse> resp = utilityBillService.listByContract(contractId).stream()
+                .map(this::toResponse).toList();
         return ResponseEntity.ok(ApiResponse.ok("Bills retrieved", resp));
     }
 
@@ -63,102 +74,45 @@ public class UtilityBillController {
             bill = utilityBillService.createMonthlyBill(contractId);
         } else {
             LocalDate billingMonth = LocalDate.parse(req.getBillingMonth());
-            bill = utilityBillService.createMonthlyBillWithMeters(contractId, billingMonth, req.getElecCurr(), req.getWaterCurr(), req.getExtraFee(), req.getExtraNote());
+            bill = utilityBillService.createMonthlyBillWithMeters(contractId, billingMonth, req.getElecCurr(),
+                    req.getWaterCurr(), req.getExtraFee(), req.getExtraNote());
         }
-
-        UtilityBillResponse r = UtilityBillResponse.builder()
-                .id(bill.getId())
-                .contractId(bill.getContract().getId())
-                .roomId(bill.getRoom().getId())
-                .billingMonth(bill.getBillingMonth())
-                .elecPrev(bill.getElecPrev())
-                .elecCurr(bill.getElecCurr())
-                .elecUsage(bill.getElecUsage())
-                .elecUnitPrice(bill.getElecUnitPrice())
-                .elecAmount(bill.getElecAmount())
-                .waterPrev(bill.getWaterPrev())
-                .waterCurr(bill.getWaterCurr())
-                .waterUsage(bill.getWaterUsage())
-                .waterUnitPrice(bill.getWaterUnitPrice())
-                .waterAmount(bill.getWaterAmount())
-                .rentAmount(bill.getRentAmount())
-                .serviceFee(bill.getServiceFee())
-                .wifiFee(bill.getWifiFee())
-                .bikeParkingFee(bill.getBikeParkingFee())
-                .extraFee(bill.getExtraFee())
-                .extraNote(bill.getExtraNote())
-                .totalAmount(bill.getTotalAmount())
-                .status(bill.getStatus().name())
-                .paidAt(bill.getPaidAt())
-                .createdAt(bill.getCreatedAt())
-                .build();
-
-        return ResponseEntity.ok(ApiResponse.ok("Bill created", r));
+        return ResponseEntity.ok(ApiResponse.ok("Bill created", toResponse(bill)));
     }
 
     @GetMapping("/bills/{billId}")
     public ResponseEntity<ApiResponse<UtilityBillResponse>> getBill(@PathVariable Long billId) {
-        UtilityBill bill = utilityBillService.getById(billId);
-        UtilityBillResponse r = UtilityBillResponse.builder()
-                .id(bill.getId())
-                .contractId(bill.getContract().getId())
-                .roomId(bill.getRoom().getId())
-                .billingMonth(bill.getBillingMonth())
-                .elecPrev(bill.getElecPrev())
-                .elecCurr(bill.getElecCurr())
-                .elecUsage(bill.getElecUsage())
-                .elecUnitPrice(bill.getElecUnitPrice())
-                .elecAmount(bill.getElecAmount())
-                .waterPrev(bill.getWaterPrev())
-                .waterCurr(bill.getWaterCurr())
-                .waterUsage(bill.getWaterUsage())
-                .waterUnitPrice(bill.getWaterUnitPrice())
-                .waterAmount(bill.getWaterAmount())
-                .rentAmount(bill.getRentAmount())
-                .serviceFee(bill.getServiceFee())
-                .wifiFee(bill.getWifiFee())
-                .bikeParkingFee(bill.getBikeParkingFee())
-                .extraFee(bill.getExtraFee())
-                .extraNote(bill.getExtraNote())
-                .totalAmount(bill.getTotalAmount())
-                .status(bill.getStatus().name())
-                .paidAt(bill.getPaidAt())
-                .createdAt(bill.getCreatedAt())
-                .build();
-
-        return ResponseEntity.ok(ApiResponse.ok("Bill retrieved", r));
+        return ResponseEntity.ok(ApiResponse.ok("Bill retrieved", toResponse(utilityBillService.getById(billId))));
     }
 
     @PatchMapping("/bills/{billId}/paid")
     public ResponseEntity<ApiResponse<UtilityBillResponse>> markPaid(@PathVariable Long billId) {
-        UtilityBill bill = utilityBillService.markPaid(billId);
-        UtilityBillResponse r = UtilityBillResponse.builder()
-                .id(bill.getId())
-                .contractId(bill.getContract().getId())
-                .roomId(bill.getRoom().getId())
-                .billingMonth(bill.getBillingMonth())
-                .elecPrev(bill.getElecPrev())
-                .elecCurr(bill.getElecCurr())
-                .elecUsage(bill.getElecUsage())
-                .elecUnitPrice(bill.getElecUnitPrice())
-                .elecAmount(bill.getElecAmount())
-                .waterPrev(bill.getWaterPrev())
-                .waterCurr(bill.getWaterCurr())
-                .waterUsage(bill.getWaterUsage())
-                .waterUnitPrice(bill.getWaterUnitPrice())
-                .waterAmount(bill.getWaterAmount())
-                .rentAmount(bill.getRentAmount())
-                .serviceFee(bill.getServiceFee())
-                .wifiFee(bill.getWifiFee())
-                .bikeParkingFee(bill.getBikeParkingFee())
-                .extraFee(bill.getExtraFee())
-                .extraNote(bill.getExtraNote())
-                .totalAmount(bill.getTotalAmount())
-                .status(bill.getStatus().name())
-                .paidAt(bill.getPaidAt())
-                .createdAt(bill.getCreatedAt())
-                .build();
+        return ResponseEntity.ok(ApiResponse.ok("Bill marked paid", toResponse(utilityBillService.markPaid(billId))));
+    }
 
-        return ResponseEntity.ok(ApiResponse.ok("Bill marked paid", r));
+    /** Renter uploads payment proof image. */
+    @PostMapping(value = "/bills/{billId}/payment-proof", consumes = "multipart/form-data")
+    public ResponseEntity<ApiResponse<UtilityBillResponse>> submitProof(
+            @PathVariable Long billId,
+            @RequestParam("image") MultipartFile file) {
+        return ResponseEntity.ok(ApiResponse.ok("Payment proof submitted",
+                toResponse(utilityBillService.submitPaymentProof(billId, file))));
+    }
+
+    /** Owner approves the payment proof. */
+    @PatchMapping("/bills/{billId}/approve")
+    public ResponseEntity<ApiResponse<UtilityBillResponse>> approve(@PathVariable Long billId) {
+        return ResponseEntity.ok(ApiResponse.ok("Payment approved",
+                toResponse(utilityBillService.approvePayment(billId))));
+    }
+
+    /** Owner rejects the payment proof. Body: { "reason": "..." } (optional). */
+    @PatchMapping("/bills/{billId}/reject")
+    public ResponseEntity<ApiResponse<UtilityBillResponse>> reject(
+            @PathVariable Long billId,
+            @RequestBody(required = false) Map<String, String> body) {
+        String reason = body != null ? body.get("reason") : null;
+        return ResponseEntity.ok(ApiResponse.ok("Payment rejected",
+                toResponse(utilityBillService.rejectPayment(billId, reason))));
     }
 }

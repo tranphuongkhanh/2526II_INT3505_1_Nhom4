@@ -89,10 +89,20 @@ public class UtilityBill {
     private BigDecimal totalAmount;
 
     @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "varchar(255)")
     private BillStatus status = BillStatus.UNPAID;
 
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
+
+    @Column(name = "payment_proof_url", columnDefinition = "TEXT")
+    private String paymentProofUrl;
+
+    @Column(name = "proof_submitted_at")
+    private LocalDateTime proofSubmittedAt;
+
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    private String rejectionReason;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

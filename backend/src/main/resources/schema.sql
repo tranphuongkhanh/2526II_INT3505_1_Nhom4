@@ -5,3 +5,6 @@ ALTER TABLE IF EXISTS rental_contracts
 
 ALTER TABLE IF EXISTS notifications
     DROP CONSTRAINT IF EXISTS notifications_type_check;
+
+ALTER TABLE IF EXISTS utility_bills
+    DROP CONSTRAINT IF EXISTS utility_bills_status_check;
