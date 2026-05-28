@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  CheckCircle, XCircle, Clock, MessageCircle, Star,
+  CheckCircle, XCircle, Clock, Star,
   Shield, UserCheck, UserX, Receipt, Bell, CheckCheck,
   Trash2, Loader2, FileText, PenLine,
 } from 'lucide-react';
@@ -16,7 +16,6 @@ const TYPE_CONFIG = {
   POST_APPROVED:    { icon: CheckCircle,   color: 'text-success',     bg: 'bg-green-100 dark:bg-green-900/30' },
   POST_REJECTED:    { icon: XCircle,       color: 'text-error',       bg: 'bg-red-100 dark:bg-red-900/30' },
   POST_EXPIRING:    { icon: Clock,         color: 'text-warning',     bg: 'bg-amber-100 dark:bg-amber-900/30' },
-  NEW_MESSAGE:      { icon: MessageCircle, color: 'text-info',        bg: 'bg-blue-100 dark:bg-blue-900/30' },
   REVIEW_APPROVED:  { icon: Star,          color: 'text-accent-500',  bg: 'bg-amber-100 dark:bg-amber-900/30' },
   REPORT_RESOLVED:  { icon: Shield,        color: 'text-primary-500', bg: 'bg-primary-50 dark:bg-primary-900/30' },
   ACCOUNT_APPROVED: { icon: UserCheck,     color: 'text-success',     bg: 'bg-green-100 dark:bg-green-900/30' },
@@ -46,7 +45,7 @@ function formatNotifTime(ts) {
 function resolveLink(notif) {
   const id = notif.relatedEntityId;
   switch (notif.type) {
-    case 'NEW_MESSAGE': return id ? `/chat/${id}` : '/chat';
+
     case 'REVIEW_APPROVED': return id ? `/posts/${id}` : null;
     case 'POST_APPROVED':
     case 'POST_REJECTED':

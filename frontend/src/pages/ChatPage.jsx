@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Send, ChevronDown, ArrowLeft, X, MessageCircle, Loader2 } from 'lucide-react';
+import { Search, Send, ChevronDown, ArrowLeft, MessageCircle, Loader2 } from 'lucide-react';
 import { chatApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import Avatar from '../components/ui/Avatar';
@@ -94,7 +94,7 @@ function ConvItem({ conv, isActive, onClick }) {
     conv.title ||
     'Cuộc trò chuyện';
   const otherAvatar = conv.partnerAvatar || conv.otherUserAvatarUrl || conv.otherUserAvatar || conv.recipientAvatarUrl;
-  const lastMsg = conv.lastMessage || conv.lastMessageContent || '';
+  const lastMsg = conv.lastMessage || conv.lastMessageContent || conv.lastMessagePreview || '';
   const lastTime = conv.lastMessageAt || conv.updatedAt;
   const unread = conv.unreadCount || 0;
 
@@ -114,18 +114,25 @@ function ConvItem({ conv, isActive, onClick }) {
       <Avatar src={otherAvatar} name={otherName} size="md" />
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-semibold text-ink-900 dark:text-ink-50 truncate">
+          <p className="text-sm font-semibold text-ink-900 dark:text-ink-50 truncate flex items-center gap-2">
             {otherName}
+            {unread > 0 ? (
+              <span className="inline-block h-2 w-2 rounded-full bg-red-500 shrink-0" aria-label={`${unread} tin nhắn chưa đọc`} />
+            ) : null}
           </p>
           <span className="text-[11px] text-ink-400 shrink-0">{formatConvTime(lastTime)}</span>
         </div>
         <div className="flex items-center justify-between gap-2 mt-0.5">
-          <p className="text-xs text-ink-400 truncate">{lastMsg || 'Bắt đầu trò chuyện'}</p>
-          {unread > 0 ? (
-            <span className="shrink-0 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary-500 text-[10px] font-bold text-white px-1.5">
-              {unread > 99 ? '99+' : unread}
-            </span>
-          ) : null}
+          <p
+            className={[
+              'text-xs truncate',
+              unread > 0
+                ? 'text-ink-900 dark:text-ink-50 font-medium'
+                : 'text-ink-400',
+            ].join(' ')}
+          >
+            {lastMsg || 'Chưa có tin nhắn'}
+          </p>
         </div>
       </div>
     </motion.button>
@@ -267,6 +274,21 @@ export default function ChatPage() {
         setMessages((prev) => [...prev, ...msgs]);
       } else {
         setMessages(msgs);
+        const latest = msgs[0];
+        if (latest) {
+          setConversations((prev) =>
+            prev.map((c) =>
+              String(c.id) === String(convId)
+                ? {
+                    ...c,
+                    lastMessage: c.lastMessage || latest.content,
+                    lastMessageContent: c.lastMessageContent || latest.content,
+                    lastMessageAt: c.lastMessageAt || latest.createdAt || latest.sentAt,
+                  }
+                : c
+            )
+          );
+        }
       }
       const nextCursor = data?.nextCursor ?? null;
       setHasMore(Boolean(nextCursor));
@@ -377,6 +399,24 @@ export default function ChatPage() {
       setMessages((prev) =>
         prev.map((m) => (m.id === optimisticId ? { ...sent, _optimistic: false } : m))
       );
+      setConversations((prev) =>
+        prev
+          .map((c) =>
+            String(c.id) === String(activeConvId)
+              ? {
+                  ...c,
+                  lastMessage: content,
+                  lastMessageContent: content,
+                  lastMessageAt: sent?.createdAt || new Date().toISOString(),
+                }
+              : c
+          )
+          .sort((a, b) => {
+            const timeA = a.lastMessageAt || a.updatedAt || 0;
+            const timeB = b.lastMessageAt || b.updatedAt || 0;
+            return new Date(timeB) - new Date(timeA);
+          })
+      );
     } catch {
       setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
     } finally {
@@ -415,16 +455,17 @@ export default function ChatPage() {
         ].join(' ')}
       >
         <div className="p-4 border-b border-ink-100 dark:border-ink-700">
-          <div className="flex items-center justify-between mb-3">
-            <h1 className="text-lg font-semibold text-ink-900 dark:text-ink-50">Tin nhắn</h1>
+          <div className="flex items-center gap-2 mb-3">
             <button
               type="button"
               onClick={handleExit}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-400 hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors"
-              aria-label="Thoát"
+              className="inline-flex items-center gap-1.5 -ml-2 px-2 py-1 rounded-lg text-sm font-medium text-ink-600 dark:text-ink-200 hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors"
+              aria-label="Quay lại"
             >
-              <X className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4" />
+              <span>Quay lại</span>
             </button>
+            <h1 className="ml-auto text-lg font-semibold text-ink-900 dark:text-ink-50">Tin nhắn</h1>
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400" />

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageCircle,
@@ -9,6 +9,7 @@ import {
   Search,
   Loader2,
   ChevronDown,
+  Maximize2,
 } from 'lucide-react';
 import { chatApi } from '../../lib/api';
 import { socketService } from '../../lib/socket';
@@ -90,7 +91,7 @@ function ConvItem({ conv, isActive, onClick }) {
     conv.partnerName || conv.otherUserName || conv.recipientName || conv.title || 'Cuộc trò chuyện';
   const otherAvatar =
     conv.partnerAvatar || conv.otherUserAvatarUrl || conv.otherUserAvatar || conv.recipientAvatarUrl;
-  const lastMsg = conv.lastMessage || conv.lastMessageContent || '';
+  const lastMsg = conv.lastMessage || conv.lastMessageContent || conv.lastMessagePreview || '';
   const lastTime = conv.lastMessageAt || conv.updatedAt;
   const unread = conv.unreadCount || 0;
 
@@ -108,16 +109,25 @@ function ConvItem({ conv, isActive, onClick }) {
       <Avatar src={otherAvatar} name={otherName} size="sm" />
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-1">
-          <p className="text-sm font-semibold text-ink-900 dark:text-ink-50 truncate">{otherName}</p>
+          <p className="text-sm font-semibold text-ink-900 dark:text-ink-50 truncate flex items-center gap-1.5">
+            {otherName}
+            {unread > 0 && (
+              <span className="inline-block h-2 w-2 rounded-full bg-red-500 shrink-0" aria-label={`${unread} tin nhắn chưa đọc`} />
+            )}
+          </p>
           <span className="text-[10px] text-ink-400 shrink-0">{formatConvTime(lastTime)}</span>
         </div>
         <div className="flex items-center justify-between gap-1 mt-0.5">
-          <p className="text-xs text-ink-400 truncate">{lastMsg || 'Bắt đầu trò chuyện'}</p>
-          {unread > 0 && (
-            <span className="shrink-0 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary-500 text-[10px] font-bold text-white px-1">
-              {unread > 99 ? '99+' : unread}
-            </span>
-          )}
+          <p
+            className={[
+              'text-xs truncate',
+              unread > 0
+                ? 'text-ink-900 dark:text-ink-50 font-medium'
+                : 'text-ink-400',
+            ].join(' ')}
+          >
+            {lastMsg || 'Chưa có tin nhắn'}
+          </p>
         </div>
       </div>
     </button>
@@ -138,6 +148,7 @@ export default function ChatPopup() {
 
 function ChatPopupInner() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [view, setView] = useState('list'); // 'list' | 'chat'
 
@@ -416,6 +427,18 @@ function ChatPopupInner() {
                 </span>
               )}
 
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  navigate(activeConvId ? `/chat/${activeConvId}` : '/chat');
+                }}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-full text-ink-400 hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors"
+                aria-label="Mở rộng"
+                title="Mở trang tin nhắn"
+              >
+                <Maximize2 className="h-3.5 w-3.5" />
+              </button>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
