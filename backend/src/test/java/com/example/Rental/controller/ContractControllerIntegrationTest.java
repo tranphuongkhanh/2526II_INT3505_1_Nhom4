@@ -68,11 +68,51 @@ class ContractControllerIntegrationTest {
     @MockBean
     private com.example.Rental.repository.PaymentRepository paymentRepository;
 
+    // Additional repositories required to satisfy the full bean graph when JPA
+    // auto-configuration is excluded. Without these mocks, services such as
+    // PostService / NotificationService / etc. fail to wire and the ApplicationContext
+    // cannot load.
+    @MockBean
+    private com.example.Rental.repository.PostRepository postRepository;
+
+    @MockBean
+    private com.example.Rental.repository.PostViewRepository postViewRepository;
+
+    @MockBean
+    private com.example.Rental.repository.PostExtensionRepository postExtensionRepository;
+
+    @MockBean
+    private com.example.Rental.repository.FavoriteRepository favoriteRepository;
+
+    @MockBean
+    private com.example.Rental.repository.RoomImageRepository roomImageRepository;
+
+    @MockBean
+    private com.example.Rental.repository.ReviewRepository reviewRepository;
+
+    @MockBean
+    private com.example.Rental.repository.ReportRepository reportRepository;
+
+    @MockBean
+    private com.example.Rental.repository.NotificationRepository notificationRepository;
+
+    @MockBean
+    private com.example.Rental.repository.ConversationRepository conversationRepository;
+
+    @MockBean
+    private com.example.Rental.repository.MessageRepository messageRepository;
+
+    @MockBean
+    private com.example.Rental.repository.UtilityBillRepository utilityBillRepository;
+
+    @MockBean
+    private com.example.Rental.repository.VehicleRepository vehicleRepository;
+
     @MockBean
     private JwtAuthFilter jwtAuthFilter;
 
     @Test
-    void createContract_shouldSetRoomRented_forOwner() throws Exception {
+    void createContract_shouldStartAsPendingRenterSignature_forOwner() throws Exception {
         User owner = User.builder().id(5L).email("owner@example.com").role(UserRole.OWNER).build();
         User renter = User.builder().id(11L).email("renter@example.com").role(UserRole.RENTER).build();
         Room room = Room.builder().id(20L).owner(owner).rentalStatus(RentalStatus.AVAILABLE).build();
@@ -105,7 +145,10 @@ class ContractControllerIntegrationTest {
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.id").value(401))
-            .andExpect(jsonPath("$.data.status").value("active"));
+            // New flow: contract starts in PENDING_RENTER_SIGNATURE; only becomes
+            // ACTIVE after the renter signs. Room rental status is also not
+            // flipped to RENTED until then.
+            .andExpect(jsonPath("$.data.status").value("pending_renter_signature"));
     }
 
     @Test
