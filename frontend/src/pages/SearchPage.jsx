@@ -8,10 +8,8 @@ import {
   LayoutGrid,
   List as ListIcon,
   Search as SearchIcon,
-  Wifi,
   AirVent,
   Refrigerator,
-  Bike,
   Bath,
   ShieldCheck,
   ChevronLeft,
@@ -63,12 +61,10 @@ const ROOM_TYPES = [
 ];
 
 const AMENITIES = [
-  { key: 'wifi',     label: 'Wifi',         Icon: Wifi },
-  { key: 'ac',       label: 'Máy lạnh',     Icon: AirVent },
-  { key: 'fridge',   label: 'Tủ lạnh',      Icon: Refrigerator },
-  { key: 'parking',  label: 'Chỗ để xe',    Icon: Bike },
-  { key: 'wc',       label: 'WC riêng',     Icon: Bath },
-  { key: 'security', label: 'Bảo vệ',       Icon: ShieldCheck },
+  { key: 'ac',       label: 'Máy lạnh',  Icon: AirVent,    apiParam: 'hasAc' },
+  { key: 'fridge',   label: 'Tủ lạnh',   Icon: Refrigerator, apiParam: 'hasFridge' },
+  { key: 'wc',       label: 'WC riêng',  Icon: Bath,        apiParam: 'hasPrivateWc' },
+  { key: 'security', label: 'Bảo vệ',    Icon: ShieldCheck, apiParam: 'hasSecurity' },
 ];
 
 const SORT_OPTIONS = [
@@ -442,6 +438,24 @@ function FilterSidebar({ filters, update, reset, anyActive, onClose }) {
         </div>
       </FilterSection>
 
+      <FilterSection title="Tiện ích">
+        <div className="space-y-0.5">
+          {AMENITIES.map(({ key, label, Icon }) => (
+            <Checkbox
+              key={key}
+              checked={filters.amenities.includes(key)}
+              onChange={(checked) =>
+                update({ amenities: checked
+                  ? [...filters.amenities, key]
+                  : filters.amenities.filter((a) => a !== key) })
+              }
+              label={label}
+              Icon={Icon}
+            />
+          ))}
+        </div>
+      </FilterSection>
+
       <FilterSection title="Khoảng giá">
         <PriceRange min={filters.minPrice} max={filters.maxPrice} onCommit={update} />
       </FilterSection>
@@ -520,6 +534,10 @@ function ActiveFilterTags({ filters, update, reset }) {
   filters.roomTypes.forEach((k) => {
     const t = ROOM_TYPES.find((r) => r.key === k);
     if (t) tags.push({ id: `type-${k}`, label: t.label, onRemove: () => update({ roomTypes: filters.roomTypes.filter((x) => x !== k) }) });
+  });
+  filters.amenities.forEach((k) => {
+    const a = AMENITIES.find((x) => x.key === k);
+    if (a) tags.push({ id: `amenity-${k}`, label: a.label, onRemove: () => update({ amenities: filters.amenities.filter((x) => x !== k) }) });
   });
   if (filters.minPrice > PRICE_MIN || filters.maxPrice < PRICE_MAX) {
     tags.push({
@@ -662,6 +680,7 @@ export function SearchPage() {
   const anyActive =
     Boolean(filters.keyword || filters.city || filters.district) ||
     filters.roomTypes.length > 0 ||
+    filters.amenities.length > 0 ||
     filters.minPrice > PRICE_MIN ||
     filters.maxPrice < PRICE_MAX ||
     filters.maxElectricity != null ||
@@ -685,6 +704,11 @@ export function SearchPage() {
       ...(filters.maxWater != null && { maxWaterPrice: filters.maxWater }),
       ...(filters.maxService != null && { maxServiceFee: filters.maxService }),
       ...(filters.maxWifi != null && { maxWifiFee: filters.maxWifi }),
+      ...Object.fromEntries(
+        AMENITIES
+          .filter(({ key }) => filters.amenities.includes(key))
+          .map(({ apiParam }) => [apiParam, true])
+      ),
     };
 
     setIsLoading(true);

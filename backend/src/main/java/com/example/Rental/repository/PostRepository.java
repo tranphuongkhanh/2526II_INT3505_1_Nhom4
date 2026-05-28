@@ -38,7 +38,11 @@ public interface PostRepository extends JpaRepository<Post, Long> {
            "(cast(:maxElectricityPrice as string) IS NULL OR r.electricityPricePerUnit <= :maxElectricityPrice) AND " +
            "(cast(:maxWaterPrice as string) IS NULL OR r.waterPricePerUnit <= :maxWaterPrice) AND " +
            "(cast(:maxServiceFee as string) IS NULL OR r.serviceFee <= :maxServiceFee) AND " +
-           "(cast(:maxWifiFee as string) IS NULL OR r.wifiFee <= :maxWifiFee)",
+           "(cast(:maxWifiFee as string) IS NULL OR r.wifiFee <= :maxWifiFee) AND " +
+           "(:hasAc IS NULL OR r.hasAc = :hasAc) AND " +
+           "(:hasFridge IS NULL OR r.hasFridge = :hasFridge) AND " +
+           "(:hasPrivateWc IS NULL OR r.hasPrivateWc = :hasPrivateWc) AND " +
+           "(:hasSecurity IS NULL OR r.hasSecurity = :hasSecurity)",
            countQuery = "SELECT COUNT(p) FROM Post p JOIN p.room r WHERE " +
            "p.status = 'APPROVED' AND p.endDate > CURRENT_TIMESTAMP AND " +
            "(cast(:keyword as string) IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', cast(:keyword as string), '%')) OR LOWER(r.address) LIKE LOWER(CONCAT('%', cast(:keyword as string), '%'))) AND " +
@@ -50,7 +54,11 @@ public interface PostRepository extends JpaRepository<Post, Long> {
            "(cast(:maxElectricityPrice as string) IS NULL OR r.electricityPricePerUnit <= :maxElectricityPrice) AND " +
            "(cast(:maxWaterPrice as string) IS NULL OR r.waterPricePerUnit <= :maxWaterPrice) AND " +
            "(cast(:maxServiceFee as string) IS NULL OR r.serviceFee <= :maxServiceFee) AND " +
-           "(cast(:maxWifiFee as string) IS NULL OR r.wifiFee <= :maxWifiFee)")
+           "(cast(:maxWifiFee as string) IS NULL OR r.wifiFee <= :maxWifiFee) AND " +
+           "(:hasAc IS NULL OR r.hasAc = :hasAc) AND " +
+           "(:hasFridge IS NULL OR r.hasFridge = :hasFridge) AND " +
+           "(:hasPrivateWc IS NULL OR r.hasPrivateWc = :hasPrivateWc) AND " +
+           "(:hasSecurity IS NULL OR r.hasSecurity = :hasSecurity)")
     Page<Post> searchGuestPosts(@Param("keyword") String keyword,
                                 @Param("minPrice") BigDecimal minPrice,
                                 @Param("maxPrice") BigDecimal maxPrice,
@@ -62,6 +70,10 @@ public interface PostRepository extends JpaRepository<Post, Long> {
                                 @Param("maxWaterPrice") BigDecimal maxWaterPrice,
                                 @Param("maxServiceFee") BigDecimal maxServiceFee,
                                 @Param("maxWifiFee") BigDecimal maxWifiFee,
+                                @Param("hasAc") Boolean hasAc,
+                                @Param("hasFridge") Boolean hasFridge,
+                                @Param("hasPrivateWc") Boolean hasPrivateWc,
+                                @Param("hasSecurity") Boolean hasSecurity,
                                 Pageable pageable);
 
     // 2b. Lấy chi tiết bài đăng kèm room, images, owner trong 1 query

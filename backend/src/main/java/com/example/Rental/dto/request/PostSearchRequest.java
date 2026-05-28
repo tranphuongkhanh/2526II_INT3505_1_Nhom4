@@ -19,6 +19,12 @@ public class PostSearchRequest {
     private BigDecimal maxWaterPrice;
     private BigDecimal maxServiceFee;
     private BigDecimal maxWifiFee;
+
+    private Boolean hasAc;
+    private Boolean hasFridge;
+    private Boolean hasPrivateWc;
+    private Boolean hasSecurity;
+
     private Integer page = 0;
     private Integer size = 10;
 }

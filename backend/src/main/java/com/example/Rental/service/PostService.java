@@ -66,7 +66,9 @@ public class PostService {
         cacheNames = CacheConstants.POSTS_SEARCH,
         key = "{#request.keyword, #request.minPrice, #request.maxPrice, #request.roomTypes, "
             + "#request.city, #request.district, #request.maxElectricityPrice, #request.maxWaterPrice, "
-            + "#request.maxServiceFee, #request.maxWifiFee, #request.page, #request.size}"
+            + "#request.maxServiceFee, #request.maxWifiFee, "
+            + "#request.hasAc, #request.hasFridge, #request.hasPrivateWc, #request.hasSecurity, "
+            + "#request.page, #request.size}"
     )
     public PageCacheWrapper<PostSummaryResponse> searchPosts(PostSearchRequest request) {
         Pageable pageable = PageRequest.of(request.getPage(), request.getSize(), Sort.by("createdAt").descending());
@@ -91,6 +93,10 @@ public class PostService {
                 request.getMaxWaterPrice(),
                 request.getMaxServiceFee(),
                 request.getMaxWifiFee(),
+                request.getHasAc(),
+                request.getHasFridge(),
+                request.getHasPrivateWc(),
+                request.getHasSecurity(),
                 pageable
         );
 
