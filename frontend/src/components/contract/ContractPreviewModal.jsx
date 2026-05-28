@@ -143,7 +143,7 @@ function PriceCard({ icon: Icon, label, value, unit, accent = false }) {
 
 // ─── Main modal ──────────────────────────────────────────────────────────────
 
-export default function ContractPreviewModal({ contract, isOpen, onClose, onSign }) {
+export default function ContractPreviewModal({ contract, isOpen, onClose, onSign, readOnly = false }) {
   const [agreed, setAgreed] = useState(false);
   const [signing, setSigning] = useState(false);
 
@@ -207,25 +207,36 @@ export default function ContractPreviewModal({ contract, isOpen, onClose, onSign
         </div>
       }
       footer={
-        <div className="flex items-center justify-between w-full">
-          <p className="text-xs text-ink-400 italic">
-            Hợp đồng có hiệu lực ngay sau khi người thuê ký xác nhận
-          </p>
-          <div className="flex gap-2">
-            <Button variant="ghost" onClick={handleClose} disabled={signing}>
+        readOnly ? (
+          <div className="flex items-center justify-between w-full">
+            <p className="text-xs text-ink-400 italic">
+              Bạn đang xem nội dung gốc của hợp đồng đã ký
+            </p>
+            <Button variant="ghost" onClick={handleClose}>
               Đóng
             </Button>
-            <Button
-              variant="primary"
-              icon={PenLine}
-              onClick={handleSign}
-              loading={signing}
-              disabled={!agreed}
-            >
-              Ký xác nhận hợp đồng
-            </Button>
           </div>
-        </div>
+        ) : (
+          <div className="flex items-center justify-between w-full">
+            <p className="text-xs text-ink-400 italic">
+              Hợp đồng có hiệu lực ngay sau khi người thuê ký xác nhận
+            </p>
+            <div className="flex gap-2">
+              <Button variant="ghost" onClick={handleClose} disabled={signing}>
+                Đóng
+              </Button>
+              <Button
+                variant="primary"
+                icon={PenLine}
+                onClick={handleSign}
+                loading={signing}
+                disabled={!agreed}
+              >
+                Ký xác nhận hợp đồng
+              </Button>
+            </div>
+          </div>
+        )
       }
     >
       <div className="space-y-4 py-1 text-sm">
@@ -395,6 +406,7 @@ export default function ContractPreviewModal({ contract, isOpen, onClose, onSign
         </div>
 
         {/* ── Checkbox agreement ──────────────────────────────────────── */}
+        {!readOnly && (
         <label
           className={[
             'flex items-start gap-3 rounded-xl border p-4 cursor-pointer transition-colors',
@@ -423,6 +435,7 @@ export default function ContractPreviewModal({ contract, isOpen, onClose, onSign
             </span>
           </div>
         </label>
+        )}
       </div>
     </Modal>
   );
