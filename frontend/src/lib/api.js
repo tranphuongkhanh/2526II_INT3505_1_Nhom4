@@ -228,6 +228,15 @@ export const billApi = {
   create: ({ contractId, ...body }) =>
     unwrap(api.post(`/contracts/${contractId}/bills`, body)),
   markPaid: (id) => unwrap(api.patch(`/bills/${id}/paid`)),
+  submitPaymentProof: (id, file) => {
+    const fd = new FormData();
+    fd.append('image', file);
+    return unwrap(api.post(`/bills/${id}/payment-proof`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }));
+  },
+  approve: (id) => unwrap(api.patch(`/bills/${id}/approve`)),
+  reject: (id, reason) => unwrap(api.patch(`/bills/${id}/reject`, { reason })),
 };
 
 export const vehicleApi = {
@@ -235,23 +244,6 @@ export const vehicleApi = {
   create: ({ roomId, ...body }) =>
     unwrap(api.post(`/rooms/${roomId}/vehicles`, body)),
   delete: (id) => unwrap(api.delete(`/vehicles/${id}`)),
-};
-
-export const ocrApi = {
-  meter: (file) => {
-    const fd = new FormData();
-    fd.append('image', file);
-    return unwrap(
-      api.post('/ocr/meter', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
-    );
-  },
-  licensePlate: (file) => {
-    const fd = new FormData();
-    fd.append('image', file);
-    return unwrap(
-      api.post('/ocr/license-plate', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
-    );
-  },
 };
 
 export const paymentApi = {

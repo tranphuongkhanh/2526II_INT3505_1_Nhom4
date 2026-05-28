@@ -33,6 +33,12 @@ public class UtilityBillResponse {
     private BigDecimal totalAmount;
     private String status;
     private LocalDateTime paidAt;
+    private String paymentProofUrl;
+    private LocalDateTime proofSubmittedAt;
+    private String rejectionReason;
+    private String ownerBankCode;
+    private String ownerBankAccountNumber;
+    private String ownerBankAccountName;
     private LocalDateTime createdAt;
 }
 

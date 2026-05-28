@@ -23,15 +23,18 @@ public class UtilityBillService {
     private final RentalContractRepository rentalContractRepository;
     private final RoomRepository roomRepository;
     private final NotificationService notificationService;
+    private final CloudinaryService cloudinaryService;
 
     public UtilityBillService(UtilityBillRepository utilityBillRepository,
                               RentalContractRepository rentalContractRepository,
                               RoomRepository roomRepository,
-                              NotificationService notificationService) {
+                              NotificationService notificationService,
+                              CloudinaryService cloudinaryService) {
         this.utilityBillRepository = utilityBillRepository;
         this.rentalContractRepository = rentalContractRepository;
         this.roomRepository = roomRepository;
         this.notificationService = notificationService;
+        this.cloudinaryService = cloudinaryService;
     }
 
     public List<UtilityBill> listByContract(Long contractId) {
@@ -138,5 +141,84 @@ public class UtilityBillService {
         bill.setStatus(BillStatus.PAID);
         bill.setPaidAt(java.time.LocalDateTime.now());
         return utilityBillRepository.save(bill);
+    }
+
+    /** Renter submits a payment proof image; bill moves to AWAITING_APPROVAL and owner is notified. */
+    @Transactional
+    public UtilityBill submitPaymentProof(Long billId, org.springframework.web.multipart.MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("Ảnh chuyển khoản không được để trống");
+        }
+        UtilityBill bill = getById(billId);
+        if (bill.getStatus() == BillStatus.PAID) {
+            throw new IllegalStateException("Hoá đơn đã thanh toán");
+        }
+        String url = cloudinaryService.uploadImage(file);
+        bill.setPaymentProofUrl(url);
+        bill.setProofSubmittedAt(java.time.LocalDateTime.now());
+        bill.setRejectionReason(null);
+        bill.setStatus(BillStatus.AWAITING_APPROVAL);
+        UtilityBill saved = utilityBillRepository.save(bill);
+
+        RentalContract contract = saved.getContract();
+        notificationService.createAndSendNotification(
+                contract.getRoom().getOwner(),
+                NotificationType.PAYMENT_PROOF_SUBMITTED,
+                "Người thuê đã gửi ảnh chuyển khoản",
+                "Hoá đơn tháng " + saved.getBillingMonth() + " — phòng '"
+                        + saved.getRoom().getTitle() + "' đang chờ bạn duyệt.",
+                "bill",
+                saved.getId()
+        );
+        return saved;
+    }
+
+    /** Owner approves: status → PAID, notify renter. */
+    @Transactional
+    public UtilityBill approvePayment(Long billId) {
+        UtilityBill bill = getById(billId);
+        if (bill.getStatus() != BillStatus.AWAITING_APPROVAL) {
+            throw new IllegalStateException("Hoá đơn chưa có ảnh chuyển khoản chờ duyệt");
+        }
+        bill.setStatus(BillStatus.PAID);
+        bill.setPaidAt(java.time.LocalDateTime.now());
+        bill.setRejectionReason(null);
+        UtilityBill saved = utilityBillRepository.save(bill);
+
+        notificationService.createAndSendNotification(
+                saved.getContract().getRenter(),
+                NotificationType.PAYMENT_APPROVED,
+                "Thanh toán đã được duyệt",
+                "Hoá đơn tháng " + saved.getBillingMonth() + " đã được chủ nhà xác nhận.",
+                "bill",
+                saved.getId()
+        );
+        return saved;
+    }
+
+    /** Owner rejects: status → UNPAID, proof cleared, reason saved, notify renter. */
+    @Transactional
+    public UtilityBill rejectPayment(Long billId, String reason) {
+        UtilityBill bill = getById(billId);
+        if (bill.getStatus() != BillStatus.AWAITING_APPROVAL) {
+            throw new IllegalStateException("Hoá đơn không ở trạng thái chờ duyệt");
+        }
+        bill.setStatus(BillStatus.UNPAID);
+        bill.setPaymentProofUrl(null);
+        bill.setProofSubmittedAt(null);
+        bill.setRejectionReason(reason);
+        UtilityBill saved = utilityBillRepository.save(bill);
+
+        notificationService.createAndSendNotification(
+                saved.getContract().getRenter(),
+                NotificationType.PAYMENT_REJECTED,
+                "Ảnh chuyển khoản bị từ chối",
+                "Hoá đơn tháng " + saved.getBillingMonth()
+                        + " bị từ chối" + (reason != null && !reason.isBlank() ? ": " + reason : "")
+                        + ". Vui lòng gửi lại ảnh chuyển khoản.",
+                "bill",
+                saved.getId()
+        );
+        return saved;
     }
 }

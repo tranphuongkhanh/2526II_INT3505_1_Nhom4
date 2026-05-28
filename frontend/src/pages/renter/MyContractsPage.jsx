@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Receipt, ChevronDown, ChevronRight, Eye } from 'lucide-react';
+import { FileText, Receipt, ChevronDown, ChevronRight, Eye, Upload, Clock, AlertCircle } from 'lucide-react';
 import { contractApi, billApi } from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -22,7 +22,7 @@ const fmt = (n) =>
 
 function PaidBadge() {
   return (
-    <span className="relative inline-flex overflow-hidden rounded-full px-2.5 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300">
+    <span className="relative inline-flex items-center whitespace-nowrap overflow-hidden rounded-full px-2.5 py-1 text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300">
       <span className="relative z-10">Đã thanh toán</span>
       <span
         className="absolute inset-0 bg-shimmer bg-[length:200%_100%] animate-shimmer opacity-50"
@@ -34,14 +34,59 @@ function PaidBadge() {
 
 function UnpaidBadge() {
   return (
-    <span className="inline-flex rounded-full px-2.5 py-1 text-xs font-bold bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-400">
+    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-400 ring-1 ring-orange-200 dark:ring-orange-500/30">
+      <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
       Chưa thanh toán
     </span>
   );
 }
 
-function BillRow({ bill }) {
+function AwaitingBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300 ring-1 ring-amber-200 dark:ring-amber-500/30">
+      <Clock className="h-3 w-3" />
+      Chờ duyệt
+    </span>
+  );
+}
+
+function StatusBadge({ status }) {
+  if (status === 'PAID') return <PaidBadge />;
+  if (status === 'AWAITING_APPROVAL') return <AwaitingBadge />;
+  return <UnpaidBadge />;
+}
+
+function BillRow({ bill: initialBill }) {
+  const toast = useToast();
+  const [bill, setBill] = useState(initialBill);
   const [open, setOpen] = useState(false);
+  const fileRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handlePickFile = (e) => {
+    e.stopPropagation();
+    fileRef.current?.click();
+  };
+
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Vui lòng chọn tệp ảnh.');
+      return;
+    }
+    setUploading(true);
+    try {
+      const updated = await billApi.submitPaymentProof(bill.id, file);
+      setBill(updated);
+      toast.success('Đã gửi ảnh chuyển khoản, chờ chủ nhà duyệt.');
+    } catch (err) {
+      toast.error(err.displayMessage ?? 'Tải ảnh thất bại.');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const lineItems = [
     bill.elecAmount > 0 && { description: `Điện (${bill.elecUsage ?? 0} kWh)`, amount: bill.elecAmount },
@@ -58,10 +103,17 @@ function BillRow({ bill }) {
     + Number(bill.bikeParkingFee ?? 0)
     + Number(bill.extraFee ?? 0);
 
-  const billDeepLink =
-    (typeof window !== 'undefined' ? window.location.origin : '')
-    + `/my-contracts?bill=${bill.id}&amount=${bill.totalAmount ?? 0}&month=${bill.billingMonth ?? ''}`;
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=6&data=${encodeURIComponent(billDeepLink)}`;
+  // VietQR for owner bank transfer — auto-fills bank, account, amount, memo.
+  const ownerBank = bill.ownerBankCode;
+  const ownerAcc = bill.ownerBankAccountNumber;
+  const ownerName = bill.ownerBankAccountName ?? '';
+  const memo = `HD${bill.id} T${bill.billingMonth ?? ''}`;
+  const qrUrl = ownerBank && ownerAcc
+    ? `https://img.vietqr.io/image/${ownerBank}-${ownerAcc}-compact2.png`
+        + `?amount=${Number(bill.totalAmount) || 0}`
+        + `&addInfo=${encodeURIComponent(memo)}`
+        + `&accountName=${encodeURIComponent(ownerName)}`
+    : null;
 
   return (
     <tbody>
@@ -97,7 +149,7 @@ function BillRow({ bill }) {
           {fmt(bill.totalAmount)}
         </td>
         <td className="py-3 pl-2 pr-4 text-right">
-          {bill.status === 'PAID' ? <PaidBadge /> : <UnpaidBadge />}
+          <StatusBadge status={bill.status} />
         </td>
       </tr>
       <AnimatePresence initial={false}>
@@ -130,15 +182,78 @@ function BillRow({ bill }) {
                     </div>
                   </div>
                   {bill.status !== 'PAID' && (
-                    <div className="flex flex-col items-center gap-1 shrink-0">
-                      <img
-                        src={qrUrl}
-                        alt="QR thanh toán hoá đơn"
-                        width={140}
-                        height={140}
-                        className="rounded-lg border border-ink-200 dark:border-ink-700 bg-white p-1.5"
+                    <div className="flex flex-col items-center gap-2 shrink-0">
+                      {bill.status === 'AWAITING_APPROVAL' ? (
+                        <>
+                          {bill.paymentProofUrl && (
+                            <img
+                              src={bill.paymentProofUrl}
+                              alt="Ảnh chuyển khoản"
+                              width={140}
+                              height={140}
+                              className="rounded-lg border border-ink-200 dark:border-ink-700 object-cover h-[140px] w-[140px] bg-white"
+                            />
+                          )}
+                          <p className="text-[11px] text-amber-600 dark:text-amber-300 flex items-center gap-1">
+                            <Clock className="h-3 w-3" /> Chờ chủ nhà duyệt
+                          </p>
+                          <button
+                            type="button"
+                            onClick={handlePickFile}
+                            disabled={uploading}
+                            className="text-[11px] text-primary-500 hover:underline disabled:opacity-50"
+                          >
+                            Gửi lại ảnh khác
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          {qrUrl ? (
+                            <>
+                              <img
+                                src={qrUrl}
+                                alt="QR chuyển khoản"
+                                width={180}
+                                height={220}
+                                className="rounded-lg border border-ink-200 dark:border-ink-700 bg-white p-1.5"
+                              />
+                              <p className="text-[11px] text-ink-500 dark:text-ink-300 text-center max-w-[180px]">
+                                <span className="font-semibold">{ownerName || 'Chủ nhà'}</span>
+                                <br />
+                                {ownerBank} • {ownerAcc}
+                              </p>
+                            </>
+                          ) : (
+                            <div className="rounded-lg border border-dashed border-ink-300 dark:border-ink-600 p-3 text-center max-w-[180px]">
+                              <p className="text-[11px] text-ink-400">
+                                Chủ nhà chưa cấu hình tài khoản nhận. Vui lòng liên hệ trực tiếp.
+                              </p>
+                            </div>
+                          )}
+                          {bill.rejectionReason && (
+                            <p className="text-[11px] text-red-500 flex items-start gap-1 max-w-[160px] text-center">
+                              <AlertCircle className="h-3 w-3 mt-px shrink-0" />
+                              <span>Bị từ chối: {bill.rejectionReason}</span>
+                            </p>
+                          )}
+                          <button
+                            type="button"
+                            onClick={handlePickFile}
+                            disabled={uploading}
+                            className="inline-flex items-center gap-1 rounded-lg bg-primary-500 hover:bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                          >
+                            <Upload className="h-3.5 w-3.5" />
+                            {uploading ? 'Đang tải…' : 'Tải ảnh chuyển khoản'}
+                          </button>
+                        </>
+                      )}
+                      <input
+                        ref={fileRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleUpload}
                       />
-                      <p className="text-[11px] text-ink-400">Quét để thanh toán</p>
                     </div>
                   )}
                 </div>

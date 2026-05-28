@@ -1,11 +1,13 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence, useSpring } from 'framer-motion';
 import {
-  Plus, Receipt, ChevronRight, ChevronDown, Camera, Check,
-  Zap, Droplets, DollarSign, PenLine, X,
+  Plus, Receipt, ChevronRight, ChevronDown,
+  Zap, Droplets, DollarSign,
 } from 'lucide-react';
-import { roomApi, contractApi, billApi, ocrApi } from '../../lib/api';
+import { roomApi, contractApi, billApi, userApi } from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
+import { useAuth } from '../../contexts/AuthContext';
+import { useNotifications } from '../../contexts/NotificationContext';
 import { springs } from '../../lib/animations';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
@@ -35,6 +37,16 @@ function SpringNumber({ value, formatFn = fmt }) {
 
 // ── Status badge with stamp animation ────────────────────
 function StatusBadge({ status, stamping }) {
+  const styles =
+    status === 'PAID'
+      ? 'bg-green-100 text-green-700 ring-green-200 dark:bg-green-900/30 dark:text-green-400 dark:ring-green-500/30'
+      : status === 'AWAITING_APPROVAL'
+        ? 'bg-amber-100 text-amber-700 ring-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:ring-amber-500/30'
+        : 'bg-orange-100 text-orange-700 ring-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:ring-orange-500/30';
+  const label =
+    status === 'PAID' ? 'Đã thanh toán'
+      : status === 'AWAITING_APPROVAL' ? 'Chờ duyệt'
+        : 'Chưa thanh toán';
   return (
     <motion.span
       key={status}
@@ -45,165 +57,13 @@ function StatusBadge({ status, stamping }) {
           : { scale: 1, rotate: 0 }
       }
       transition={springs.bouncy}
-      className={[
-        'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap',
-        status === 'PAID'
-          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-          : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-      ].join(' ')}
+      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ring-1 ${styles}`}
     >
-      {status === 'PAID' ? 'Đã TT' : 'Chưa TT'}
+      <span className={`h-1.5 w-1.5 rounded-full ${
+        status === 'PAID' ? 'bg-green-500' : status === 'AWAITING_APPROVAL' ? 'bg-amber-500' : 'bg-orange-500'
+      }`} />
+      {label}
     </motion.span>
-  );
-}
-
-// ── OCR scan panel ────────────────────────────────────────
-function OcrScanPanel({ label, onAccept, onClose }) {
-  const fileRef = useRef(null);
-  const [preview, setPreview] = useState(null);
-  const [scanning, setScanning] = useState(false);
-  const [result, setResult] = useState(null);
-  const [displayText, setDisplayText] = useState('');
-  const [confidence, setConfidence] = useState(null);
-  const [editMode, setEditMode] = useState(false);
-  const [edited, setEdited] = useState('');
-
-  const handleFile = async (file) => {
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    setPreview(url);
-    setScanning(true);
-    setResult(null);
-    setDisplayText('');
-    setConfidence(null);
-    try {
-      const data = await ocrApi.meter(file);
-      const reading = String(data?.reading ?? data?.value ?? '');
-      const conf = data?.confidence ?? null;
-      setConfidence(conf);
-      // Typewriter effect
-      let i = 0;
-      const step = () => {
-        if (i >= reading.length) { setResult(reading); setScanning(false); return; }
-        setDisplayText(reading.slice(0, ++i));
-        setTimeout(step, 80);
-      };
-      step();
-    } catch {
-      setScanning(false);
-      setDisplayText('Không nhận diện được');
-    }
-  };
-
-  const handleAccept = () => {
-    onAccept(editMode ? edited : result);
-  };
-
-  return (
-    <div className="rounded-2xl border border-ink-200 dark:border-ink-700 bg-ink-50 dark:bg-ink-800/50 p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-ink-700 dark:text-ink-200">{label}</p>
-        <button
-          type="button"
-          onClick={onClose}
-          className="p-1 rounded-lg text-ink-400 hover:bg-ink-200 dark:hover:bg-ink-700"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-
-      {!preview ? (
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          className="w-full h-28 border-2 border-dashed border-ink-300 dark:border-ink-600 rounded-xl flex flex-col items-center justify-center gap-2 text-ink-400 hover:border-primary-400 hover:text-primary-500 transition-colors"
-        >
-          <Camera className="h-6 w-6" />
-          <span className="text-sm">Chọn ảnh đồng hồ</span>
-        </button>
-      ) : (
-        <div className="relative rounded-xl overflow-hidden h-36 bg-black">
-          <img src={preview} alt="" className="h-full w-full object-contain" />
-          {scanning && (
-            <motion.div
-              className="absolute left-0 right-0 h-0.5 bg-green-400 shadow-[0_0_8px_2px_rgba(74,222,128,0.7)]"
-              animate={{ top: ['-2px', '100%'] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
-            />
-          )}
-        </div>
-      )}
-
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => handleFile(e.target.files?.[0])}
-      />
-
-      {(displayText || result) && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 bg-white dark:bg-ink-900 rounded-xl px-3 py-2 border border-ink-200 dark:border-ink-700">
-            <span className="font-mono text-lg font-bold text-primary-500 flex-1">
-              {displayText}
-              {scanning && <span className="animate-pulse">|</span>}
-            </span>
-          </div>
-
-          {confidence != null && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-ink-400">Độ tin cậy</span>
-              <div className="flex-1 h-1.5 bg-ink-200 dark:bg-ink-700 rounded-full overflow-hidden">
-                <motion.div
-                  className={`h-full rounded-full ${confidence > 0.8 ? 'bg-green-500' : 'bg-amber-500'}`}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${(confidence * 100).toFixed(0)}%` }}
-                  transition={springs.smooth}
-                />
-              </div>
-              <span className={`text-xs font-medium ${confidence > 0.8 ? 'text-green-600' : 'text-amber-600'}`}>
-                {(confidence * 100).toFixed(0)}%
-              </span>
-            </div>
-          )}
-
-          {result && !scanning && (
-            editMode ? (
-              <div className="flex gap-2">
-                <input
-                  className="flex-1 h-9 px-3 rounded-lg border border-primary-400 bg-white dark:bg-ink-900 text-sm text-ink-900 dark:text-ink-50 outline-none font-mono"
-                  value={edited}
-                  onChange={(e) => setEdited(e.target.value)}
-                  autoFocus
-                />
-                <Button size="sm" onClick={handleAccept}>Dùng</Button>
-                <Button size="sm" variant="ghost" onClick={() => setEditMode(false)}>Huỷ</Button>
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                <Button size="sm" icon={Check} onClick={handleAccept} className="flex-1">Chấp nhận</Button>
-                <Button size="sm" variant="outlined" icon={PenLine} onClick={() => { setEditMode(true); setEdited(result); }}>
-                  Sửa
-                </Button>
-              </div>
-            )
-          )}
-        </div>
-      )}
-
-      {!preview && (
-        <Button
-          variant="outlined"
-          size="sm"
-          icon={Camera}
-          fullWidth
-          onClick={() => fileRef.current?.click()}
-        >
-          Chụp / chọn ảnh
-        </Button>
-      )}
-    </div>
   );
 }
 
@@ -215,17 +75,32 @@ function BillRow({ bill: initialBill, contract }) {
   const [marking, setMarking] = useState(false);
   const [stamping, setStamping] = useState(false);
 
-  const handleMarkPaid = async (e) => {
+  const handleApprove = async (e) => {
     e.stopPropagation();
-    if (bill.status === 'PAID') return;
+    if (bill.status !== 'AWAITING_APPROVAL') return;
     setMarking(true);
     try {
-      await billApi.markPaid(bill.id);
+      const updated = await billApi.approve(bill.id);
       setStamping(true);
-      setBill((b) => ({ ...b, status: 'PAID' }));
+      setBill(updated);
       setTimeout(() => setStamping(false), 800);
     } catch (err) {
-      toast.error(err.displayMessage ?? 'Cập nhật thất bại.');
+      toast.error(err.displayMessage ?? 'Duyệt thất bại.');
+    } finally {
+      setMarking(false);
+    }
+  };
+
+  const handleReject = async (e) => {
+    e.stopPropagation();
+    if (bill.status !== 'AWAITING_APPROVAL') return;
+    const reason = window.prompt('Lý do từ chối (tuỳ chọn):', '') ?? '';
+    setMarking(true);
+    try {
+      const updated = await billApi.reject(bill.id, reason);
+      setBill(updated);
+    } catch (err) {
+      toast.error(err.displayMessage ?? 'Từ chối thất bại.');
     } finally {
       setMarking(false);
     }
@@ -252,7 +127,7 @@ function BillRow({ bill: initialBill, contract }) {
           </span>
         </td>
         <td className="py-3 px-2 text-sm text-ink-600 dark:text-ink-200 text-right">
-          {fmt(bill.electricityAmount)}
+          {fmt(bill.elecAmount)}
         </td>
         <td className="py-3 px-2 text-sm text-ink-600 dark:text-ink-200 text-right">
           {fmt(bill.waterAmount)}
@@ -261,7 +136,7 @@ function BillRow({ bill: initialBill, contract }) {
           {fmt(bill.rentAmount)}
         </td>
         <td className="py-3 px-2 text-sm text-ink-600 dark:text-ink-200 text-right">
-          {fmt(bill.extraAmount)}
+          {fmt(bill.extraFee)}
         </td>
         <td className="py-3 px-2 text-sm font-semibold text-ink-900 dark:text-ink-50 text-right">
           {fmt(bill.totalAmount)}
@@ -270,10 +145,15 @@ function BillRow({ bill: initialBill, contract }) {
           <StatusBadge status={bill.status} stamping={stamping} />
         </td>
         <td className="py-3 pl-2 pr-4 text-right" onClick={(e) => e.stopPropagation()}>
-          {bill.status !== 'PAID' && (
-            <Button size="sm" variant="outlined" loading={marking} onClick={handleMarkPaid}>
-              Đã TT
-            </Button>
+          {bill.status === 'AWAITING_APPROVAL' && (
+            <div className="inline-flex gap-1.5">
+              <Button size="sm" variant="outlined" loading={marking} onClick={handleApprove}>
+                Duyệt
+              </Button>
+              <Button size="sm" variant="ghost" onClick={handleReject}>
+                Từ chối
+              </Button>
+            </div>
           )}
         </td>
       </tr>
@@ -290,16 +170,16 @@ function BillRow({ bill: initialBill, contract }) {
               >
                 <div className="bg-ink-50 dark:bg-ink-800/50 px-6 py-4 space-y-2 border-b border-ink-100 dark:border-ink-700">
                   {/* Electricity detail */}
-                  {bill.electricityUsage != null && (
+                  {bill.elecUsage != null && (
                     <div className="flex items-center justify-between text-sm">
                       <span className="flex items-center gap-1.5 text-ink-500 dark:text-ink-400">
                         <Zap className="h-3.5 w-3.5 text-yellow-400" />
-                        Điện: {bill.previousElectricityReading ?? '?'} →{' '}
-                        {bill.currentElectricityReading ?? '?'} kWh
-                        ({bill.electricityUsage} × {fmt(bill.electricityUnitPrice ?? contract?.electricityPrice)})
+                        Điện: {bill.elecPrev ?? '?'} →{' '}
+                        {bill.elecCurr ?? '?'} kWh
+                        ({bill.elecUsage} × {fmt(bill.elecUnitPrice ?? contract?.electricityPrice)})
                       </span>
                       <span className="font-medium text-ink-900 dark:text-ink-50">
-                        {fmt(bill.electricityAmount)}
+                        {fmt(bill.elecAmount)}
                       </span>
                     </div>
                   )}
@@ -308,8 +188,8 @@ function BillRow({ bill: initialBill, contract }) {
                     <div className="flex items-center justify-between text-sm">
                       <span className="flex items-center gap-1.5 text-ink-500 dark:text-ink-400">
                         <Droplets className="h-3.5 w-3.5 text-blue-400" />
-                        Nước: {bill.previousWaterReading ?? '?'} →{' '}
-                        {bill.currentWaterReading ?? '?'} m³
+                        Nước: {bill.waterPrev ?? '?'} →{' '}
+                        {bill.waterCurr ?? '?'} m³
                         ({bill.waterUsage} × {fmt(bill.waterUnitPrice ?? contract?.waterPrice)})
                       </span>
                       <span className="font-medium text-ink-900 dark:text-ink-50">
@@ -328,13 +208,13 @@ function BillRow({ bill: initialBill, contract }) {
                     </span>
                   </div>
                   {/* Extra */}
-                  {bill.extraAmount > 0 && (
+                  {bill.extraFee > 0 && (
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-ink-500 dark:text-ink-400">
-                        Phụ phí{bill.extraFeeNote ? ` — ${bill.extraFeeNote}` : ''}
+                        Phụ phí{bill.extraNote ? ` — ${bill.extraNote}` : ''}
                       </span>
                       <span className="font-medium text-ink-900 dark:text-ink-50">
-                        {fmt(bill.extraAmount)}
+                        {fmt(bill.extraFee)}
                       </span>
                     </div>
                   )}
@@ -353,6 +233,36 @@ function BillRow({ bill: initialBill, contract }) {
                     <span className="text-ink-700 dark:text-ink-200">Tổng cộng</span>
                     <span className="text-primary-500">{fmt(bill.totalAmount)}</span>
                   </div>
+
+                  {bill.paymentProofUrl && (
+                    <div className="pt-3 border-t border-ink-200 dark:border-ink-700 space-y-2">
+                      <p className="text-xs font-semibold text-ink-500 dark:text-ink-300">
+                        Ảnh chuyển khoản từ người thuê
+                        {bill.proofSubmittedAt && (
+                          <span className="ml-2 text-ink-400 font-normal">
+                            ({new Date(bill.proofSubmittedAt).toLocaleString('vi-VN')})
+                          </span>
+                        )}
+                      </p>
+                      <a
+                        href={bill.paymentProofUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <img
+                          src={bill.paymentProofUrl}
+                          alt="Ảnh chuyển khoản"
+                          className="rounded-lg border border-ink-200 dark:border-ink-700 max-h-72 bg-white"
+                        />
+                      </a>
+                    </div>
+                  )}
+                  {bill.rejectionReason && (
+                    <p className="text-xs text-red-500 pt-2 border-t border-ink-200 dark:border-ink-700">
+                      Lý do từ chối lần trước: {bill.rejectionReason}
+                    </p>
+                  )}
                 </div>
               </motion.div>
             </td>
@@ -363,18 +273,24 @@ function BillRow({ bill: initialBill, contract }) {
   );
 }
 
+// Common Vietnamese bank short codes accepted by img.vietqr.io
+const BANK_CODES = [
+  'VCB', 'TCB', 'MB', 'BIDV', 'VPB', 'ACB', 'TPB', 'STB',
+  'ICB', 'AGRIBANK', 'VIB', 'SHB', 'HDB', 'OCB', 'MSB', 'SEAB',
+];
+
 // ── Create bill modal ─────────────────────────────────────
 function CreateBillModal({ isOpen, onClose, contract, room, lastBill, onCreated }) {
   const toast = useToast();
+  const { user, updateUser } = useAuth();
   const [saving, setSaving] = useState(false);
-  const [showElecOcr, setShowElecOcr] = useState(false);
-  const [showWaterOcr, setShowWaterOcr] = useState(false);
 
   const today = new Date();
-  const defaultMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  const currentMonthLabel = today.toLocaleString('en-US', { month: 'long', year: 'numeric' });
 
   const [form, setForm] = useState({
-    billingMonth: defaultMonth,
+    billingMonth: currentMonth,
     prevElec: '',
     currElec: '',
     elecPrice: '',
@@ -383,6 +299,9 @@ function CreateBillModal({ isOpen, onClose, contract, room, lastBill, onCreated 
     waterPrice: '',
     extraAmount: '',
     extraNote: '',
+    bankCode: 'VCB',
+    bankAccountNumber: '',
+    bankAccountName: '',
   });
 
   useEffect(() => {
@@ -391,7 +310,7 @@ function CreateBillModal({ isOpen, onClose, contract, room, lastBill, onCreated 
     const prevElecVal = lastBill?.elecCurr ?? lastBill?.electricityCurrent ?? 0;
     const prevWaterVal = lastBill?.waterCurr ?? lastBill?.waterCurrent ?? 0;
     setForm({
-      billingMonth: defaultMonth,
+      billingMonth: currentMonth,
       prevElec: String(prevElecVal),
       currElec: '',
       elecPrice: String(contract.electricity_price ?? contract.electricityPrice ?? ''),
@@ -400,10 +319,11 @@ function CreateBillModal({ isOpen, onClose, contract, room, lastBill, onCreated 
       waterPrice: String(contract.water_price ?? contract.waterPrice ?? ''),
       extraAmount: '',
       extraNote: '',
+      bankCode: user?.bankCode ?? 'VCB',
+      bankAccountNumber: user?.bankAccountNumber ?? '',
+      bankAccountName: user?.bankAccountName ?? user?.fullName ?? '',
     });
-    setShowElecOcr(false);
-    setShowWaterOcr(false);
-  }, [isOpen, contract, lastBill]);
+  }, [isOpen, contract, lastBill, user]);
 
   const set = (field, val) => setForm((f) => ({ ...f, [field]: val }));
 
@@ -422,8 +342,25 @@ function CreateBillModal({ isOpen, onClose, contract, room, lastBill, onCreated 
     if (!form.billingMonth) { toast.error('Vui lòng chọn tháng.'); return; }
     if (!form.currElec) { toast.error('Vui lòng nhập chỉ số điện hiện tại.'); return; }
     if (!form.currWater) { toast.error('Vui lòng nhập chỉ số nước hiện tại.'); return; }
+    if (!form.bankCode || !form.bankAccountNumber || !form.bankAccountName) {
+      toast.error('Vui lòng nhập đầy đủ thông tin tài khoản nhận tiền.');
+      return;
+    }
     setSaving(true);
     try {
+      // Persist bank info first, so the bill snapshot uses up-to-date account.
+      const bankChanged =
+        form.bankCode !== user?.bankCode
+        || form.bankAccountNumber !== user?.bankAccountNumber
+        || form.bankAccountName !== user?.bankAccountName;
+      if (bankChanged) {
+        const updated = await userApi.updateMe({
+          bankCode: form.bankCode,
+          bankAccountNumber: form.bankAccountNumber,
+          bankAccountName: form.bankAccountName,
+        });
+        updateUser(updated);
+      }
       // Backend expects: billingMonth (yyyy-MM-dd, day 1), elecCurr, waterCurr, extraFee, extraNote.
       // Prev meters & prices come from the last bill / contract on the server; service fees come from the room.
       const result = await billApi.create({
@@ -460,13 +397,15 @@ function CreateBillModal({ isOpen, onClose, contract, room, lastBill, onCreated 
       }
     >
       <div className="space-y-6 py-2">
-        {/* Month */}
-        <Input
-          label="Tháng"
-          type="month"
-          value={form.billingMonth}
-          onChange={(e) => set('billingMonth', e.target.value)}
-        />
+        {/* Month — always the current real month, not editable */}
+        <div>
+          <label className="block text-xs text-primary-500 mb-1">Tháng</label>
+          <input
+            readOnly
+            value={currentMonthLabel}
+            className={`${inputClass} bg-ink-50 dark:bg-ink-800 cursor-not-allowed`}
+          />
+        </div>
 
         {/* Electricity */}
         <div className="space-y-3">
@@ -484,42 +423,15 @@ function CreateBillModal({ isOpen, onClose, contract, room, lastBill, onCreated 
             </div>
             <div>
               <label className="block text-xs text-ink-400 mb-1">Chỉ số mới (kWh)</label>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  value={form.currElec}
-                  onChange={(e) => set('currElec', e.target.value)}
-                  className={inputClass}
-                  placeholder="0"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowElecOcr((v) => !v)}
-                  className="shrink-0 h-12 w-12 flex items-center justify-center rounded-xl border border-ink-200 dark:border-ink-700 text-ink-400 hover:border-primary-400 hover:text-primary-500 transition-colors"
-                  title="OCR"
-                >
-                  <Camera className="h-4 w-4" />
-                </button>
-              </div>
+              <input
+                type="number"
+                value={form.currElec}
+                onChange={(e) => set('currElec', e.target.value)}
+                className={inputClass}
+                placeholder="0"
+              />
             </div>
           </div>
-          <AnimatePresence>
-            {showElecOcr && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={springs.smooth}
-                className="overflow-hidden"
-              >
-                <OcrScanPanel
-                  label="Chụp đồng hồ điện"
-                  onAccept={(v) => { set('currElec', v); setShowElecOcr(false); }}
-                  onClose={() => setShowElecOcr(false)}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
           <div className="grid grid-cols-3 gap-3 text-sm">
             <div className="bg-ink-50 dark:bg-ink-800/50 rounded-xl p-3 text-center">
               <p className="text-xs text-ink-400">Sử dụng</p>
@@ -558,42 +470,15 @@ function CreateBillModal({ isOpen, onClose, contract, room, lastBill, onCreated 
             </div>
             <div>
               <label className="block text-xs text-ink-400 mb-1">Chỉ số mới (m³)</label>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  value={form.currWater}
-                  onChange={(e) => set('currWater', e.target.value)}
-                  className={inputClass}
-                  placeholder="0"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowWaterOcr((v) => !v)}
-                  className="shrink-0 h-12 w-12 flex items-center justify-center rounded-xl border border-ink-200 dark:border-ink-700 text-ink-400 hover:border-primary-400 hover:text-primary-500 transition-colors"
-                  title="OCR"
-                >
-                  <Camera className="h-4 w-4" />
-                </button>
-              </div>
+              <input
+                type="number"
+                value={form.currWater}
+                onChange={(e) => set('currWater', e.target.value)}
+                className={inputClass}
+                placeholder="0"
+              />
             </div>
           </div>
-          <AnimatePresence>
-            {showWaterOcr && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={springs.smooth}
-                className="overflow-hidden"
-              >
-                <OcrScanPanel
-                  label="Chụp đồng hồ nước"
-                  onAccept={(v) => { set('currWater', v); setShowWaterOcr(false); }}
-                  onClose={() => setShowWaterOcr(false)}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
           <div className="grid grid-cols-3 gap-3 text-sm">
             <div className="bg-ink-50 dark:bg-ink-800/50 rounded-xl p-3 text-center">
               <p className="text-xs text-ink-400">Sử dụng</p>
@@ -659,59 +544,51 @@ function CreateBillModal({ isOpen, onClose, contract, room, lastBill, onCreated 
           />
         </div>
 
+        {/* Bank account for QR */}
+        <div className="space-y-3 rounded-2xl border border-ink-200 dark:border-ink-700 p-4">
+          <p className="text-sm font-semibold text-ink-700 dark:text-ink-200">
+            Tài khoản nhận tiền (dùng để tạo QR)
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-ink-400 mb-1">Ngân hàng</label>
+              <select
+                value={form.bankCode}
+                onChange={(e) => set('bankCode', e.target.value)}
+                className="w-full h-11 px-3 rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-900 text-sm outline-none focus:border-primary-500"
+              >
+                {BANK_CODES.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-ink-400 mb-1">Số tài khoản</label>
+              <input
+                value={form.bankAccountNumber}
+                onChange={(e) => set('bankAccountNumber', e.target.value.replace(/\D/g, ''))}
+                className="w-full h-11 px-3 rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-900 text-sm outline-none focus:border-primary-500"
+                placeholder="Ví dụ: 0123456789"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-ink-400 mb-1">Tên chủ tài khoản</label>
+            <input
+              value={form.bankAccountName}
+              onChange={(e) => set('bankAccountName', e.target.value)}
+              className="w-full h-11 px-3 rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-900 text-sm outline-none focus:border-primary-500"
+              placeholder="Họ tên chủ tài khoản"
+            />
+          </div>
+        </div>
+
         {/* Total */}
         <div className="flex items-center justify-between rounded-2xl bg-primary-500/10 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-800 px-5 py-4">
           <span className="text-base font-semibold text-ink-700 dark:text-ink-200">Tổng cộng</span>
           <span className="text-2xl font-bold text-primary-500">
             <SpringNumber value={total} />
           </span>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-// ── Bill QR modal (shown to owner after a bill is created) ───────────────
-export function BillQrPayload(bill) {
-  // The renter scans this QR; encodes a deep link plus a quick payment summary.
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const params = new URLSearchParams({
-    bill: String(bill?.id ?? ''),
-    amount: String(bill?.totalAmount ?? ''),
-    month: String(bill?.billingMonth ?? ''),
-  });
-  return `${origin}/my-contracts?${params.toString()}`;
-}
-
-function BillQrModal({ bill, renterName, onClose }) {
-  if (!bill) return null;
-  const text = BillQrPayload(bill);
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(text)}`;
-
-  return (
-    <Modal
-      isOpen
-      onClose={onClose}
-      size="sm"
-      title="Hoá đơn đã gửi"
-      footer={<Button onClick={onClose}>Đóng</Button>}
-    >
-      <div className="flex flex-col items-center gap-4 py-2">
-        <p className="text-sm text-ink-600 dark:text-ink-200 text-center">
-          Đã gửi thông báo &amp; mã QR đến{' '}
-          <strong>{renterName ?? 'người thuê'}</strong>. Họ có thể quét QR để mở chi tiết hoá đơn và thanh toán.
-        </p>
-        <img
-          src={qrUrl}
-          alt="QR hoá đơn"
-          width={240}
-          height={240}
-          className="rounded-xl border border-ink-200 dark:border-ink-700 bg-white p-2"
-        />
-        <div className="text-center">
-          <p className="text-xs text-ink-400">Tổng tiền</p>
-          <p className="text-xl font-bold text-primary-500">{fmt(bill.totalAmount)}</p>
-          <p className="text-xs text-ink-400 mt-1">Tháng {bill.billingMonth ?? '—'}</p>
         </div>
       </div>
     </Modal>
@@ -779,13 +656,29 @@ export default function BillManagementPage() {
   const selectedRoom = rooms.find((r) => String(r.id) === selectedRoomId);
   const isContractActive = (selectedContract?.status ?? '').toLowerCase() === 'active';
   const lastBill = bills.length > 0 ? bills[bills.length - 1] : null;
-  const [createdBill, setCreatedBill] = useState(null);
 
   const handleCreated = useCallback((bill) => {
     setBills((prev) => [...prev, bill]);
-    setCreatedBill(bill);
     toast.success('Đã tạo hoá đơn — đã gửi QR cho người thuê.');
   }, [toast]);
+
+  // Realtime: when a bill-related notification arrives (e.g. renter paid),
+  // refresh the bill list for the currently selected contract.
+  const { notifications } = useNotifications();
+  const latestNotifId = notifications[0]?.id;
+  useEffect(() => {
+    if (!selectedId || !latestNotifId) return;
+    const top = notifications[0];
+    const refType = (top?.referenceType || top?.reference_type || '').toLowerCase();
+    if (refType !== 'bill') return;
+    billApi
+      .getByContract(selectedId)
+      .then((r) => {
+        const arr = Array.isArray(r) ? r : (r?.content ?? r?.items ?? []);
+        setBills(arr);
+      })
+      .catch(() => {});
+  }, [latestNotifId, selectedId, notifications]);
 
   return (
     <div className="space-y-6">
@@ -906,12 +799,6 @@ export default function BillManagementPage() {
         room={selectedRoom}
         lastBill={lastBill}
         onCreated={handleCreated}
-      />
-
-      <BillQrModal
-        bill={createdBill}
-        renterName={selectedContract?.renter_name ?? selectedContract?.renterName}
-        onClose={() => setCreatedBill(null)}
       />
     </div>
   );

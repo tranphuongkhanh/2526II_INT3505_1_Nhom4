@@ -20,6 +20,9 @@ public class UserResponse {
     private String citizenId;
     private String permanentAddress;
     private String avatarUrl;
+    private String bankCode;
+    private String bankAccountNumber;
+    private String bankAccountName;
     private String role;
     private String status;
     private LocalDateTime createdAt;

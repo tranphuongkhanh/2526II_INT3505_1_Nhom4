@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Home, Car, Bike, Trash2, Camera, Check, PenLine, X } from 'lucide-react';
-import { roomApi, vehicleApi, ocrApi } from '../../lib/api';
+import { Plus, Home, Car, Bike, Trash2 } from 'lucide-react';
+import { roomApi, vehicleApi } from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
 import { springs } from '../../lib/animations';
 import Button from '../../components/ui/Button';
@@ -189,70 +189,16 @@ function VehicleCard({ vehicle, index, onDelete }) {
 // ── Add vehicle modal ─────────────────────────────────────
 function AddVehicleModal({ isOpen, onClose, room, onAdded }) {
   const toast = useToast();
-  const fileRef = useRef(null);
   const [plateInput, setPlateInput] = useState('');
-  const [plateDisplay, setPlateDisplay] = useState('');
   const [vehicleType, setVehicleType] = useState('MOTORBIKE');
   const [saving, setSaving] = useState(false);
-
-  // OCR state
-  const [preview, setPreview] = useState(null);
-  const [scanning, setScanning] = useState(false);
-  const [ocrDone, setOcrDone] = useState(false);
-  const [confidence, setConfidence] = useState(null);
-  const [editMode, setEditMode] = useState(false);
-  const [editVal, setEditVal] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       setPlateInput('');
-      setPlateDisplay('');
       setVehicleType('MOTORBIKE');
-      setPreview(null);
-      setScanning(false);
-      setOcrDone(false);
-      setConfidence(null);
-      setEditMode(false);
     }
   }, [isOpen]);
-
-  const handleFile = async (file) => {
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    setPreview(url);
-    setScanning(true);
-    setOcrDone(false);
-    setPlateDisplay('');
-    try {
-      const data = await ocrApi.licensePlate(file);
-      const plate = formatPlate(data?.plateNumber ?? data?.plate ?? '');
-      setConfidence(data?.confidence ?? null);
-      // Typewriter char by char
-      let i = 0;
-      const step = () => {
-        if (i >= plate.length) {
-          setScanning(false);
-          setOcrDone(true);
-          setPlateInput(plate);
-          return;
-        }
-        setPlateDisplay(plate.slice(0, ++i));
-        setTimeout(step, 100);
-      };
-      step();
-    } catch {
-      setScanning(false);
-      setOcrDone(false);
-      toast.error('Không nhận diện được biển số.');
-    }
-  };
-
-  const handleAcceptOcr = () => {
-    const val = editMode ? formatPlate(editVal) : formatPlate(plateDisplay);
-    setPlateInput(val);
-    setOcrDone(false);
-    setPreview(null);
-  };
 
   const isValid = PLATE_REGEX.test(plateInput.replace(/\s/g, ''));
 
@@ -290,147 +236,32 @@ function AddVehicleModal({ isOpen, onClose, room, onAdded }) {
       <div className="space-y-4 py-2">
         {/* Plate preview */}
         <div className="flex justify-center py-2">
-          <PlateGraphic
-            plateNumber={plateDisplay || plateInput}
-            animating={scanning}
-          />
+          <PlateGraphic plateNumber={plateInput} animating={false} />
         </div>
 
-        {/* Plate input + OCR */}
+        {/* Plate input */}
         <div>
           <label className="block text-xs text-ink-400 mb-1.5">Biển số xe</label>
-          <div className="flex gap-2">
-            <input
-              className={[
-                'flex-1 h-12 px-4 rounded-xl border bg-white dark:bg-ink-900 text-sm font-mono font-bold text-ink-900 dark:text-ink-50 outline-none transition-colors',
-                plateInput
-                  ? isValid
-                    ? 'border-green-400 focus:border-green-500'
-                    : 'border-amber-400 focus:border-amber-500'
-                  : 'border-ink-200 dark:border-ink-700 focus:border-primary-500',
-              ].join(' ')}
-              value={plateInput}
-              onChange={(e) => {
-                setPlateInput(formatPlate(e.target.value));
-                setPlateDisplay('');
-                setOcrDone(false);
-              }}
-              placeholder="51A-12345"
-              maxLength={12}
-            />
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              className="shrink-0 h-12 w-12 flex items-center justify-center rounded-xl border border-ink-200 dark:border-ink-700 text-ink-400 hover:border-primary-400 hover:text-primary-500 transition-colors"
-              title="OCR"
-            >
-              <Camera className="h-4 w-4" />
-            </button>
-          </div>
+          <input
+            className={[
+              'w-full h-12 px-4 rounded-xl border bg-white dark:bg-ink-900 text-sm font-mono font-bold text-ink-900 dark:text-ink-50 outline-none transition-colors',
+              plateInput
+                ? isValid
+                  ? 'border-green-400 focus:border-green-500'
+                  : 'border-amber-400 focus:border-amber-500'
+                : 'border-ink-200 dark:border-ink-700 focus:border-primary-500',
+            ].join(' ')}
+            value={plateInput}
+            onChange={(e) => setPlateInput(formatPlate(e.target.value))}
+            placeholder="51A-12345"
+            maxLength={12}
+          />
           {plateInput && (
             <p className={`text-xs mt-1 ${isValid ? 'text-green-600' : 'text-amber-600'}`}>
               {isValid ? 'Biển số hợp lệ' : 'Biển số chưa đúng định dạng Việt Nam'}
             </p>
           )}
         </div>
-
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => handleFile(e.target.files?.[0])}
-        />
-
-        {/* OCR preview area */}
-        <AnimatePresence>
-          {preview && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={springs.smooth}
-              className="overflow-hidden space-y-3"
-            >
-              <div className="relative rounded-xl overflow-hidden h-32 bg-black">
-                <img src={preview} alt="" className="h-full w-full object-contain" />
-                {scanning && (
-                  <>
-                    {[0, 1, 2, 3].map((i) => (
-                      <motion.div
-                        key={`h-${i}`}
-                        className="absolute left-0 right-0 h-px bg-green-400/70 shadow-[0_0_6px_rgba(74,222,128,0.7)]"
-                        animate={{ top: ['-2px', '130px'] }}
-                        transition={{ duration: 0.9, delay: i * 0.1, repeat: Infinity, ease: 'linear' }}
-                      />
-                    ))}
-                    {[0, 1, 2].map((i) => (
-                      <motion.div
-                        key={`v-${i}`}
-                        className="absolute top-0 bottom-0 w-px bg-green-400/70 shadow-[0_0_6px_rgba(74,222,128,0.7)]"
-                        animate={{ left: ['-2px', '100%'] }}
-                        transition={{ duration: 0.9, delay: i * 0.18, repeat: Infinity, ease: 'linear' }}
-                      />
-                    ))}
-                  </>
-                )}
-              </div>
-
-              {confidence != null && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-ink-400">Độ tin cậy</span>
-                  <div className="flex-1 h-1.5 bg-ink-200 dark:bg-ink-700 rounded-full overflow-hidden">
-                    <motion.div
-                      className={`h-full rounded-full ${confidence > 0.8 ? 'bg-green-500' : 'bg-amber-500'}`}
-                      initial={{ width: 0 }}
-                      animate={{ width: `${(confidence * 100).toFixed(0)}%` }}
-                      transition={springs.smooth}
-                    />
-                  </div>
-                  <span className={`text-xs font-medium ${confidence > 0.8 ? 'text-green-600' : 'text-amber-600'}`}>
-                    {(confidence * 100).toFixed(0)}%
-                  </span>
-                </div>
-              )}
-
-              {ocrDone && !editMode && (
-                <div className="flex gap-2">
-                  <Button size="sm" icon={Check} onClick={handleAcceptOcr} className="flex-1">
-                    Chấp nhận
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outlined"
-                    icon={PenLine}
-                    onClick={() => { setEditMode(true); setEditVal(plateDisplay); }}
-                  >
-                    Sửa
-                  </Button>
-                  <button
-                    type="button"
-                    onClick={() => { setPreview(null); setOcrDone(false); }}
-                    className="p-2 rounded-xl text-ink-400 hover:text-ink-600 hover:bg-ink-100 dark:hover:bg-ink-700"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              )}
-
-              {editMode && (
-                <div className="flex gap-2">
-                  <input
-                    className="flex-1 h-9 px-3 rounded-lg border border-primary-400 bg-white dark:bg-ink-900 text-sm font-mono font-bold text-ink-900 dark:text-ink-50 outline-none"
-                    value={editVal}
-                    onChange={(e) => setEditVal(e.target.value.toUpperCase())}
-                    autoFocus
-                  />
-                  <Button size="sm" onClick={handleAcceptOcr}>Dùng</Button>
-                  <Button size="sm" variant="ghost" onClick={() => setEditMode(false)}>Huỷ</Button>
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* Vehicle type */}
         <div>
