@@ -5,6 +5,7 @@ import {
   FileText, Eye, Heart, Calendar, AlertCircle, BarChart2, Plus,
   X, TrendingUp, RefreshCw, Home, MapPin, Ruler, Wind, Refrigerator,
   ShieldCheck, Flame, Wifi, Zap, Droplets, Star, DollarSign,
+  Clock, Activity, Target, Sunrise, Sun, Sunset, Moon,
 } from 'lucide-react';
 import { postApi, roomApi } from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
@@ -34,61 +35,232 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString('vi-VN');
 }
 
+// ── Tooltip rendered inside the SVG so it scales with the chart ─────────
+function ChartTooltip({ x, y, label, value, anchorRight, chartWidth }) {
+  // Approx tooltip width — keep it inside the SVG bounds.
+  const tw = 64;
+  const th = 28;
+  // Default: tooltip centered above the point. Clamp horizontally.
+  let tx = x - tw / 2;
+  if (tx < 2) tx = 2;
+  if (tx + tw > chartWidth - 2) tx = chartWidth - tw - 2;
+  const ty = Math.max(2, y - th - 8);
+  return (
+    <g pointerEvents="none" style={{ transition: 'opacity 0.12s' }}>
+      <rect
+        x={tx} y={ty} width={tw} height={th} rx={6}
+        fill="#0f172a" fillOpacity={0.92}
+      />
+      <text x={tx + tw / 2} y={ty + 11} textAnchor="middle" fill="white" fontSize="9" fontWeight="600">
+        {label}
+      </text>
+      <text x={tx + tw / 2} y={ty + 22} textAnchor="middle" fill="white" fontSize="10" fontWeight="700">
+        {value} lượt
+      </text>
+      {/* Connector dot */}
+      <circle cx={x} cy={y} r={3.5} fill="#14919B" stroke="white" strokeWidth={1.5} />
+      {/* (anchorRight is unused for now; kept for future variants) */}
+      {anchorRight ? null : null}
+    </g>
+  );
+}
+
 // ── SVG Line + Area + Bar charts ───────────────────────────
 function LineChart({ data }) {
-  const W = 400; const H = 100; const PAD = 20;
-  if (!data || data.length < 2) return <div className="h-24 flex items-center justify-center text-ink-400 text-sm">Không có dữ liệu</div>;
+  const W = 400; const H = 120; const PAD_X = 24; const PAD_T = 8; const PAD_B = 22;
+  const [hoverIdx, setHoverIdx] = useState(null);
+  if (!data || data.length === 0) return <div className="h-28 flex items-center justify-center text-ink-400 text-sm">Không có dữ liệu</div>;
 
   const vals = data.map((d) => d.count ?? d.value ?? 0);
   const max = Math.max(...vals, 1);
-  const pts = vals.map((v, i) => ({
-    x: PAD + (i / (vals.length - 1)) * (W - PAD * 2),
-    y: H - PAD - (v / max) * (H - PAD * 2),
-  }));
+  const innerH = H - PAD_T - PAD_B;
+  const innerW = W - PAD_X * 2;
+
+  const xFor = (i) =>
+    data.length === 1
+      ? W / 2
+      : PAD_X + (i / (data.length - 1)) * innerW;
+  const yFor = (v) => PAD_T + innerH - (v / max) * innerH;
+
+  const pts = vals.map((v, i) => ({ x: xFor(i), y: yFor(v) }));
   const linePath = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-  const areaPath = `${linePath} L ${pts[pts.length - 1].x} ${H - PAD} L ${pts[0].x} ${H - PAD} Z`;
+  const areaPath = `${linePath} L ${pts[pts.length - 1].x} ${PAD_T + innerH} L ${pts[0].x} ${PAD_T + innerH} Z`;
+
+  // Show at most ~5 evenly-spaced labels to avoid clutter.
+  const labelStep = Math.max(1, Math.ceil(data.length / 5));
+
+  // Width of each hover hit-zone (covers half the gap on either side of a point).
+  const slotW = data.length > 1 ? innerW / (data.length - 1) : innerW;
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ overflow: 'visible' }}>
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ overflow: 'visible' }} onMouseLeave={() => setHoverIdx(null)}>
       <defs>
         <linearGradient id="area-grad" x1="0" x2="0" y1="0" y2="1">
           <stop offset="0%" stopColor="#14919B" stopOpacity="0.25" />
           <stop offset="100%" stopColor="#14919B" stopOpacity="0" />
         </linearGradient>
       </defs>
-      <motion.path d={areaPath} fill="url(#area-grad)" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.85, duration: 0.4 }} />
-      <motion.path d={linePath} fill="none" stroke="#14919B" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
-        initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }} />
+      {/* Baseline */}
+      <line x1={PAD_X} x2={W - PAD_X} y1={PAD_T + innerH} y2={PAD_T + innerH}
+        stroke="currentColor" strokeOpacity={0.1} strokeDasharray="2 3" />
+      {data.length >= 2 && (
+        <motion.path d={areaPath} fill="url(#area-grad)" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8, duration: 0.4 }} />
+      )}
+      {data.length >= 2 && (
+        <motion.path d={linePath} fill="none" stroke="#14919B" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
+          initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }} />
+      )}
       {pts.map((p, i) => (
-        <motion.circle key={i} cx={p.x} cy={p.y} r={3} fill="#14919B"
+        <motion.circle key={i} cx={p.x} cy={p.y} r={hoverIdx === i ? 4.5 : 3} fill="#14919B"
           initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.8 + i * 0.04 }} />
+          transition={{ delay: 0.6 + i * 0.04 }} />
       ))}
+      {/* X-axis labels */}
+      {data.map((d, i) =>
+        i % labelStep === 0 || i === data.length - 1 ? (
+          <text key={i} x={xFor(i)} y={H - 4} textAnchor="middle" className="text-[9px] fill-ink-400" fontSize="9">
+            {d.label ?? ''}
+          </text>
+        ) : null
+      )}
+      {/* Invisible hover hit-zones for each data point */}
+      {data.map((d, i) => (
+        <rect
+          key={`hit-${i}`}
+          x={Math.max(0, xFor(i) - slotW / 2)}
+          y={PAD_T}
+          width={slotW}
+          height={innerH + PAD_B}
+          fill="transparent"
+          onMouseEnter={() => setHoverIdx(i)}
+          style={{ cursor: 'pointer' }}
+        />
+      ))}
+      {/* Tooltip */}
+      {hoverIdx != null && (
+        <ChartTooltip
+          x={pts[hoverIdx].x}
+          y={pts[hoverIdx].y}
+          label={data[hoverIdx].label ?? ''}
+          value={vals[hoverIdx]}
+          chartWidth={W}
+        />
+      )}
     </svg>
   );
 }
 
-function BarChart({ data }) {
-  const W = 400; const H = 100; const PAD = 20;
-  if (!data || data.length === 0) return <div className="h-24 flex items-center justify-center text-ink-400 text-sm">Không có dữ liệu</div>;
+function BarChart({ data, highlightIndex }) {
+  const W = 400; const H = 120; const PAD_X = 16; const PAD_T = 8; const PAD_B = 22;
+  const [hoverIdx, setHoverIdx] = useState(null);
+  if (!data || data.length === 0) return <div className="h-28 flex items-center justify-center text-ink-400 text-sm">Không có dữ liệu</div>;
 
   const vals = data.map((d) => d.count ?? d.value ?? 0);
   const max = Math.max(...vals, 1);
-  const bw = (W - PAD * 2) / data.length;
+  const innerH = H - PAD_T - PAD_B;
+  const bw = (W - PAD_X * 2) / data.length;
+  const labelStep = Math.max(1, Math.ceil(data.length / 8));
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" onMouseLeave={() => setHoverIdx(null)}>
+      <line x1={PAD_X} x2={W - PAD_X} y1={PAD_T + innerH} y2={PAD_T + innerH}
+        stroke="currentColor" strokeOpacity={0.1} strokeDasharray="2 3" />
       {data.map((d, i) => {
-        const bh = ((vals[i] / max) * (H - PAD * 2));
-        const x = PAD + i * bw + bw * 0.1;
+        const bh = ((vals[i] / max) * innerH);
+        const x = PAD_X + i * bw + bw * 0.1;
+        const isPeak = highlightIndex === i;
+        const isHover = hoverIdx === i;
         return (
-          <motion.rect key={i} x={x} width={bw * 0.8} rx={3} fill="#14919B" opacity={0.75}
-            initial={{ y: H - PAD, height: 0 }}
-            animate={{ y: H - PAD - bh, height: bh }}
-            transition={{ ...springs.smooth, delay: i * 0.03 + 0.1 }} />
+          <g key={i}>
+            <motion.rect
+              x={x}
+              width={bw * 0.8}
+              rx={3}
+              fill={isPeak ? '#0f766e' : '#14919B'}
+              opacity={isHover ? 1 : (isPeak ? 1 : 0.75)}
+              initial={{ y: PAD_T + innerH, height: 0 }}
+              animate={{ y: PAD_T + innerH - bh, height: bh }}
+              transition={{ ...springs.smooth, delay: i * 0.02 + 0.1 }}
+            />
+            {/* Hover hit-zone: full bar slot, not just the visible bar */}
+            <rect
+              x={PAD_X + i * bw}
+              y={PAD_T}
+              width={bw}
+              height={innerH + PAD_B}
+              fill="transparent"
+              onMouseEnter={() => setHoverIdx(i)}
+              style={{ cursor: 'pointer' }}
+            />
+            {i % labelStep === 0 ? (
+              <text x={x + bw * 0.4} y={H - 4} textAnchor="middle" className="fill-ink-400" fontSize="9">
+                {d.label ?? ''}
+              </text>
+            ) : null}
+          </g>
         );
       })}
+      {/* Tooltip */}
+      {hoverIdx != null && (() => {
+        const bh = (vals[hoverIdx] / max) * innerH;
+        const x = PAD_X + hoverIdx * bw + bw / 2;
+        const y = PAD_T + innerH - bh;
+        return (
+          <ChartTooltip
+            x={x}
+            y={y}
+            label={data[hoverIdx].label ?? ''}
+            value={vals[hoverIdx]}
+            chartWidth={W}
+          />
+        );
+      })()}
     </svg>
+  );
+}
+
+// ── Stats helpers ──────────────────────────────────────────
+const HOUR_BANDS = [
+  { key: 'morning',   label: 'Sáng',      icon: Sunrise, range: [6, 11] },
+  { key: 'afternoon', label: 'Chiều',     icon: Sun,     range: [12, 17] },
+  { key: 'evening',   label: 'Tối',       icon: Sunset,  range: [18, 22] },
+  { key: 'night',     label: 'Đêm',       icon: Moon,    range: [23, 5] }, // wraps
+];
+
+function bandFor(hour) {
+  if (hour >= 6 && hour <= 11) return HOUR_BANDS[0];
+  if (hour >= 12 && hour <= 17) return HOUR_BANDS[1];
+  if (hour >= 18 && hour <= 22) return HOUR_BANDS[2];
+  return HOUR_BANDS[3];
+}
+
+function fmtDayLabel(iso) {
+  // iso = 'yyyy-MM-dd'
+  if (!iso || iso.length < 10) return iso ?? '';
+  return iso.slice(8, 10) + '/' + iso.slice(5, 7);
+}
+
+function fmtFullDay(iso) {
+  if (!iso || iso.length < 10) return '—';
+  return iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4);
+}
+
+function StatTile({ icon: Icon, label, value, hint, accent = 'primary' }) {
+  const tones = {
+    primary: 'text-primary-500',
+    rose:    'text-red-500',
+    amber:   'text-amber-500',
+    blue:    'text-blue-500',
+  };
+  return (
+    <div className="bg-ink-50 dark:bg-ink-800 rounded-xl p-4">
+      <div className="flex items-center gap-2 mb-1">
+        <Icon className={`h-4 w-4 ${tones[accent]}`} />
+        <span className="text-xs text-ink-400 font-medium">{label}</span>
+      </div>
+      <p className="text-2xl font-bold font-mono text-ink-900 dark:text-ink-50 leading-tight">{value}</p>
+      {hint ? <p className="text-[11px] text-ink-400 mt-0.5">{hint}</p> : null}
+    </div>
   );
 }
 
@@ -149,53 +321,138 @@ function StatsModal({ postId, onClose }) {
                   </div>
                 ) : !stats ? (
                   <div className="text-center py-12 text-ink-400">Không có dữ liệu.</div>
-                ) : (
-                  <>
-                    {/* Summary */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-ink-50 dark:bg-ink-800 rounded-xl p-4">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Eye className="h-4 w-4 text-primary-500" />
-                          <span className="text-xs text-ink-400 font-medium">Tổng lượt xem</span>
-                        </div>
-                        <p className="text-2xl font-bold font-mono text-ink-900 dark:text-ink-50">{stats.totalViews ?? 0}</p>
-                      </div>
-                      <div className="bg-ink-50 dark:bg-ink-800 rounded-xl p-4">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Heart className="h-4 w-4 text-red-500" />
-                          <span className="text-xs text-ink-400 font-medium">Tổng lượt thích</span>
-                        </div>
-                        <p className="text-2xl font-bold font-mono text-ink-900 dark:text-ink-50">{stats.favoriteCount ?? 0}</p>
-                      </div>
-                    </div>
+                ) : (() => {
+                  const totalViews = Number(stats.totalViews ?? 0);
+                  const favCount = Number(stats.favoriteCount ?? 0);
+                  const dayEntries = Object.entries(stats.viewsByDay ?? {})
+                    .sort(([a], [b]) => a.localeCompare(b));
+                  const hourEntries = Object.entries(stats.viewsByHour ?? {})
+                    .sort(([a], [b]) => Number(a) - Number(b));
+                  const activeDays = dayEntries.filter(([, v]) => Number(v) > 0).length;
+                  const dailyAvg = activeDays > 0 ? Math.round(totalViews / activeDays) : 0;
+                  const conv = totalViews > 0 ? ((favCount / totalViews) * 100) : 0;
 
-                    {/* Views by day chart */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <TrendingUp className="h-4 w-4 text-primary-500" />
-                        <h4 className="text-sm font-semibold text-ink-900 dark:text-ink-50">Lượt xem theo ngày</h4>
-                      </div>
-                      <LineChart data={
-                        Object.entries(stats.viewsByDay ?? {})
-                          .sort(([a], [b]) => a.localeCompare(b))
-                          .map(([, count]) => ({ count }))
-                      } />
-                    </div>
+                  // Aggregate hour-band totals
+                  const bandTotals = HOUR_BANDS.map((b) => ({ ...b, total: 0 }));
+                  hourEntries.forEach(([h, v]) => {
+                    const band = bandFor(Number(h));
+                    const target = bandTotals.find((b) => b.key === band.key);
+                    if (target) target.total += Number(v);
+                  });
+                  const topBand = bandTotals.reduce((a, b) => (b.total > a.total ? b : a), bandTotals[0]);
+                  const TopBandIcon = topBand?.icon ?? Activity;
 
-                    {/* Views by hour bar chart */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <BarChart2 className="h-4 w-4 text-primary-500" />
-                        <h4 className="text-sm font-semibold text-ink-900 dark:text-ink-50">Lượt xem theo giờ</h4>
+                  const peakHourIndex = stats.peakHour != null
+                    ? hourEntries.findIndex(([h]) => Number(h) === Number(stats.peakHour))
+                    : -1;
+
+                  const firstDay = dayEntries[0]?.[0];
+                  const lastDay = dayEntries[dayEntries.length - 1]?.[0];
+
+                  return (
+                    <>
+                      {/* KPI summary */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <StatTile icon={Eye}      label="Tổng lượt xem"   value={totalViews} accent="primary" />
+                        <StatTile icon={Heart}    label="Tổng lượt thích" value={favCount}   accent="rose" />
+                        <StatTile icon={Target}   label="Tỉ lệ thích"     value={`${conv.toFixed(1)}%`} hint={`${favCount}/${totalViews || 0}`} accent="amber" />
+                        <StatTile icon={Activity} label="TB / ngày"       value={dailyAvg}    hint={`${activeDays} ngày có lượt xem`} accent="blue" />
                       </div>
-                      <BarChart data={
-                        Object.entries(stats.viewsByHour ?? {})
-                          .sort(([a], [b]) => Number(a) - Number(b))
-                          .map(([, count]) => ({ count }))
-                      } />
-                    </div>
-                  </>
-                )}
+
+                      {/* Highlights */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="rounded-xl border border-ink-100 dark:border-ink-700 p-3 flex items-center gap-3">
+                          <div className="h-9 w-9 rounded-lg bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center shrink-0">
+                            <Calendar className="h-4 w-4 text-primary-500" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[11px] text-ink-400 uppercase tracking-wide">Ngày cao điểm</p>
+                            <p className="text-sm font-semibold text-ink-900 dark:text-ink-50 truncate">{fmtFullDay(stats.peakDay)}</p>
+                          </div>
+                        </div>
+                        <div className="rounded-xl border border-ink-100 dark:border-ink-700 p-3 flex items-center gap-3">
+                          <div className="h-9 w-9 rounded-lg bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center shrink-0">
+                            <Clock className="h-4 w-4 text-primary-500" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[11px] text-ink-400 uppercase tracking-wide">Khung giờ cao điểm</p>
+                            <p className="text-sm font-semibold text-ink-900 dark:text-ink-50">
+                              {stats.peakHour != null ? `${String(stats.peakHour).padStart(2, '0')}:00 – ${String(stats.peakHour).padStart(2, '0')}:59` : '—'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="rounded-xl border border-ink-100 dark:border-ink-700 p-3 flex items-center gap-3">
+                          <div className="h-9 w-9 rounded-lg bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center shrink-0">
+                            <TopBandIcon className="h-4 w-4 text-primary-500" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[11px] text-ink-400 uppercase tracking-wide">Buổi nhiều lượt nhất</p>
+                            <p className="text-sm font-semibold text-ink-900 dark:text-ink-50">
+                              {topBand?.label ?? '—'} <span className="text-ink-400 font-normal">· {topBand?.total ?? 0} lượt</span>
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Views by day chart */}
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4 text-primary-500" />
+                            <h4 className="text-sm font-semibold text-ink-900 dark:text-ink-50">Lượt xem theo ngày</h4>
+                          </div>
+                          {firstDay && lastDay && (
+                            <span className="text-[11px] text-ink-400">{fmtFullDay(firstDay)} – {fmtFullDay(lastDay)}</span>
+                          )}
+                        </div>
+                        <LineChart data={dayEntries.map(([day, count]) => ({ count, label: fmtDayLabel(day) }))} />
+                      </div>
+
+                      {/* Views by hour bar chart */}
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <BarChart2 className="h-4 w-4 text-primary-500" />
+                            <h4 className="text-sm font-semibold text-ink-900 dark:text-ink-50">Lượt xem theo giờ</h4>
+                          </div>
+                          {stats.peakHour != null && (
+                            <span className="text-[11px] text-ink-400">Cao nhất: {String(stats.peakHour).padStart(2, '0')}h</span>
+                          )}
+                        </div>
+                        <BarChart
+                          data={hourEntries.map(([hour, count]) => ({ count, label: `${hour}h` }))}
+                          highlightIndex={peakHourIndex}
+                        />
+                      </div>
+
+                      {/* Band breakdown */}
+                      <div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <Activity className="h-4 w-4 text-primary-500" />
+                          <h4 className="text-sm font-semibold text-ink-900 dark:text-ink-50">Phân bố theo buổi</h4>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {bandTotals.map(({ key, label, icon: BIcon, total }) => {
+                            const pct = totalViews > 0 ? Math.round((total / totalViews) * 100) : 0;
+                            return (
+                              <div key={key} className="rounded-xl bg-ink-50 dark:bg-ink-800 p-3">
+                                <div className="flex items-center gap-1.5 text-ink-500 dark:text-ink-300 mb-1">
+                                  <BIcon className="h-3.5 w-3.5" />
+                                  <span className="text-[11px] font-medium">{label}</span>
+                                </div>
+                                <p className="text-base font-bold text-ink-900 dark:text-ink-50 font-mono leading-none">{total}</p>
+                                <div className="mt-2 h-1 rounded-full bg-ink-200 dark:bg-ink-700 overflow-hidden">
+                                  <div className="h-full bg-primary-500" style={{ width: `${pct}%` }} />
+                                </div>
+                                <p className="text-[10px] text-ink-400 mt-1">{pct}%</p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </motion.div>
           </motion.div>
