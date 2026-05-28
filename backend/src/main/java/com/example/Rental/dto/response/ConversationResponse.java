@@ -14,4 +14,5 @@ public class ConversationResponse {
     private String partnerAvatar;
     private String lastMessagePreview;
     private LocalDateTime lastMessageAt;
+    private long unreadCount;
 }

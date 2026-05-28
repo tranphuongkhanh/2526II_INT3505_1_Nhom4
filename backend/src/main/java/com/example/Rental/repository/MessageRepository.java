@@ -22,4 +22,7 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     @Modifying
     @Query("UPDATE Message m SET m.isRead = true WHERE m.conversation.id = :conversationId AND m.sender.id != :currentUserId AND m.isRead = false")
     int markMessagesAsRead(@Param("conversationId") Long conversationId, @Param("currentUserId") Long currentUserId);
+
+    // 4. Đếm tin nhắn chưa đọc trong một hội thoại (do người kia gửi)
+    long countByConversationIdAndSenderIdNotAndIsReadFalse(Long conversationId, Long currentUserId);
 }
