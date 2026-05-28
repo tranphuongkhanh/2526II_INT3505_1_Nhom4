@@ -84,6 +84,7 @@ export const userApi = {
     return unwrap(api.post('/users/me/avatar', fd, { headers: { 'Content-Type': 'multipart/form-data' } }));
   },
   searchRenters: (q) => unwrap(api.get('/users/search', { params: { q } })),
+  lookupRenterByEmail: (email) => unwrap(api.get('/users/lookup-renter', { params: { email } })),
 };
 
 export const roomApi = {
