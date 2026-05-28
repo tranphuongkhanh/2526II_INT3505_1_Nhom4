@@ -110,9 +110,10 @@ export default function AdminDashboardPage() {
     api.get('/admin/statistics')
       .then((r) => {
         const d = r?.data ?? r;
-        setStats(d?.data ?? d);
+        const next = d?.data ?? d;
+        if (next && typeof next === 'object') setStats(next);
       })
-      .catch(() => setStats(null))
+      .catch(() => { /* keep prior stats; don't wipe on transient errors */ })
       .finally(() => {
         setLoading(false);
         setTimeout(() => setScrambleActive(true), 80);
