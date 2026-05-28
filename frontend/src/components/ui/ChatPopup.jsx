@@ -143,8 +143,7 @@ export default function ChatPopup() {
   if (
     !isAuthenticated ||
     pathname.startsWith('/chat') ||
-    pathname.startsWith('/admin') ||
-    pathname.startsWith('/owner')
+    pathname.startsWith('/admin')
   ) return null;
   return <ChatPopupInner />;
 }

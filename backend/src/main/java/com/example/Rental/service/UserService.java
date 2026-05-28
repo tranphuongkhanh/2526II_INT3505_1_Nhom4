@@ -22,6 +22,7 @@ import com.example.Rental.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -32,6 +33,7 @@ import java.util.stream.Collectors;
 public class UserService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final CloudinaryService cloudinaryService;
 
     public User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -84,6 +86,19 @@ public class UserService {
         User saved = userRepository.save(user);
         log.info("Profile updated for user: {}", user.getEmail());
 
+        return mapToResponse(saved);
+    }
+
+    @CacheEvict(cacheNames = CacheConstants.USER_PROFILE, keyGenerator = "currentUserKeyGenerator")
+    public UserResponse uploadAvatar(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new RuntimeException("File ảnh không được để trống");
+        }
+        User user = getCurrentUser();
+        String url = cloudinaryService.uploadImage(file);
+        user.setAvatarUrl(url);
+        User saved = userRepository.save(user);
+        log.info("Avatar updated for user: {}", user.getEmail());
         return mapToResponse(saved);
     }
 

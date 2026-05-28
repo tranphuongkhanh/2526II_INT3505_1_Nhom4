@@ -4,7 +4,7 @@ import {
   Plus, Receipt, ChevronRight, ChevronDown,
   Zap, Droplets, DollarSign,
 } from 'lucide-react';
-import { roomApi, contractApi, billApi, userApi } from '../../lib/api';
+import { roomApi, contractApi, billApi, userApi, vehicleApi } from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
@@ -280,7 +280,7 @@ const BANK_CODES = [
 ];
 
 // ── Create bill modal ─────────────────────────────────────
-function CreateBillModal({ isOpen, onClose, contract, room, lastBill, onCreated }) {
+function CreateBillModal({ isOpen, onClose, contract, room, lastBill, onCreated, vehicleCount = 0 }) {
   const toast = useToast();
   const { user, updateUser } = useAuth();
   const [saving, setSaving] = useState(false);
@@ -334,7 +334,8 @@ function CreateBillModal({ isOpen, onClose, contract, room, lastBill, onCreated 
   const rentAmount = Number(contract?.monthly_rent ?? contract?.monthlyRent ?? 0);
   const serviceFee = Number(room?.serviceFee ?? room?.service_fee ?? 0);
   const wifiFee = Number(room?.wifiFee ?? room?.wifi_fee ?? 0);
-  const bikeParkingFee = Number(room?.bikeParkingFee ?? room?.bike_parking_fee ?? 0);
+  const bikeParkingFeePerVehicle = Number(room?.bikeParkingFee ?? room?.bike_parking_fee ?? 0);
+  const bikeParkingFee = bikeParkingFeePerVehicle * (vehicleCount || 0);
   const extra = Number(form.extraAmount) || 0;
   const total = elecAmount + waterAmount + rentAmount + serviceFee + wifiFee + bikeParkingFee + extra;
 
@@ -523,7 +524,10 @@ function CreateBillModal({ isOpen, onClose, contract, room, lastBill, onCreated 
           )}
           {bikeParkingFee > 0 && (
             <div className="flex items-center justify-between rounded-xl bg-ink-50/60 dark:bg-ink-800/30 px-4 py-2 text-sm">
-              <span className="text-ink-600 dark:text-ink-300">Phí gửi xe</span>
+              <span className="text-ink-600 dark:text-ink-300">
+                Phí gửi xe
+                {vehicleCount > 1 && ` (${vehicleCount} xe × ${fmt(bikeParkingFeePerVehicle)})`}
+              </span>
               <span className="font-medium text-ink-800 dark:text-ink-100">{fmt(bikeParkingFee)}</span>
             </div>
           )}
@@ -603,6 +607,7 @@ export default function BillManagementPage() {
   const [contracts, setContracts] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [bills, setBills] = useState([]);
+  const [vehicleCount, setVehicleCount] = useState(0);
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [loadingContracts, setLoadingContracts] = useState(false);
   const [loadingBills, setLoadingBills] = useState(false);
@@ -636,6 +641,17 @@ export default function BillManagementPage() {
       })
       .catch(() => toast.error('Không thể tải hợp đồng.'))
       .finally(() => setLoadingContracts(false));
+  }, [selectedRoomId]);
+
+  useEffect(() => {
+    if (!selectedRoomId) { setVehicleCount(0); return; }
+    vehicleApi
+      .getByRoom(selectedRoomId)
+      .then((r) => {
+        const arr = Array.isArray(r) ? r : (r?.content ?? r?.items ?? []);
+        setVehicleCount(arr.length);
+      })
+      .catch(() => setVehicleCount(0));
   }, [selectedRoomId]);
 
   useEffect(() => {
@@ -799,6 +815,7 @@ export default function BillManagementPage() {
         room={selectedRoom}
         lastBill={lastBill}
         onCreated={handleCreated}
+        vehicleCount={vehicleCount}
       />
     </div>
   );

@@ -2,6 +2,7 @@ package com.example.Rental.controller;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.example.Rental.dto.request.UpdateProfileRequest;
 import com.example.Rental.dto.request.UserStatusUpdateRequest;
@@ -67,6 +68,13 @@ public class UserController {
             @Valid @RequestBody UpdateProfileRequest request) {
         UserResponse data = userService.updateProfile(request);
         return ResponseEntity.ok(ApiResponse.ok("Update profile successfully", data));
+    }
+
+    @PostMapping("/me/avatar")
+    public ResponseEntity<ApiResponse<UserResponse>> uploadAvatar(
+            @RequestParam("avatar") MultipartFile file) {
+        UserResponse data = userService.uploadAvatar(file);
+        return ResponseEntity.ok(ApiResponse.ok("Avatar updated successfully", data));
     }
 
     // Admin: list users with optional filters role & status and pagination

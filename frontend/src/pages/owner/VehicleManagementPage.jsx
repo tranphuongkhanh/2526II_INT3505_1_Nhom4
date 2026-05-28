@@ -9,11 +9,11 @@ import Modal from '../../components/ui/Modal';
 import Input from '../../components/ui/Input';
 import Skeleton from '../../components/ui/Skeleton';
 
-// Vietnamese license plate regex
-const PLATE_REGEX = /^\d{2}[A-Z]{1,2}[-\s]?\d{4,5}$/;
+// Vietnamese license plate regex — supports both old (51A-12345) and new (37B2-79228) formats
+const PLATE_REGEX = /^\d{2}[A-Z]\d?[-\s]?\d{4,5}$/;
 
 function formatPlate(raw) {
-  return raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return raw.toUpperCase().replace(/[^A-Z0-9-]/g, '');
 }
 
 // ── Vietnamese plate graphic ──────────────────────────────

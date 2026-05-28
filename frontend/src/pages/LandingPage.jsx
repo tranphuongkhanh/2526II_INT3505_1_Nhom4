@@ -470,11 +470,11 @@ function FeaturedListings() {
     setLoading(true);
     setError(false);
     postApi
-      .search({ size: 8 })
+      .search({ size: 3 })
       .then((res) => {
         if (cancelled) return;
         const raw = res?.items ?? [];
-        setItems(Array.isArray(raw) ? raw.slice(0, 8) : []);
+        setItems(Array.isArray(raw) ? raw.slice(0, 3) : []);
       })
       .catch(() => {
         if (cancelled) return;
@@ -511,7 +511,7 @@ function FeaturedListings() {
 
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {Array.from({ length: 6 }).map((_, i) => (
+            {Array.from({ length: 3 }).map((_, i) => (
               <Skeleton key={i} variant="card" />
             ))}
           </div>
