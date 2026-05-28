@@ -12,6 +12,8 @@ import com.example.Rental.dto.request.RegisterRequest;
 import com.example.Rental.dto.request.ForgotPasswordRequest;
 import com.example.Rental.dto.request.ResetPasswordRequest;
 import com.example.Rental.dto.request.ChangePasswordRequest;
+import com.example.Rental.dto.request.GoogleLoginRequest;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 
 import com.example.Rental.dto.response.LoginResponse;
 import com.example.Rental.dto.response.UserResponse;
@@ -44,6 +46,7 @@ public class AuthService {
     private final TokenBlacklistService tokenBlacklistService;
     private final EmailService emailService;
     private final UserService userService;
+    private final GoogleAuthService googleAuthService;
 
     @Value("${jwt.expiration}")
     private long jwtExpiration;
@@ -226,5 +229,81 @@ public class AuthService {
         userRepository.save(user);
 
         log.info("Password changed successfully for user: {}", user.getEmail());
+    }
+
+    public LoginResponse loginWithGoogle(GoogleLoginRequest request) {
+        // 1. Verify Google ID token
+        GoogleIdToken.Payload payload = googleAuthService.verifyToken(request.getCredential());
+        if (payload == null) {
+            throw new RuntimeException("Invalid Google credential");
+        }
+
+        String email = payload.getEmail();
+        if (email == null || email.isBlank()) {
+            throw new RuntimeException("Google account has no email");
+        }
+
+        // 2. Try to find user by email
+        User user = userRepository.findByEmail(email).orElse(null);
+
+        if (user == null) {
+            // Register a new user
+            String name = (String) payload.get("name");
+            if (name == null || name.isBlank()) {
+                name = email.substring(0, email.indexOf("@"));
+            }
+
+            String pictureUrl = (String) payload.get("picture");
+
+            // Generate a unique username
+            String baseUsername = email.substring(0, email.indexOf("@"));
+            String username = baseUsername;
+            int counter = 1;
+            while (userRepository.findByUsername(username).isPresent()) {
+                username = baseUsername + counter;
+                counter++;
+            }
+
+            // Role
+            UserRole userRole = UserRole.RENTER;
+            if (request.getRole() != null) {
+                try {
+                    userRole = UserRole.valueOf(request.getRole().toUpperCase());
+                } catch (IllegalArgumentException e) {
+                    log.warn("Invalid role passed: {}. Defaulting to RENTER.", request.getRole());
+                }
+            }
+
+            user = User.builder()
+                    .email(email)
+                    .username(username)
+                    .fullName(name)
+                    .avatarUrl(pictureUrl)
+                    .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
+                    .role(userRole)
+                    .status(UserStatus.ACTIVE) // Auto-active for Google registration
+                    .build();
+
+            user = userRepository.save(user);
+            log.info("Registered new user {} via Google", email);
+        } else {
+            // Check status for existing user
+            if (user.getStatus() == UserStatus.BANNED) {
+                throw new RuntimeException("Your account has been banned. Please contact admin for more information");
+            }
+            if (user.getStatus() == UserStatus.PENDING) {
+                throw new RuntimeException("Your account is pending approval. Please contact admin for more information");
+            }
+        }
+
+        // Generate JWT token
+        String token = jwtUtil.generateToken(user.getEmail(), user.getId(), user.getRole().name());
+
+        return LoginResponse.builder()
+                .token(token)
+                .tokenType("Bearer")
+                .expiresIn(jwtExpiration)
+                .user(mapToResponse(user))
+                .build();
     }
 }
