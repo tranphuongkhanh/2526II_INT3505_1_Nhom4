@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  labels:
+    app: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          # TODO: Thay thế bằng repo Docker Hub của bạn (ví dụ: mydockerhub/rental-backend:latest)
+          image: DOCKER_USERNAME/rental-backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          # Define environment variables if needed
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "prod"
+            # Add database URL, passwords etc. referencing Kubernetes Secrets ideally
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+spec:
+  type: NodePort
+  selector:
+    app: backend
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30080
