@@ -39,6 +39,8 @@ public class ContractService {
 	private final RoomRepository roomRepository;
 	private final UserRepository userRepository;
 	private final NotificationService notificationService;
+	private final com.example.Rental.repository.RoomImageRepository roomImageRepository;
+	private final com.example.Rental.repository.PostRepository postRepository;
 
 	@Transactional(readOnly = true)
 	public ContractListResponse listContracts(Long roomId, String ownerEmail, ContractQueryRequest query) {
@@ -252,6 +254,29 @@ public class ContractService {
 			.roomCity(room.getCity())
 			.ownerName(owner != null ? owner.getFullName() : null)
 			.ownerPhone(owner != null ? owner.getPhone() : null)
+			.roomAreaMq(room.getAreaMq())
+			.roomType(room.getRoomType() != null ? room.getRoomType().name() : null)
+			.roomDeposit(room.getDeposit())
+			.roomServiceFee(room.getServiceFee())
+			.roomWifiFee(room.getWifiFee())
+			.roomBikeParkingFee(room.getBikeParkingFee())
+			.roomHasAc(room.getHasAc())
+			.roomHasFridge(room.getHasFridge())
+			.roomHasPrivateWc(room.getHasPrivateWc())
+			.roomHasSecurity(room.getHasSecurity())
+			.roomAvgRating(room.getAvgRating())
+			.roomReviewCount(room.getReviewCount())
+			.roomImageUrls(roomImageRepository.findByRoomIdOrderByDisplayOrderAsc(room.getId())
+					.stream().map(com.example.Rental.entity.RoomImage::getImageUrl).toList())
+			.roomThumbnailUrl(roomImageRepository.findByRoomIdOrderByDisplayOrderAsc(room.getId())
+					.stream()
+					.filter(img -> Boolean.TRUE.equals(img.getIsThumbnail()))
+					.map(com.example.Rental.entity.RoomImage::getImageUrl)
+					.findFirst()
+					.orElseGet(() -> roomImageRepository.findByRoomIdOrderByDisplayOrderAsc(room.getId())
+							.stream().map(com.example.Rental.entity.RoomImage::getImageUrl).findFirst().orElse(null)))
+			.postId(postRepository.findFirstByRoomIdOrderByCreatedAtDesc(room.getId())
+					.map(p -> p.getId()).orElse(null))
 			.build();
 	}
 }

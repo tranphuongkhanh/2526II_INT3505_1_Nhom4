@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -72,4 +73,49 @@ public class ContractResponse {
 
     @JsonProperty("owner_phone")
     private String ownerPhone;
+
+    @JsonProperty("room_thumbnail_url")
+    private String roomThumbnailUrl;
+
+    @JsonProperty("room_image_urls")
+    private List<String> roomImageUrls;
+
+    @JsonProperty("room_area_mq")
+    private Double roomAreaMq;
+
+    @JsonProperty("room_type")
+    private String roomType;
+
+    @JsonProperty("room_deposit")
+    private BigDecimal roomDeposit;
+
+    @JsonProperty("room_service_fee")
+    private BigDecimal roomServiceFee;
+
+    @JsonProperty("room_wifi_fee")
+    private BigDecimal roomWifiFee;
+
+    @JsonProperty("room_bike_parking_fee")
+    private BigDecimal roomBikeParkingFee;
+
+    @JsonProperty("room_has_ac")
+    private Boolean roomHasAc;
+
+    @JsonProperty("room_has_fridge")
+    private Boolean roomHasFridge;
+
+    @JsonProperty("room_has_private_wc")
+    private Boolean roomHasPrivateWc;
+
+    @JsonProperty("room_has_security")
+    private Boolean roomHasSecurity;
+
+    @JsonProperty("room_avg_rating")
+    private Double roomAvgRating;
+
+    @JsonProperty("room_review_count")
+    private Integer roomReviewCount;
+
+    @JsonProperty("post_id")
+    private Long postId;
 }

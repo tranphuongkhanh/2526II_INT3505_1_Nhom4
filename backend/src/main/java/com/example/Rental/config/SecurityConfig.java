@@ -35,8 +35,13 @@ public class SecurityConfig {
                 ).permitAll()
 
                 .requestMatchers(HttpMethod.GET,
+                    "/api/v1/users/me/**"
+                ).authenticated()
+
+                .requestMatchers(HttpMethod.GET,
                     "/api/v1/posts",
                     "/api/v1/posts/**",
+                    "/api/v1/reviews",
                     "/api/v1/rooms/*/reviews",
                     "/api/v1/users/*/renter-reviews",
                     "/api/v1/payments/vnpay-return",

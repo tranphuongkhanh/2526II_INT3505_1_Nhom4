@@ -58,6 +58,12 @@ function WrittenReviewCard({ review }) {
       ? 'Từ chối'
       : review.status;
 
+  const isRenterReview = (review.review_type ?? review.reviewType) === 'OWNER_TO_RENTER';
+  const targetTitle = isRenterReview
+    ? (review.target_user_name ?? review.targetUserName ?? 'Người thuê')
+    : (review.target_room_title ?? review.targetRoomTitle ?? review.roomTitle ?? review.room?.title ?? '—');
+  const createdAt = review.created_at ?? review.createdAt;
+
   return (
     <motion.div
       layout
@@ -68,13 +74,13 @@ function WrittenReviewCard({ review }) {
     >
       <img
         src={review.thumbnailUrl ?? review.room?.thumbnailUrl ?? PLACEHOLDER_IMG}
-        alt={review.roomTitle ?? review.room?.title ?? ''}
+        alt={targetTitle}
         className="h-20 w-28 rounded-xl object-cover shrink-0 bg-ink-100 dark:bg-ink-800"
       />
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2 flex-wrap">
           <p className="font-semibold text-ink-900 dark:text-ink-50 truncate leading-snug">
-            {review.roomTitle ?? review.room?.title ?? '—'}
+            {isRenterReview ? `Đánh giá người thuê: ${targetTitle}` : targetTitle}
           </p>
           {review.status && (
             <Badge variant={statusVariant} size="sm">
@@ -88,9 +94,9 @@ function WrittenReviewCard({ review }) {
         <p className="mt-2 text-sm text-ink-600 dark:text-ink-200 line-clamp-2">
           {review.comment}
         </p>
-        {review.createdAt && (
+        {createdAt && (
           <p className="mt-1.5 text-xs text-ink-400">
-            {new Date(review.createdAt).toLocaleDateString('vi-VN')}
+            {new Date(createdAt).toLocaleDateString('vi-VN')}
           </p>
         )}
       </div>
@@ -99,6 +105,12 @@ function WrittenReviewCard({ review }) {
 }
 
 function RenterReviewCard({ review }) {
+  const reviewerName =
+    review.reviewer_name ?? review.reviewerName ?? review.reviewer?.fullName ?? 'Chủ trọ';
+  const reviewerAvatar =
+    review.reviewer_avatar ?? review.reviewerAvatarUrl ?? review.reviewer?.avatarUrl;
+  const createdAt = review.created_at ?? review.createdAt;
+
   return (
     <motion.div
       layout
@@ -107,22 +119,10 @@ function RenterReviewCard({ review }) {
       transition={springs.smooth}
       className="flex gap-4 bg-white dark:bg-ink-900 rounded-2xl border border-ink-100 dark:border-ink-700 shadow-soft p-4"
     >
-      <Avatar
-        src={review.reviewerAvatarUrl ?? review.reviewer?.avatarUrl ?? review.owner?.avatarUrl}
-        name={
-          review.reviewerName ??
-          review.reviewer?.fullName ??
-          review.owner?.fullName ??
-          'Chủ trọ'
-        }
-        size="lg"
-      />
+      <Avatar src={reviewerAvatar} name={reviewerName} size="lg" />
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-ink-900 dark:text-ink-50 leading-snug">
-          {review.reviewerName ??
-            review.reviewer?.fullName ??
-            review.owner?.fullName ??
-            'Chủ trọ'}
+          {reviewerName}
         </p>
         <div className="mt-1.5">
           <AnimatedStars rating={review.rating ?? 0} />
@@ -130,9 +130,9 @@ function RenterReviewCard({ review }) {
         <p className="mt-2 text-sm text-ink-600 dark:text-ink-200 line-clamp-3">
           {review.comment}
         </p>
-        {review.createdAt && (
+        {createdAt && (
           <p className="mt-1.5 text-xs text-ink-400">
-            {new Date(review.createdAt).toLocaleDateString('vi-VN')}
+            {new Date(createdAt).toLocaleDateString('vi-VN')}
           </p>
         )}
       </div>

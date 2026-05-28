@@ -44,9 +44,12 @@ function formatNotifTime(ts) {
 
 function resolveLink(notif) {
   const id = notif.relatedEntityId;
+  const relType = notif.relatedEntityType;
   switch (notif.type) {
 
-    case 'REVIEW_APPROVED': return id ? `/posts/${id}` : null;
+    case 'REVIEW_APPROVED':
+      if (relType === 'post' && id) return `/posts/${id}`;
+      return '/reviews-forum';
     case 'POST_APPROVED':
     case 'POST_REJECTED':
     case 'POST_EXPIRING': return id ? `/posts/${id}` : '/owner/posts';

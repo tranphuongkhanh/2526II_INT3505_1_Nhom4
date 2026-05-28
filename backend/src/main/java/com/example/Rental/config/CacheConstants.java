@@ -10,6 +10,8 @@ public final class CacheConstants {
     public static final String POST_STATISTICS = "post_statistics";
     public static final String ROOM_REVIEWS = "room_reviews";
     public static final String RENTER_REVIEWS = "renter_reviews";
+    public static final String REVIEWS_FEED = "reviews_feed";
+    public static final String MY_REVIEWS = "my_reviews";
     public static final String ROOM_DETAIL = "room_detail";
     public static final String NOTIFICATION_UNREAD_COUNT = "notification_unread_count";
     public static final String USER_PROFILE = "user_profile";

@@ -70,6 +70,15 @@ public class UtilityBill {
     @Column(name = "rent_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal rentAmount;
 
+    @Column(name = "service_fee", precision = 12, scale = 2)
+    private BigDecimal serviceFee = BigDecimal.ZERO;
+
+    @Column(name = "wifi_fee", precision = 12, scale = 2)
+    private BigDecimal wifiFee = BigDecimal.ZERO;
+
+    @Column(name = "bike_parking_fee", precision = 12, scale = 2)
+    private BigDecimal bikeParkingFee = BigDecimal.ZERO;
+
     @Column(name = "extra_fee", precision = 12, scale = 2)
     private BigDecimal extraFee = BigDecimal.ZERO;
 

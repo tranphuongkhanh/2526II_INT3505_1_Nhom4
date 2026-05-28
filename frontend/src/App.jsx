@@ -21,6 +21,7 @@ import PostDetailPage from './pages/PostDetailPage';
 import ProfilePage from './pages/ProfilePage';
 import ChatPage from './pages/ChatPage';
 import NotificationsPage from './pages/NotificationsPage';
+import ReviewsForumPage from './pages/ReviewsForumPage';
 import FavoritesPage from './pages/renter/FavoritesPage';
 import MyReportsPage from './pages/renter/MyReportsPage';
 import MyContractsPage from './pages/renter/MyContractsPage';
@@ -57,6 +58,7 @@ export default function App() {
                 <Route index element={<LandingPage />} />
                 <Route path="posts" element={<SearchPage />} />
                 <Route path="posts/:postId" element={<PostDetailPage />} />
+                <Route path="reviews-forum" element={<ReviewsForumPage />} />
 
                 {/* Protected — any authenticated user */}
                 <Route
