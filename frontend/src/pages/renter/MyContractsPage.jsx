@@ -5,7 +5,7 @@ import { contractApi, billApi } from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { Badge } from '../../components/ui/Badge';
-import { springs, easings } from '../../lib/animations';
+import { springs } from '../../lib/animations';
 import ContractPreviewModal from '../../components/contract/ContractPreviewModal';
 
 const CONTRACT_STATUS = {
@@ -42,7 +42,26 @@ function UnpaidBadge() {
 
 function BillRow({ bill }) {
   const [open, setOpen] = useState(false);
-  const lineItems = bill.lineItems ?? bill.items ?? [];
+
+  const lineItems = [
+    bill.elecAmount > 0 && { description: `Điện (${bill.elecUsage ?? 0} kWh)`, amount: bill.elecAmount },
+    bill.waterAmount > 0 && { description: `Nước (${bill.waterUsage ?? 0} m³)`, amount: bill.waterAmount },
+    bill.rentAmount > 0 && { description: 'Tiền thuê', amount: bill.rentAmount },
+    bill.serviceFee > 0 && { description: 'Phí dịch vụ', amount: bill.serviceFee },
+    bill.wifiFee > 0 && { description: 'Phí WiFi', amount: bill.wifiFee },
+    bill.bikeParkingFee > 0 && { description: 'Phí gửi xe', amount: bill.bikeParkingFee },
+    bill.extraFee > 0 && { description: bill.extraNote || 'Phụ phí', amount: bill.extraFee },
+  ].filter(Boolean);
+
+  const extraTotal = Number(bill.serviceFee ?? 0)
+    + Number(bill.wifiFee ?? 0)
+    + Number(bill.bikeParkingFee ?? 0)
+    + Number(bill.extraFee ?? 0);
+
+  const billDeepLink =
+    (typeof window !== 'undefined' ? window.location.origin : '')
+    + `/my-contracts?bill=${bill.id}&amount=${bill.totalAmount ?? 0}&month=${bill.billingMonth ?? ''}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=6&data=${encodeURIComponent(billDeepLink)}`;
 
   return (
     <tbody>
@@ -63,7 +82,7 @@ function BillRow({ bill }) {
           </span>
         </td>
         <td className="py-3 px-2 text-sm text-ink-600 dark:text-ink-200 text-right">
-          {fmt(bill.electricityAmount)}
+          {fmt(bill.elecAmount)}
         </td>
         <td className="py-3 px-2 text-sm text-ink-600 dark:text-ink-200 text-right">
           {fmt(bill.waterAmount)}
@@ -72,7 +91,7 @@ function BillRow({ bill }) {
           {fmt(bill.rentAmount)}
         </td>
         <td className="py-3 px-2 text-sm text-ink-600 dark:text-ink-200 text-right">
-          {fmt(bill.extraAmount)}
+          {fmt(extraTotal)}
         </td>
         <td className="py-3 px-2 text-sm font-semibold text-ink-900 dark:text-ink-50 text-right">
           {fmt(bill.totalAmount)}
@@ -82,7 +101,7 @@ function BillRow({ bill }) {
         </td>
       </tr>
       <AnimatePresence initial={false}>
-        {open && lineItems.length > 0 && (
+        {open && (
           <tr>
             <td colSpan={7} className="p-0">
               <motion.div
@@ -92,18 +111,36 @@ function BillRow({ bill }) {
                 transition={springs.smooth}
                 className="overflow-hidden"
               >
-                <div className="bg-ink-50 dark:bg-ink-800/50 px-4 py-3 space-y-1.5">
-                  {lineItems.map((item, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between text-sm text-ink-600 dark:text-ink-200"
-                    >
-                      <span>{item.description ?? item.name ?? `Khoản ${i + 1}`}</span>
-                      <span className="font-medium text-ink-900 dark:text-ink-50">
-                        {fmt(item.amount)}
-                      </span>
+                <div className="bg-ink-50 dark:bg-ink-800/50 px-4 py-3 flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1 space-y-1.5">
+                    {lineItems.map((item, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between text-sm text-ink-600 dark:text-ink-200"
+                      >
+                        <span>{item.description ?? item.name ?? `Khoản ${i + 1}`}</span>
+                        <span className="font-medium text-ink-900 dark:text-ink-50">
+                          {fmt(item.amount)}
+                        </span>
+                      </div>
+                    ))}
+                    <div className="pt-2 border-t border-ink-200 dark:border-ink-700 flex items-center justify-between text-sm font-bold">
+                      <span className="text-ink-700 dark:text-ink-200">Tổng cộng</span>
+                      <span className="text-primary-500">{fmt(bill.totalAmount)}</span>
                     </div>
-                  ))}
+                  </div>
+                  {bill.status !== 'PAID' && (
+                    <div className="flex flex-col items-center gap-1 shrink-0">
+                      <img
+                        src={qrUrl}
+                        alt="QR thanh toán hoá đơn"
+                        width={140}
+                        height={140}
+                        className="rounded-lg border border-ink-200 dark:border-ink-700 bg-white p-1.5"
+                      />
+                      <p className="text-[11px] text-ink-400">Quét để thanh toán</p>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             </td>

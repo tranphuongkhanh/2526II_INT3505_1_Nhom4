@@ -364,7 +364,7 @@ function BillRow({ bill: initialBill, contract }) {
 }
 
 // ── Create bill modal ─────────────────────────────────────
-function CreateBillModal({ isOpen, onClose, contract, lastBill, onCreated }) {
+function CreateBillModal({ isOpen, onClose, contract, room, lastBill, onCreated }) {
   const toast = useToast();
   const [saving, setSaving] = useState(false);
   const [showElecOcr, setShowElecOcr] = useState(false);
@@ -387,12 +387,15 @@ function CreateBillModal({ isOpen, onClose, contract, lastBill, onCreated }) {
 
   useEffect(() => {
     if (!isOpen || !contract) return;
+    // First month → 0/0; otherwise carry over the last bill's current reading.
+    const prevElecVal = lastBill?.elecCurr ?? lastBill?.electricityCurrent ?? 0;
+    const prevWaterVal = lastBill?.waterCurr ?? lastBill?.waterCurrent ?? 0;
     setForm({
       billingMonth: defaultMonth,
-      prevElec: String(lastBill?.currentElectricityReading ?? ''),
+      prevElec: String(prevElecVal),
       currElec: '',
       elecPrice: String(contract.electricity_price ?? contract.electricityPrice ?? ''),
-      prevWater: String(lastBill?.currentWaterReading ?? ''),
+      prevWater: String(prevWaterVal),
       currWater: '',
       waterPrice: String(contract.water_price ?? contract.waterPrice ?? ''),
       extraAmount: '',
@@ -408,9 +411,12 @@ function CreateBillModal({ isOpen, onClose, contract, lastBill, onCreated }) {
   const elecAmount = elecUsage * (Number(form.elecPrice) || 0);
   const waterUsage = Math.max(0, (Number(form.currWater) || 0) - (Number(form.prevWater) || 0));
   const waterAmount = waterUsage * (Number(form.waterPrice) || 0);
-  const rentAmount = contract?.rentPrice ?? contract?.price ?? 0;
+  const rentAmount = Number(contract?.monthly_rent ?? contract?.monthlyRent ?? 0);
+  const serviceFee = Number(room?.serviceFee ?? room?.service_fee ?? 0);
+  const wifiFee = Number(room?.wifiFee ?? room?.wifi_fee ?? 0);
+  const bikeParkingFee = Number(room?.bikeParkingFee ?? room?.bike_parking_fee ?? 0);
   const extra = Number(form.extraAmount) || 0;
-  const total = elecAmount + waterAmount + rentAmount + extra;
+  const total = elecAmount + waterAmount + rentAmount + serviceFee + wifiFee + bikeParkingFee + extra;
 
   const handleSave = async () => {
     if (!form.billingMonth) { toast.error('Vui lòng chọn tháng.'); return; }
@@ -418,17 +424,15 @@ function CreateBillModal({ isOpen, onClose, contract, lastBill, onCreated }) {
     if (!form.currWater) { toast.error('Vui lòng nhập chỉ số nước hiện tại.'); return; }
     setSaving(true);
     try {
+      // Backend expects: billingMonth (yyyy-MM-dd, day 1), elecCurr, waterCurr, extraFee, extraNote.
+      // Prev meters & prices come from the last bill / contract on the server; service fees come from the room.
       const result = await billApi.create({
         contractId: contract.id,
-        billingMonth: form.billingMonth,
-        previousElectricityReading: Number(form.prevElec) || 0,
-        currentElectricityReading: Number(form.currElec),
-        electricityUnitPrice: Number(form.elecPrice) || 0,
-        previousWaterReading: Number(form.prevWater) || 0,
-        currentWaterReading: Number(form.currWater),
-        waterUnitPrice: Number(form.waterPrice) || 0,
-        extraAmount: extra,
-        extraFeeNote: form.extraNote,
+        billingMonth: `${form.billingMonth}-01`,
+        elecCurr: Number(form.currElec),
+        waterCurr: Number(form.currWater),
+        extraFee: extra,
+        extraNote: form.extraNote,
       });
       onCreated(result);
       onClose();
@@ -612,12 +616,32 @@ function CreateBillModal({ isOpen, onClose, contract, lastBill, onCreated }) {
           </div>
         </div>
 
-        {/* Rent (readOnly) */}
-        <div className="flex items-center justify-between rounded-xl bg-ink-50 dark:bg-ink-800/50 px-4 py-3">
-          <span className="flex items-center gap-2 text-sm text-ink-600 dark:text-ink-200">
-            <DollarSign className="h-4 w-4 text-ink-400" /> Tiền thuê
-          </span>
-          <span className="font-semibold text-ink-900 dark:text-ink-50">{fmt(rentAmount)}</span>
+        {/* Rent + service fees (readOnly, from room/contract) */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between rounded-xl bg-ink-50 dark:bg-ink-800/50 px-4 py-3">
+            <span className="flex items-center gap-2 text-sm text-ink-600 dark:text-ink-200">
+              <DollarSign className="h-4 w-4 text-ink-400" /> Tiền thuê
+            </span>
+            <span className="font-semibold text-ink-900 dark:text-ink-50">{fmt(rentAmount)}</span>
+          </div>
+          {serviceFee > 0 && (
+            <div className="flex items-center justify-between rounded-xl bg-ink-50/60 dark:bg-ink-800/30 px-4 py-2 text-sm">
+              <span className="text-ink-600 dark:text-ink-300">Phí dịch vụ</span>
+              <span className="font-medium text-ink-800 dark:text-ink-100">{fmt(serviceFee)}</span>
+            </div>
+          )}
+          {wifiFee > 0 && (
+            <div className="flex items-center justify-between rounded-xl bg-ink-50/60 dark:bg-ink-800/30 px-4 py-2 text-sm">
+              <span className="text-ink-600 dark:text-ink-300">Phí WiFi</span>
+              <span className="font-medium text-ink-800 dark:text-ink-100">{fmt(wifiFee)}</span>
+            </div>
+          )}
+          {bikeParkingFee > 0 && (
+            <div className="flex items-center justify-between rounded-xl bg-ink-50/60 dark:bg-ink-800/30 px-4 py-2 text-sm">
+              <span className="text-ink-600 dark:text-ink-300">Phí gửi xe</span>
+              <span className="font-medium text-ink-800 dark:text-ink-100">{fmt(bikeParkingFee)}</span>
+            </div>
+          )}
         </div>
 
         {/* Extra fee */}
@@ -641,6 +665,53 @@ function CreateBillModal({ isOpen, onClose, contract, lastBill, onCreated }) {
           <span className="text-2xl font-bold text-primary-500">
             <SpringNumber value={total} />
           </span>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// ── Bill QR modal (shown to owner after a bill is created) ───────────────
+export function BillQrPayload(bill) {
+  // The renter scans this QR; encodes a deep link plus a quick payment summary.
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const params = new URLSearchParams({
+    bill: String(bill?.id ?? ''),
+    amount: String(bill?.totalAmount ?? ''),
+    month: String(bill?.billingMonth ?? ''),
+  });
+  return `${origin}/my-contracts?${params.toString()}`;
+}
+
+function BillQrModal({ bill, renterName, onClose }) {
+  if (!bill) return null;
+  const text = BillQrPayload(bill);
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(text)}`;
+
+  return (
+    <Modal
+      isOpen
+      onClose={onClose}
+      size="sm"
+      title="Hoá đơn đã gửi"
+      footer={<Button onClick={onClose}>Đóng</Button>}
+    >
+      <div className="flex flex-col items-center gap-4 py-2">
+        <p className="text-sm text-ink-600 dark:text-ink-200 text-center">
+          Đã gửi thông báo &amp; mã QR đến{' '}
+          <strong>{renterName ?? 'người thuê'}</strong>. Họ có thể quét QR để mở chi tiết hoá đơn và thanh toán.
+        </p>
+        <img
+          src={qrUrl}
+          alt="QR hoá đơn"
+          width={240}
+          height={240}
+          className="rounded-xl border border-ink-200 dark:border-ink-700 bg-white p-2"
+        />
+        <div className="text-center">
+          <p className="text-xs text-ink-400">Tổng tiền</p>
+          <p className="text-xl font-bold text-primary-500">{fmt(bill.totalAmount)}</p>
+          <p className="text-xs text-ink-400 mt-1">Tháng {bill.billingMonth ?? '—'}</p>
         </div>
       </div>
     </Modal>
@@ -705,11 +776,15 @@ export default function BillManagementPage() {
   }, [selectedId]);
 
   const selectedContract = contracts.find((c) => String(c.id) === selectedId);
+  const selectedRoom = rooms.find((r) => String(r.id) === selectedRoomId);
+  const isContractActive = (selectedContract?.status ?? '').toLowerCase() === 'active';
   const lastBill = bills.length > 0 ? bills[bills.length - 1] : null;
+  const [createdBill, setCreatedBill] = useState(null);
 
   const handleCreated = useCallback((bill) => {
     setBills((prev) => [...prev, bill]);
-    toast.success('Đã tạo hoá đơn.');
+    setCreatedBill(bill);
+    toast.success('Đã tạo hoá đơn — đã gửi QR cho người thuê.');
   }, [toast]);
 
   return (
@@ -717,7 +792,7 @@ export default function BillManagementPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-ink-900 dark:text-ink-50">Quản lý hoá đơn</h1>
-        {selectedContract?.status === 'ACTIVE' && (
+        {isContractActive && (
           <Button icon={Plus} onClick={() => setCreateOpen(true)}>
             Tạo hoá đơn
           </Button>
@@ -768,7 +843,7 @@ export default function BillManagementPage() {
             {contracts.map((c) => (
               <option key={c.id} value={c.id}>
                 HĐ #{c.id} — Khách #{c.renter_id ?? c.renterId ?? '?'}
-                {c.status === 'ACTIVE' ? ' ✓' : ''}
+                {(c.status ?? '').toLowerCase() === 'active' ? ' ✓' : ''}
               </option>
             ))}
           </select>
@@ -791,7 +866,7 @@ export default function BillManagementPage() {
           >
             <Receipt className="h-8 w-8 text-ink-300 mb-2" />
             <p className="text-ink-600 dark:text-ink-200 font-medium">Chưa có hoá đơn</p>
-            {selectedContract?.status === 'ACTIVE' && (
+            {isContractActive && (
               <Button className="mt-3" size="sm" icon={Plus} onClick={() => setCreateOpen(true)}>
                 Tạo hoá đơn đầu tiên
               </Button>
@@ -828,8 +903,15 @@ export default function BillManagementPage() {
         isOpen={createOpen}
         onClose={() => setCreateOpen(false)}
         contract={selectedContract}
+        room={selectedRoom}
         lastBill={lastBill}
         onCreated={handleCreated}
+      />
+
+      <BillQrModal
+        bill={createdBill}
+        renterName={selectedContract?.renter_name ?? selectedContract?.renterName}
+        onClose={() => setCreatedBill(null)}
       />
     </div>
   );

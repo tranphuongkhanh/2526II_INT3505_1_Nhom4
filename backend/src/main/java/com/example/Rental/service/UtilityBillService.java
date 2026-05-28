@@ -81,7 +81,11 @@ public class UtilityBillService {
         java.math.BigDecimal rentAmount = contract.getMonthlyRent() != null ? contract.getMonthlyRent() : java.math.BigDecimal.ZERO;
 
         java.math.BigDecimal extra = (extraFee != null) ? extraFee : java.math.BigDecimal.ZERO;
-        java.math.BigDecimal total = elecAmount.add(waterAmount).add(rentAmount).add(extra);
+        java.math.BigDecimal serviceFee = room.getServiceFee() != null ? room.getServiceFee() : java.math.BigDecimal.ZERO;
+        java.math.BigDecimal wifiFee = room.getWifiFee() != null ? room.getWifiFee() : java.math.BigDecimal.ZERO;
+        java.math.BigDecimal bikeParkingFee = room.getBikeParkingFee() != null ? room.getBikeParkingFee() : java.math.BigDecimal.ZERO;
+        java.math.BigDecimal total = elecAmount.add(waterAmount).add(rentAmount)
+                .add(serviceFee).add(wifiFee).add(bikeParkingFee).add(extra);
 
         UtilityBill bill = UtilityBill.builder()
                 .contract(contract)
@@ -98,6 +102,9 @@ public class UtilityBillService {
                 .waterUnitPrice(waterPrice)
                 .waterAmount(waterAmount)
                 .rentAmount(rentAmount)
+                .serviceFee(serviceFee)
+                .wifiFee(wifiFee)
+                .bikeParkingFee(bikeParkingFee)
                 .extraFee(extra)
                 .extraNote(extraNote)
                 .totalAmount(total)
@@ -110,8 +117,9 @@ public class UtilityBillService {
         notificationService.createAndSendNotification(
                 contract.getRenter(),
                 NotificationType.NEW_BILL,
-                "Hóa đơn dịch vụ mới",
-                "Bạn có hóa đơn điện nước mới tháng " + billingMonth + " cho phòng '" + room.getTitle() + "'. Tổng tiền: " + total + " VND.",
+                "Hóa đơn mới — quét QR để thanh toán",
+                "Bạn có hoá đơn tháng " + billingMonth + " cho phòng '" + room.getTitle()
+                        + "'. Tổng tiền: " + total + " VND. Mở chi tiết để xem mã QR thanh toán.",
                 "bill",
                 savedBill.getId()
         );
