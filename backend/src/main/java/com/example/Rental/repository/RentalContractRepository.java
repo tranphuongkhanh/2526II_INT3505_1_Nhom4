@@ -18,5 +18,4 @@ public interface RentalContractRepository extends JpaRepository<RentalContract, 
     Page<RentalContract> findByRenterId(Long renterId, Pageable pageable);
     List<RentalContract> findByRoomId(Long roomId);
     Page<RentalContract> findByRoomId(Long roomId, Pageable pageable);
-    Optional<RentalContract> findFirstByRenterIdAndRoomIdOrderByCreatedAtDesc(Long renterId, Long roomId);
 }
