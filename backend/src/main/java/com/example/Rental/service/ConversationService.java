@@ -15,6 +15,7 @@ import com.example.Rental.entity.Conversation;
 import com.example.Rental.entity.User;
 import com.example.Rental.exception.EntityNotFoundException;
 import com.example.Rental.repository.ConversationRepository;
+import com.example.Rental.repository.MessageRepository;
 import com.example.Rental.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ public class ConversationService {
 
     private final ConversationRepository conversationRepository;
     private final UserRepository userRepository;
+    private final MessageRepository messageRepository;
 
     // 1. Lấy danh sách hội thoại
     @Transactional(readOnly = true)
@@ -122,6 +124,9 @@ public class ConversationService {
                 ? conversation.getUser2() 
                 : conversation.getUser1();
 
+        long unread = messageRepository.countByConversationIdAndSenderIdNotAndIsReadFalse(
+                conversation.getId(), currentUser.getId());
+
         return ConversationResponse.builder()
                 .id(conversation.getId())
                 .partnerId(partner.getId())
@@ -129,6 +134,7 @@ public class ConversationService {
                 .partnerAvatar(partner.getAvatarUrl())
                 .lastMessagePreview(conversation.getLastMessagePreview())
                 .lastMessageAt(conversation.getLastMessageAt())
+                .unreadCount(unread)
                 .build();
     }
 }

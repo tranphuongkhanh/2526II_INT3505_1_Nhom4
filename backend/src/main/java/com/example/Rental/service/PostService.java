@@ -5,6 +5,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -14,12 +17,14 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.Rental.config.CacheConstants;
 import com.example.Rental.dto.request.CreatePostRequest;
 import com.example.Rental.dto.request.ExtendPostRequest;
 import com.example.Rental.dto.request.PostSearchRequest;
 import com.example.Rental.dto.request.PostStatusUpdateRequest;
 import com.example.Rental.dto.response.AdminPostResponse;
 import com.example.Rental.dto.response.OwnerPostResponse;
+import com.example.Rental.dto.response.PageCacheWrapper;
 import com.example.Rental.dto.response.PostDetailResponse;
 import com.example.Rental.dto.response.PostSummaryResponse;
 import com.example.Rental.entity.Payment;
@@ -57,15 +62,29 @@ public class PostService {
     private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
-    public Page<PostSummaryResponse> searchPosts(PostSearchRequest request) {
-        // Sắp xếp bài đăng mới nhất lên đầu
+    @Cacheable(
+        cacheNames = CacheConstants.POSTS_SEARCH,
+        key = "{#request.keyword, #request.minPrice, #request.maxPrice, #request.roomTypes, "
+            + "#request.city, #request.district, #request.maxElectricityPrice, #request.maxWaterPrice, "
+            + "#request.maxServiceFee, #request.maxWifiFee, #request.page, #request.size}"
+    )
+    public PageCacheWrapper<PostSummaryResponse> searchPosts(PostSearchRequest request) {
         Pageable pageable = PageRequest.of(request.getPage(), request.getSize(), Sort.by("createdAt").descending());
-        
+
+        java.util.List<com.example.Rental.enums.RoomType> roomTypes = request.getRoomTypes();
+        boolean hasRoomTypes = roomTypes != null && !roomTypes.isEmpty();
+        // Hibernate requires a non-empty list for IN binding even when the
+        // condition short-circuits, so use a placeholder list when unused.
+        java.util.List<com.example.Rental.enums.RoomType> typesParam = hasRoomTypes
+                ? roomTypes
+                : java.util.List.of(com.example.Rental.enums.RoomType.values()[0]);
+
         Page<Post> posts = postRepository.searchGuestPosts(
                 request.getKeyword(),
                 request.getMinPrice(),
                 request.getMaxPrice(),
-                request.getRoomType(),
+                hasRoomTypes,
+                typesParam,
                 request.getCity(),
                 request.getDistrict(),
                 request.getMaxElectricityPrice(),
@@ -75,10 +94,11 @@ public class PostService {
                 pageable
         );
 
-        return posts.map(this::mapToSummaryResponse);
+        return PageCacheWrapper.of(posts.map(this::mapToSummaryResponse));
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheConstants.POST_DETAIL, key = "{#postId, #viewerEmail}")
     public PostDetailResponse getPostDetail(Long postId, String viewerEmail) {
         Post post = postRepository.findByIdWithDetails(postId)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy bài đăng ID: " + postId));
@@ -98,6 +118,7 @@ public class PostService {
 
     @Async
     @Transactional
+    @CacheEvict(cacheNames = CacheConstants.POST_STATISTICS, key = "#postId")
     public void recordPostView(Long postId) {
         try {
             postRepository.incrementViewCount(postId);
@@ -228,6 +249,10 @@ public class PostService {
     }
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(cacheNames = CacheConstants.POSTS_SEARCH, allEntries = true),
+        @CacheEvict(cacheNames = CacheConstants.POST_DETAIL, allEntries = true)
+    })
     public Payment createPost(String email, CreatePostRequest request) {
         User owner = userRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
@@ -353,6 +378,10 @@ public class PostService {
     }
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(cacheNames = CacheConstants.POSTS_SEARCH, allEntries = true),
+        @CacheEvict(cacheNames = CacheConstants.POST_DETAIL, allEntries = true)
+    })
     public void deletePost(String email, Long postId) {
         // 1. Tìm User
         User owner = userRepository.findByEmail(email)
@@ -398,6 +427,10 @@ public class PostService {
     }
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(cacheNames = CacheConstants.POSTS_SEARCH, allEntries = true),
+        @CacheEvict(cacheNames = CacheConstants.POST_DETAIL, allEntries = true)
+    })
     public AdminPostResponse updatePostStatus(Long postId, PostStatusUpdateRequest request, String adminEmail) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy bài đăng ID: " + postId));

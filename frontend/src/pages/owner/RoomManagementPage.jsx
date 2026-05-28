@@ -12,6 +12,7 @@ import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Input from '../../components/ui/Input';
 import Skeleton from '../../components/ui/Skeleton';
+import { getCityNames, getDistrictsOf, getWardsOf } from '../../lib/vietnamLocations';
 
 // ── Constants ──────────────────────────────────────────────
 const ROOM_TYPES = [
@@ -407,6 +408,32 @@ function RoomDetailModal({ room, onClose }) {
   );
 }
 
+// ── Location select (dropdown styled like Input) ───────────
+function LocationSelect({ label, value, onChange, options, disabled, placeholder = 'Chọn...' }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-ink-700 dark:text-ink-200 mb-1.5">
+        {label}
+      </label>
+      <select
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        className="w-full h-12 rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-900 text-ink-900 dark:text-ink-50 px-4 text-sm outline-none focus:border-primary-500 transition-colors disabled:bg-ink-50 dark:disabled:bg-ink-800 disabled:text-ink-400 disabled:cursor-not-allowed"
+      >
+        <option value="" disabled={!value}>{placeholder}</option>
+        {options.map((opt) => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+        {/* Preserve a legacy free-text value that isn't in the option list so we don't silently drop it. */}
+        {value && !options.includes(value) && (
+          <option value={value}>{value}</option>
+        )}
+      </select>
+    </div>
+  );
+}
+
 // ── Room form modal ────────────────────────────────────────
 function RoomModal({ isOpen, onClose, editRoom, onSaved }) {
   const toast = useToast();
@@ -437,6 +464,18 @@ function RoomModal({ isOpen, onClose, editRoom, onSaved }) {
   }, [isOpen, editRoom]);
 
   const set = useCallback((field, val) => setForm((f) => ({ ...f, [field]: val })), []);
+
+  // Cascade reset: changing city clears district + ward; changing district clears ward.
+  const setCity = useCallback((val) => {
+    setForm((f) => ({ ...f, city: val, district: '', ward: '' }));
+  }, []);
+  const setDistrict = useCallback((val) => {
+    setForm((f) => ({ ...f, district: val, ward: '' }));
+  }, []);
+
+  const cityOptions = useMemo(() => getCityNames(), []);
+  const districtOptions = useMemo(() => getDistrictsOf(form.city), [form.city]);
+  const wardOptions = useMemo(() => getWardsOf(form.city, form.district), [form.city, form.district]);
 
   const buildPayload = useCallback(() => ({
     ...form,
@@ -580,11 +619,47 @@ function RoomModal({ isOpen, onClose, editRoom, onSaved }) {
         <div>
           <p className="text-sm font-medium text-ink-700 dark:text-ink-200 mb-3">Địa chỉ</p>
           <div className="space-y-3">
-            <Input label="Địa chỉ" value={form.address} onChange={(e) => set('address', e.target.value)} />
-            <div className="grid grid-cols-3 gap-3">
-              <Input label="Phường/Xã" value={form.ward} onChange={(e) => set('ward', e.target.value)} />
-              <Input label="Quận/Huyện" value={form.district} onChange={(e) => set('district', e.target.value)} />
-              <Input label="Tỉnh/Thành phố" value={form.city} onChange={(e) => set('city', e.target.value)} />
+            <Input
+              label="Số nhà / Tên đường"
+              value={form.address}
+              onChange={(e) => set('address', e.target.value)}
+              placeholder="VD: 360 Giải Phóng"
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <LocationSelect
+                label="Tỉnh/Thành phố"
+                value={form.city}
+                onChange={setCity}
+                options={cityOptions}
+                placeholder="Chọn tỉnh/thành phố"
+              />
+              <LocationSelect
+                label="Quận/Huyện"
+                value={form.district}
+                onChange={setDistrict}
+                options={districtOptions}
+                disabled={!form.city}
+                placeholder={form.city ? 'Chọn quận/huyện' : 'Chọn tỉnh trước'}
+              />
+              {wardOptions.length > 0 ? (
+                <LocationSelect
+                  label="Phường/Xã"
+                  value={form.ward}
+                  onChange={(v) => set('ward', v)}
+                  options={wardOptions}
+                  disabled={!form.district}
+                  placeholder={form.district ? 'Chọn phường/xã' : 'Chọn quận trước'}
+                />
+              ) : (
+                // Fall back to text input when we don't have ward data for the selected district.
+                <Input
+                  label="Phường/Xã"
+                  value={form.ward}
+                  onChange={(e) => set('ward', e.target.value)}
+                  placeholder={form.district ? 'Nhập phường/xã' : 'Chọn quận trước'}
+                  disabled={!form.district}
+                />
+              )}
             </div>
           </div>
         </div>

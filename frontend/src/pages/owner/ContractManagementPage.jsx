@@ -256,119 +256,99 @@ function InfoGrid({ rows }) {
   );
 }
 
-// ── Renter search picker ──────────────────────────────────
+// ── Renter exact-email lookup ─────────────────────────────
+// Privacy: an owner only learns whether an exact email belongs to a verified
+// renter; the API never returns the renter's real name, phone, or full email
+// before the contract is signed. The owner sees masked previews only.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function RenterPicker({ selected, onSelect }) {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState([]);
-  const [searching, setSearching] = useState(false);
-  const [open, setOpen] = useState(false);
-  const debounceRef = useState(null);
+  const [email, setEmail] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [error, setError] = useState('');
 
-  const search = (q) => {
-    clearTimeout(debounceRef[0]);
-    if (!q.trim()) { setResults([]); setOpen(false); return; }
-    debounceRef[0] = setTimeout(async () => {
-      setSearching(true);
-      try {
-        const data = await userApi.searchRenters(q);
-        setResults(Array.isArray(data) ? data : (data?.items ?? []));
-        setOpen(true);
-      } catch {
-        setResults([]);
-      } finally {
-        setSearching(false);
-      }
-    }, 350);
+  const verify = async () => {
+    const value = email.trim().toLowerCase();
+    setError('');
+    if (!EMAIL_RE.test(value)) {
+      setError('Vui lòng nhập email hợp lệ.');
+      return;
+    }
+    setVerifying(true);
+    try {
+      const data = await userApi.lookupRenterByEmail(value);
+      // Server returns { id, maskedEmail, maskedName } only.
+      onSelect(data);
+    } catch (err) {
+      onSelect(null);
+      setError(err?.displayMessage || 'Không tìm thấy người thuê với email này.');
+    } finally {
+      setVerifying(false);
+    }
   };
 
-  const handleChange = (e) => {
-    setQuery(e.target.value);
-    if (selected) onSelect(null);
-    search(e.target.value);
+  const clear = () => {
+    onSelect(null);
+    setEmail('');
+    setError('');
   };
 
-  const pick = (u) => {
-    onSelect(u);
-    setQuery(`${u.fullName ?? ''} — ${u.email}`);
-    setOpen(false);
-  };
+  if (selected) {
+    return (
+      <div className="rounded-lg border border-primary-200 dark:border-primary-700 bg-primary-50/50 dark:bg-primary-900/20 px-3 py-2.5 flex items-center gap-3">
+        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-800 text-primary-600 dark:text-primary-300 font-bold text-sm shrink-0">
+          {(selected.maskedName ?? selected.maskedEmail ?? '?')[0].toUpperCase()}
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-ink-900 dark:text-ink-50 truncate">{selected.maskedName ?? '—'}</p>
+          <p className="text-xs text-ink-500 dark:text-ink-400 truncate">{selected.maskedEmail}</p>
+        </div>
+        <span className="ml-auto shrink-0 text-xs font-medium text-primary-600 dark:text-primary-400 bg-primary-100 dark:bg-primary-900/40 px-2 py-0.5 rounded-full">
+          Đã xác thực
+        </span>
+        <button
+          type="button"
+          onClick={clear}
+          className="text-ink-400 hover:text-ink-600 shrink-0"
+          aria-label="Bỏ chọn"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="relative">
-      <div className="relative">
+    <div>
+      <div className="flex gap-2">
         <input
-          type="text"
-          value={selected ? `${selected.fullName ?? ''} — ${selected.email}` : query}
-          onChange={handleChange}
-          onFocus={() => results.length > 0 && setOpen(true)}
-          onBlur={() => setTimeout(() => setOpen(false), 150)}
-          placeholder="Tìm theo tên, email hoặc số điện thoại..."
-          className="w-full h-11 rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-900 px-4 pr-10 text-sm text-ink-900 dark:text-ink-50 placeholder-ink-400 outline-none focus:border-primary-500 transition-colors"
+          type="email"
+          value={email}
+          onChange={(e) => { setEmail(e.target.value); if (error) setError(''); }}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); verify(); } }}
+          placeholder="Nhập chính xác email của người thuê"
+          className="flex-1 h-11 rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-900 px-4 text-sm text-ink-900 dark:text-ink-50 placeholder-ink-400 outline-none focus:border-primary-500 transition-colors"
+          autoComplete="off"
+          spellCheck={false}
         />
-        {searching && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2">
-            <svg className="h-4 w-4 animate-spin text-primary-400" fill="none" viewBox="0 0 24 24">
+        <button
+          type="button"
+          onClick={verify}
+          disabled={verifying || !email.trim()}
+          className="h-11 px-4 rounded-xl bg-primary-500 hover:bg-primary-600 disabled:bg-ink-200 dark:disabled:bg-ink-700 disabled:text-ink-400 text-white text-sm font-medium transition-colors flex items-center gap-1.5 shrink-0"
+        >
+          {verifying && (
+            <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
             </svg>
-          </span>
-        )}
-        {selected && (
-          <button type="button" onClick={() => { onSelect(null); setQuery(''); }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-600">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
-        )}
+          )}
+          Xác minh
+        </button>
       </div>
-
-      {/* Selected renter info card */}
-      {selected && (
-        <div className="mt-2 rounded-lg border border-primary-200 dark:border-primary-700 bg-primary-50/50 dark:bg-primary-900/20 px-3 py-2 flex items-center gap-3">
-          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-800 text-primary-600 dark:text-primary-300 font-bold text-sm shrink-0">
-            {(selected.fullName ?? selected.email ?? '?')[0].toUpperCase()}
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-ink-900 dark:text-ink-50 truncate">{selected.fullName ?? '—'}</p>
-            <p className="text-xs text-ink-500 dark:text-ink-400 truncate">{selected.email}{selected.phone ? ` · ${selected.phone}` : ''}</p>
-          </div>
-          <span className="ml-auto shrink-0 text-xs font-medium text-primary-600 dark:text-primary-400 bg-primary-100 dark:bg-primary-900/40 px-2 py-0.5 rounded-full">ID #{selected.id}</span>
-        </div>
-      )}
-
-      {/* Dropdown results */}
-      <AnimatePresence>
-        {open && results.length > 0 && !selected && (
-          <motion.ul
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.12 }}
-            className="absolute z-20 left-0 right-0 mt-1 rounded-xl border border-ink-100 dark:border-ink-700 bg-white dark:bg-ink-900 shadow-elevated overflow-hidden"
-          >
-            {results.map((u) => (
-              <li key={u.id}>
-                <button type="button" onMouseDown={() => pick(u)}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors text-left">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-ink-100 dark:bg-ink-700 text-ink-600 dark:text-ink-300 font-bold text-sm shrink-0">
-                    {(u.fullName ?? u.email ?? '?')[0].toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-ink-900 dark:text-ink-50 truncate">{u.fullName ?? '—'}</p>
-                    <p className="text-xs text-ink-400 truncate">{u.email}{u.phone ? ` · ${u.phone}` : ''}</p>
-                  </div>
-                  <span className="ml-auto shrink-0 text-xs text-ink-400">#{u.id}</span>
-                </button>
-              </li>
-            ))}
-          </motion.ul>
-        )}
-        {open && results.length === 0 && !searching && query.trim() && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="absolute z-20 left-0 right-0 mt-1 rounded-xl border border-ink-100 dark:border-ink-700 bg-white dark:bg-ink-900 px-4 py-3 text-sm text-ink-400 shadow-elevated">
-            Không tìm thấy người thuê nào.
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {error && <p className="mt-1.5 text-xs text-error">{error}</p>}
     </div>
   );
 }
@@ -491,7 +471,8 @@ function CreateContractModal({ isOpen, onClose, room, onCreated }) {
         <ArticleSection number="B" title="Bên thuê (Bên B)">
           <RenterPicker selected={selectedRenter} onSelect={setSelectedRenter} />
           <p className="text-xs text-ink-400 mt-1.5">
-            Tìm kiếm theo tên, email hoặc số điện thoại. Người thuê phải có tài khoản đã xác thực trên hệ thống.
+            Nhập đúng email người thuê để mời ký hợp đồng. Thông tin cá nhân (họ tên, số điện thoại)
+            chỉ hiển thị đầy đủ sau khi người thuê xác nhận hợp đồng.
           </p>
         </ArticleSection>
 

@@ -678,7 +678,7 @@ export function SearchPage() {
       ...(filters.keyword && { keyword: filters.keyword }),
       ...(filters.city && { city: filters.city }),
       ...(filters.district && { district: filters.district }),
-      ...(filters.roomTypes.length > 0 && { roomType: filters.roomTypes[0] }),
+      ...(filters.roomTypes.length > 0 && { roomTypes: filters.roomTypes.join(',') }),
       ...(filters.minPrice > PRICE_MIN && { minPrice: filters.minPrice }),
       ...(filters.maxPrice < PRICE_MAX && { maxPrice: filters.maxPrice }),
       ...(filters.maxElectricity != null && { maxElectricityPrice: filters.maxElectricity }),

@@ -1,6 +1,7 @@
 package com.example.Rental.dto.request;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import com.example.Rental.enums.RoomType;
 
@@ -11,7 +12,7 @@ public class PostSearchRequest {
     private String keyword; // Tìm theo title hoặc address của phòng
     private BigDecimal minPrice;
     private BigDecimal maxPrice;
-    private RoomType roomType;
+    private List<RoomType> roomTypes;
     private String city;
     private String district;
     private BigDecimal maxElectricityPrice;

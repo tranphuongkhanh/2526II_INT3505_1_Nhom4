@@ -15,11 +15,14 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     Optional<Notification> findByIdAndUserId(Long id, Long userId);
 
-    // Khi lấy trang đầu tiên (cursor = null)
-    List<Notification> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+    // Khi lấy trang đầu tiên (cursor = null), loại trừ các loại không mong muốn
+    List<Notification> findByUserIdAndTypeNotInOrderByCreatedAtDesc(Long userId, List<NotificationType> excludedTypes, Pageable pageable);
 
-    // Khi lấy các trang tiếp theo dựa trên cursor (ID của thông báo cuối cùng trước đó)
-    List<Notification> findByUserIdAndIdLessThanOrderByCreatedAtDesc(Long userId, Long cursor, Pageable pageable);
+    // Khi lấy các trang tiếp theo dựa trên cursor, loại trừ các loại không mong muốn
+    List<Notification> findByUserIdAndTypeNotInAndIdLessThanOrderByCreatedAtDesc(Long userId, List<NotificationType> excludedTypes, Long cursor, Pageable pageable);
+
+    // Đếm số thông báo chưa đọc, loại trừ các loại không mong muốn
+    long countByUserIdAndIsReadFalseAndTypeNotIn(Long userId, List<NotificationType> excludedTypes);
 
     // Cho lần lướt đầu tiên (có lọc)
     List<Notification> findByUserIdAndTypeInOrderByIdDesc(Long userId, List<NotificationType> types, Pageable pageable);

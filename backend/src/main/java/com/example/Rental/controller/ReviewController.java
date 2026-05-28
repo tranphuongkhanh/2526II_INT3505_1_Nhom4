@@ -2,7 +2,6 @@ package com.example.Rental.controller;
 
 import java.security.Principal;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -20,10 +19,10 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.Rental.dto.request.RenterReviewRequest;
 import com.example.Rental.dto.request.ReviewRequest;
 import com.example.Rental.dto.response.ApiResponse;
+import com.example.Rental.dto.response.PageCacheWrapper;
 import com.example.Rental.dto.response.PaginationMetaResponse;
 import com.example.Rental.dto.response.ReviewListResponse;
 import com.example.Rental.dto.response.ReviewResponse;
-import com.example.Rental.entity.Review;
 import com.example.Rental.service.ReviewService;
 
 import jakarta.validation.Valid;
@@ -45,23 +44,22 @@ public class ReviewController {
 
         
         Pageable pageable = PageRequest.of(page - 1, limit);
-        Page<Review> reviewPage = reviewService.getApprovedRoomReviews(roomId, pageable);
-        
-        List<ReviewResponse> items = reviewPage.getContent().stream()
-                .map(ReviewResponse::fromEntity)
-                .collect(Collectors.toList());
-                
+        PageCacheWrapper<ReviewResponse> wrapper = reviewService.getApprovedRoomReviews(roomId, pageable);
+        Page<ReviewResponse> reviewPage = wrapper.toPage();
+
+        List<ReviewResponse> items = reviewPage.getContent();
+
         PaginationMetaResponse meta = PaginationMetaResponse.builder()
                 .total(reviewPage.getTotalElements())
                 .page(page)
                 .limit(limit)
                 .build();
-                
+
         ReviewListResponse response = ReviewListResponse.builder()
                 .items(items)
                 .meta(meta)
                 .build();
-                
+
         return ResponseEntity.ok(ApiResponse.ok("Room reviews retrieved", response));
     }
 
@@ -92,23 +90,22 @@ public class ReviewController {
 
         
         Pageable pageable = PageRequest.of(page - 1, limit);
-        Page<Review> reviewPage = reviewService.getApprovedRenterReviews(userId, pageable);
-        
-        List<ReviewResponse> items = reviewPage.getContent().stream()
-                .map(ReviewResponse::fromEntity)
-                .collect(Collectors.toList());
-                
+        PageCacheWrapper<ReviewResponse> wrapper = reviewService.getApprovedRenterReviews(userId, pageable);
+        Page<ReviewResponse> reviewPage = wrapper.toPage();
+
+        List<ReviewResponse> items = reviewPage.getContent();
+
         PaginationMetaResponse meta = PaginationMetaResponse.builder()
                 .total(reviewPage.getTotalElements())
                 .page(page)
                 .limit(limit)
                 .build();
-                
+
         ReviewListResponse response = ReviewListResponse.builder()
                 .items(items)
                 .meta(meta)
                 .build();
-                
+
         return ResponseEntity.ok(ApiResponse.ok("Renter reviews retrieved", response));
     }
 

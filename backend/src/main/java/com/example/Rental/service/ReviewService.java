@@ -3,14 +3,20 @@ package com.example.Rental.service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.Rental.config.CacheConstants;
 import com.example.Rental.dto.request.RenterReviewRequest;
 import com.example.Rental.dto.request.ReviewRequest;
+import com.example.Rental.dto.response.PageCacheWrapper;
+import com.example.Rental.dto.response.ReviewResponse;
 import com.example.Rental.entity.RentalContract;
 import com.example.Rental.entity.Review;
 import com.example.Rental.entity.Room;
@@ -38,6 +44,7 @@ public class ReviewService {
     private final NotificationService notificationService;
 
     @Transactional
+    @CacheEvict(cacheNames = CacheConstants.ROOM_REVIEWS, allEntries = true)
     public void createRoomReview(Long roomId, ReviewRequest request, String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
@@ -90,6 +97,7 @@ public class ReviewService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = CacheConstants.RENTER_REVIEWS, allEntries = true)
     public void createRenterReview(Long contractId, RenterReviewRequest request, String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
@@ -135,13 +143,19 @@ public class ReviewService {
     }
 
     @Transactional(readOnly = true)
-    public Page<Review> getApprovedRoomReviews(Long roomId, Pageable pageable) {
-        return reviewRepository.findByTargetRoomIdAndStatus(roomId, ReviewStatus.APPROVED, pageable);
+    @Cacheable(cacheNames = CacheConstants.ROOM_REVIEWS,
+               key = "#roomId + ':' + #pageable.pageNumber + ':' + #pageable.pageSize")
+    public PageCacheWrapper<ReviewResponse> getApprovedRoomReviews(Long roomId, Pageable pageable) {
+        Page<Review> page = reviewRepository.findByTargetRoomIdAndStatus(roomId, ReviewStatus.APPROVED, pageable);
+        return PageCacheWrapper.of(page.map(ReviewResponse::fromEntity));
     }
 
     @Transactional(readOnly = true)
-    public Page<Review> getApprovedRenterReviews(Long userId, Pageable pageable) {
-        return reviewRepository.findByTargetUserIdAndStatus(userId, ReviewStatus.APPROVED, pageable);
+    @Cacheable(cacheNames = CacheConstants.RENTER_REVIEWS,
+               key = "#userId + ':' + #pageable.pageNumber + ':' + #pageable.pageSize")
+    public PageCacheWrapper<ReviewResponse> getApprovedRenterReviews(Long userId, Pageable pageable) {
+        Page<Review> page = reviewRepository.findByTargetUserIdAndStatus(userId, ReviewStatus.APPROVED, pageable);
+        return PageCacheWrapper.of(page.map(ReviewResponse::fromEntity));
     }
 
     @Transactional(readOnly = true)
@@ -158,6 +172,10 @@ public class ReviewService {
     }
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(cacheNames = CacheConstants.ROOM_REVIEWS, allEntries = true),
+        @CacheEvict(cacheNames = CacheConstants.RENTER_REVIEWS, allEntries = true)
+    })
     public void updateReviewStatus(Long reviewId, ReviewStatus status, String adminEmail) {
         User admin = userRepository.findByEmail(adminEmail)
                 .orElseThrow(() -> new EntityNotFoundException("Admin not found"));

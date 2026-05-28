@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Receipt, ChevronDown, ChevronRight, PenLine } from 'lucide-react';
+import { FileText, Receipt, ChevronDown, ChevronRight, Eye } from 'lucide-react';
 import { contractApi, billApi } from '../../lib/api';
 import { useToast } from '../../components/ui/Toast';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { Badge } from '../../components/ui/Badge';
 import { springs, easings } from '../../lib/animations';
+import ContractPreviewModal from '../../components/contract/ContractPreviewModal';
 
 const CONTRACT_STATUS = {
   PENDING_RENTER_SIGNATURE: { label: 'Chờ bạn ký', variant: 'warning' },
@@ -173,18 +174,15 @@ function BillTable({ contractId }) {
   );
 }
 
-function ContractCard({ contract, isSelected, onSelect, onSign }) {
+function ContractCard({ contract, isSelected, onSelect, onPreview }) {
   const [billsOpen, setBillsOpen] = useState(false);
-  const [signing, setSigning] = useState(false);
   const status = (contract.status ?? '').toUpperCase();
   const meta = CONTRACT_STATUS[status] ?? { label: contract.status, variant: 'info' };
   const isPending = status === 'PENDING_RENTER_SIGNATURE';
 
-  const handleSign = async (e) => {
+  const handlePreview = (e) => {
     e.stopPropagation();
-    setSigning(true);
-    try { await onSign(contract.id); }
-    finally { setSigning(false); }
+    onPreview(contract);
   };
 
   return (
@@ -260,12 +258,11 @@ function ContractCard({ contract, isSelected, onSelect, onSign }) {
           {isPending && (
             <button
               type="button"
-              onClick={handleSign}
-              disabled={signing}
-              className="flex items-center gap-1.5 rounded-lg bg-primary-500 hover:bg-primary-600 disabled:opacity-60 px-4 py-1.5 text-sm font-semibold text-white transition-colors"
+              onClick={handlePreview}
+              className="flex items-center gap-1.5 rounded-lg bg-primary-500 hover:bg-primary-600 px-4 py-1.5 text-sm font-semibold text-white transition-colors"
             >
-              <PenLine className="h-4 w-4" />
-              {signing ? 'Đang ký...' : 'Ký xác nhận hợp đồng'}
+              <Eye className="h-4 w-4" />
+              Xem & Ký hợp đồng
             </button>
           )}
           {!isPending && (
@@ -307,6 +304,7 @@ export default function MyContractsPage() {
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState(null);
+  const [previewContract, setPreviewContract] = useState(null);
   const toast = useToast();
 
   const handleSign = useCallback(async (contractId) => {
@@ -354,11 +352,18 @@ export default function MyContractsPage() {
               contract={c}
               isSelected={selectedId === c.id}
               onSelect={() => setSelectedId(c.id)}
-              onSign={handleSign}
+              onPreview={setPreviewContract}
             />
           ))}
         </div>
       )}
+
+      <ContractPreviewModal
+        contract={previewContract}
+        isOpen={!!previewContract}
+        onClose={() => setPreviewContract(null)}
+        onSign={handleSign}
+      />
     </div>
   );
 }

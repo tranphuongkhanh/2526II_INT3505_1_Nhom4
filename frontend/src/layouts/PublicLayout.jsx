@@ -1,18 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, NavLink, Navigate, Outlet, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
 import {
-  Bell,
   Menu,
   X,
   Heart,
-  MessageCircle,
+  Home,
   User as UserIcon,
   LogOut,
   Mail,
   Phone,
   MapPin,
+  Search,
 } from 'lucide-react';
+import { favoriteApi } from '../lib/api';
 
 const BrandIcon = {
   Facebook: (props) => (
@@ -34,11 +35,11 @@ const BrandIcon = {
   ),
 };
 import { useAuth } from '../contexts/AuthContext';
-import { useNotifications } from '../contexts/NotificationContext';
 import { useToast } from '../components/ui/Toast';
 import ThemeToggle from '../components/ui/ThemeToggle';
 import Avatar from '../components/ui/Avatar';
 import ChatPopup from '../components/ui/ChatPopup';
+import NotificationsDropdown from '../components/ui/NotificationsDropdown';
 import { springs } from '../lib/animations';
 
 
@@ -68,7 +69,7 @@ function AvatarDropdown() {
   const items = [
     { label: 'Hồ sơ', icon: UserIcon, to: '/profile' },
     { label: 'Yêu thích', icon: Heart, to: '/favorites' },
-    { label: 'Tin nhắn', icon: MessageCircle, to: '/chat' },
+    { label: 'Phòng đang thuê', icon: Home, to: '/current-rent' },
   ];
 
   return (
@@ -135,18 +136,63 @@ function AvatarDropdown() {
   );
 }
 
-function NotificationBell() {
-  const { unreadCount } = useNotifications();
+function QuickSearch() {
+  const navigate = useNavigate();
+  const [value, setValue] = useState('');
+
+  const onSubmit = (e) => {
+    e.preventDefault();
+    const q = value.trim();
+    navigate(q ? `/posts?q=${encodeURIComponent(q)}` : '/posts');
+  };
+
+  return (
+    <form onSubmit={onSubmit} className="hidden lg:flex items-center">
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400" />
+        <input
+          type="search"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="Tìm theo từ khoá, khu vực..."
+          className="h-9 w-64 rounded-full border border-ink-100 dark:border-ink-700 bg-ink-50 dark:bg-ink-800 pl-9 pr-3 text-sm text-ink-900 dark:text-ink-50 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+          aria-label="Tìm phòng"
+        />
+      </div>
+    </form>
+  );
+}
+
+function FavoritesButton() {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    favoriteApi
+      .getAll()
+      .then((data) => {
+        if (cancelled) return;
+        const arr = Array.isArray(data) ? data : (data?.content ?? data?.items ?? []);
+        const total = data?.totalElements ?? arr.length ?? 0;
+        setCount(total);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <Link
-      to="/notifications"
+      to="/favorites"
       className="relative inline-flex h-10 w-10 items-center justify-center rounded-full text-ink-600 dark:text-ink-200 hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors"
-      aria-label="Thông báo"
+      aria-label="Yêu thích"
+      title="Yêu thích"
     >
-      <Bell className="h-5 w-5" />
-      {unreadCount > 0 ? (
-        <span className="absolute top-1 right-1 inline-flex items-center justify-center h-4 min-w-[16px] rounded-full bg-error text-white text-[10px] font-bold px-1 ring-2 ring-white dark:ring-ink-900">
-          {unreadCount > 99 ? '99+' : unreadCount}
+      <Heart className="h-5 w-5" />
+      {count > 0 ? (
+        <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-full bg-primary-500 text-[10px] font-semibold text-white">
+          {count > 99 ? '99+' : count}
         </span>
       ) : null}
     </Link>
@@ -190,22 +236,18 @@ function Navbar() {
           RoomHub
         </Link>
 
-        <nav className="hidden md:flex items-center gap-6 ml-2">
-          <NavLink to="/posts" className={navLink}>
-            Tìm phòng
-          </NavLink>
-          {isAuthenticated && (
-            <NavLink to="/current-rent" className={navLink}>
-              Phòng đang thuê
-            </NavLink>
-          )}
-        </nav>
-
         <div className="ml-auto flex items-center gap-1.5">
+          <QuickSearch />
+          <nav className="hidden md:flex items-center gap-6 mx-4">
+            <NavLink to="/posts" className={navLink}>
+              Tìm phòng
+            </NavLink>
+          </nav>
           <ThemeToggle />
           {isAuthenticated ? (
             <>
-              <NotificationBell />
+              <FavoritesButton />
+              <NotificationsDropdown role="RENTER" />
               <AvatarDropdown />
             </>
           ) : (
@@ -253,15 +295,6 @@ function Navbar() {
               >
                 Tìm phòng
               </NavLink>
-              {isAuthenticated && (
-                <NavLink
-                  to="/current-rent"
-                  onClick={() => setMobileOpen(false)}
-                  className="block py-2 text-base font-medium text-ink-900 dark:text-ink-50"
-                >
-                  Phòng đang thuê
-                </NavLink>
-              )}
               {!isAuthenticated ? (
                 <div className="flex gap-2 pt-2">
                   <Link
@@ -340,6 +373,7 @@ function Footer() {
 
 export function PublicLayout() {
   const { role, isLoading } = useAuth();
+  const { pathname } = useLocation();
 
   if (isLoading) {
     return (
@@ -349,8 +383,21 @@ export function PublicLayout() {
     );
   }
 
-  if (role === 'OWNER') return <Navigate to="/owner" replace />;
-  if (role === 'ADMIN') return <Navigate to="/admin" replace />;
+  // Personal/shared pages should be reachable for every role:
+  //  - /notifications, /profile         → personal pages every user owns
+  //  - /posts/:id                       → post detail; admins/owners need to view
+  //                                       reported posts, owners want to preview
+  //                                       their own listings
+  // Other public-shell routes (index, /posts search) still redirect role-bound
+  // users to their dashboard.
+  const sharedPath =
+    pathname.startsWith('/notifications') ||
+    pathname.startsWith('/profile') ||
+    /^\/posts\/[^/]+/.test(pathname);
+  if (!sharedPath) {
+    if (role === 'OWNER') return <Navigate to="/owner" replace />;
+    if (role === 'ADMIN') return <Navigate to="/admin" replace />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-base">

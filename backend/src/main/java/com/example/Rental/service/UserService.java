@@ -1,5 +1,8 @@
 package com.example.Rental.service;
 
+import com.example.Rental.config.CacheConstants;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -8,6 +11,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import com.example.Rental.dto.request.UpdateProfileRequest;
+import com.example.Rental.dto.response.RenterLookupResponse;
 import com.example.Rental.dto.response.UserListResponse;
 import com.example.Rental.dto.response.UserResponse;
 import com.example.Rental.entity.User;
@@ -34,11 +38,13 @@ public class UserService {
         return userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
     }
 
+    @Cacheable(cacheNames = CacheConstants.USER_PROFILE, keyGenerator = "currentUserKeyGenerator")
     public UserResponse getProfile() {
         User user = getCurrentUser();
         return mapToResponse(user);
     }
 
+    @CacheEvict(cacheNames = CacheConstants.USER_PROFILE, keyGenerator = "currentUserKeyGenerator")
     public UserResponse updateProfile(UpdateProfileRequest request) {
         User user = getCurrentUser();
 
@@ -189,5 +195,59 @@ public class UserService {
         Pageable limit = PageRequest.of(0, 8, Sort.by("fullName"));
         return userRepository.searchRenters(q.trim(), limit)
                 .stream().map(this::mapToResponse).collect(Collectors.toList());
+    }
+
+    /**
+     * Privacy-preserving renter lookup for contract drafting.
+     * Requires an EXACT email match (no fuzzy enumeration) and returns only
+     * the id plus masked previews — enough for the owner to confirm the right
+     * account without exposing the renter's PII before they accept the contract.
+     */
+    public RenterLookupResponse findRenterByEmail(String email) {
+        if (email == null || email.isBlank()) {
+            throw new RuntimeException("Email is required");
+        }
+        String normalized = email.trim().toLowerCase();
+        User user = userRepository.findByEmail(normalized)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người thuê với email này"));
+        if (user.getRole() != UserRole.RENTER) {
+            throw new RuntimeException("Tài khoản này không phải người thuê");
+        }
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new RuntimeException("Tài khoản người thuê chưa được xác thực");
+        }
+        return RenterLookupResponse.builder()
+                .id(user.getId())
+                .maskedEmail(maskEmail(user.getEmail()))
+                .maskedName(maskName(user.getFullName()))
+                .build();
+    }
+
+    private static String maskEmail(String email) {
+        if (email == null) return null;
+        int at = email.indexOf('@');
+        if (at <= 1) return "***" + (at >= 0 ? email.substring(at) : "");
+        String local = email.substring(0, at);
+        String visible = local.substring(0, Math.min(2, local.length()));
+        return visible + "***" + email.substring(at);
+    }
+
+    private static String maskName(String name) {
+        if (name == null || name.isBlank()) return "—";
+        String[] parts = name.trim().split("\\s+");
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < parts.length; i++) {
+            if (i > 0) sb.append(' ');
+            String p = parts[i];
+            if (p.length() <= 1) {
+                sb.append(p);
+            } else if (i == parts.length - 1) {
+                // Keep last name (e.g. surname) visible for confirmation
+                sb.append(p);
+            } else {
+                sb.append(p.charAt(0)).append('.');
+            }
+        }
+        return sb.toString();
     }
 }

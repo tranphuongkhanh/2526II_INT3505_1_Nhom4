@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.*;
 import com.example.Rental.dto.request.UpdateProfileRequest;
 import com.example.Rental.dto.request.UserStatusUpdateRequest;
 import com.example.Rental.dto.response.ApiResponse;
+import com.example.Rental.dto.response.RenterLookupResponse;
 import com.example.Rental.dto.response.UserListResponse;
 import com.example.Rental.dto.response.UserResponse;
 import java.util.List;
@@ -26,10 +27,33 @@ import java.util.Collection;
 public class UserController {
     private final UserService userService;
 
+    // Admin-only: fuzzy search exposes PII, so it must not be reachable by owners.
     @GetMapping("/search")
-    public ResponseEntity<ApiResponse<List<UserResponse>>> searchRenters(@RequestParam String q) {
+    public ResponseEntity<ApiResponse<List<UserResponse>>> searchRenters(
+            @RequestParam String q,
+            Authentication authentication) {
+        if (!hasAdminRole(authentication.getAuthorities())) {
+            return ResponseEntity.status(403).body(ApiResponse.error("Access denied"));
+        }
         List<UserResponse> results = userService.searchRenters(q);
         return ResponseEntity.ok(ApiResponse.ok("Search results", results));
+    }
+
+    // Owner-facing renter lookup for contract drafting.
+    // Requires an EXACT email and returns only id + masked previews so the owner
+    // cannot enumerate users or read PII before the renter accepts the contract.
+    @GetMapping("/lookup-renter")
+    public ResponseEntity<ApiResponse<RenterLookupResponse>> lookupRenterByEmail(
+            @RequestParam String email,
+            Authentication authentication) {
+        boolean isOwner = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_OWNER")
+                        || a.getAuthority().equals("ROLE_ADMIN"));
+        if (!isOwner) {
+            return ResponseEntity.status(403).body(ApiResponse.error("Access denied"));
+        }
+        RenterLookupResponse data = userService.findRenterByEmail(email);
+        return ResponseEntity.ok(ApiResponse.ok("Renter found", data));
     }
 
     @GetMapping("/me")

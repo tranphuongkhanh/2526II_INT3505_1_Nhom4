@@ -31,7 +31,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
            "(cast(:keyword as string) IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', cast(:keyword as string), '%')) OR LOWER(r.address) LIKE LOWER(CONCAT('%', cast(:keyword as string), '%'))) AND " +
            "(cast(:minPrice as string) IS NULL OR r.price >= :minPrice) AND " +
            "(cast(:maxPrice as string) IS NULL OR r.price <= :maxPrice) AND " +
-           "(cast(:roomType as string) IS NULL OR r.roomType = :roomType) AND " +
+           "(:hasRoomTypes = false OR r.roomType IN :roomTypes) AND " +
            "(cast(:city as string) IS NULL OR r.city = :city) AND " +
            "(cast(:district as string) IS NULL OR r.district = :district) AND " +
            "(cast(:maxElectricityPrice as string) IS NULL OR r.electricityPricePerUnit <= :maxElectricityPrice) AND " +
@@ -43,7 +43,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
            "(cast(:keyword as string) IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', cast(:keyword as string), '%')) OR LOWER(r.address) LIKE LOWER(CONCAT('%', cast(:keyword as string), '%'))) AND " +
            "(cast(:minPrice as string) IS NULL OR r.price >= :minPrice) AND " +
            "(cast(:maxPrice as string) IS NULL OR r.price <= :maxPrice) AND " +
-           "(cast(:roomType as string) IS NULL OR r.roomType = :roomType) AND " +
+           "(:hasRoomTypes = false OR r.roomType IN :roomTypes) AND " +
            "(cast(:city as string) IS NULL OR r.city = :city) AND " +
            "(cast(:district as string) IS NULL OR r.district = :district) AND " +
            "(cast(:maxElectricityPrice as string) IS NULL OR r.electricityPricePerUnit <= :maxElectricityPrice) AND " +
@@ -53,7 +53,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     Page<Post> searchGuestPosts(@Param("keyword") String keyword,
                                 @Param("minPrice") BigDecimal minPrice,
                                 @Param("maxPrice") BigDecimal maxPrice,
-                                @Param("roomType") RoomType roomType,
+                                @Param("hasRoomTypes") boolean hasRoomTypes,
+                                @Param("roomTypes") List<RoomType> roomTypes,
                                 @Param("city") String city,
                                 @Param("district") String district,
                                 @Param("maxElectricityPrice") BigDecimal maxElectricityPrice,
