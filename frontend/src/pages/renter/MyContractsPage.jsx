@@ -211,7 +211,7 @@ function BillTable({ contractId }) {
   );
 }
 
-function ContractCard({ contract, isSelected, onSelect, onPreview }) {
+function ContractCard({ contract, isSelected, onSelect, onPreview, onViewDetails }) {
   const [billsOpen, setBillsOpen] = useState(false);
   const status = (contract.status ?? '').toUpperCase();
   const meta = CONTRACT_STATUS[status] ?? { label: contract.status, variant: 'info' };
@@ -220,6 +220,11 @@ function ContractCard({ contract, isSelected, onSelect, onPreview }) {
   const handlePreview = (e) => {
     e.stopPropagation();
     onPreview(contract);
+  };
+
+  const handleViewDetails = (e) => {
+    e.stopPropagation();
+    onViewDetails(contract);
   };
 
   return (
@@ -303,17 +308,27 @@ function ContractCard({ contract, isSelected, onSelect, onPreview }) {
             </button>
           )}
           {!isPending && (
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setBillsOpen((o) => !o); }}
-              className="flex items-center gap-1.5 text-sm font-medium text-primary-500 hover:text-primary-700 transition-colors"
-            >
-              <Receipt className="h-4 w-4" />
-              Xem hoá đơn
-              <motion.span animate={{ rotate: billsOpen ? 180 : 0 }} transition={springs.snappy}>
-                <ChevronDown className="h-4 w-4" />
-              </motion.span>
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={handleViewDetails}
+                className="flex items-center gap-1.5 rounded-lg border border-primary-300 dark:border-primary-700 px-3 py-1.5 text-sm font-semibold text-primary-600 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+              >
+                <FileText className="h-4 w-4" />
+                Xem chi tiết hợp đồng
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setBillsOpen((o) => !o); }}
+                className="flex items-center gap-1.5 text-sm font-medium text-primary-500 hover:text-primary-700 transition-colors"
+              >
+                <Receipt className="h-4 w-4" />
+                Xem hoá đơn
+                <motion.span animate={{ rotate: billsOpen ? 180 : 0 }} transition={springs.snappy}>
+                  <ChevronDown className="h-4 w-4" />
+                </motion.span>
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -342,6 +357,7 @@ export default function MyContractsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState(null);
   const [previewContract, setPreviewContract] = useState(null);
+  const [detailsContract, setDetailsContract] = useState(null);
   const toast = useToast();
 
   const handleSign = useCallback(async (contractId) => {
@@ -390,6 +406,7 @@ export default function MyContractsPage() {
               isSelected={selectedId === c.id}
               onSelect={() => setSelectedId(c.id)}
               onPreview={setPreviewContract}
+              onViewDetails={setDetailsContract}
             />
           ))}
         </div>
@@ -400,6 +417,13 @@ export default function MyContractsPage() {
         isOpen={!!previewContract}
         onClose={() => setPreviewContract(null)}
         onSign={handleSign}
+      />
+
+      <ContractPreviewModal
+        contract={detailsContract}
+        isOpen={!!detailsContract}
+        onClose={() => setDetailsContract(null)}
+        readOnly
       />
     </div>
   );
