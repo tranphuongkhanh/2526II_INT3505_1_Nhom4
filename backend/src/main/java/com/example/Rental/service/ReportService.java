@@ -13,6 +13,7 @@ import com.example.Rental.entity.Post;
 import com.example.Rental.entity.Report;
 import com.example.Rental.entity.User;
 import com.example.Rental.enums.NotificationType;
+import com.example.Rental.enums.PostStatus;
 import com.example.Rental.enums.ReportStatus;
 import com.example.Rental.enums.UserStatus;
 import com.example.Rental.exception.EntityNotFoundException;
@@ -98,13 +99,31 @@ public class ReportService {
 
         reportRepository.save(report);
 
-        // Gửi thông báo WebSocket realtime khi report được giải quyết
+        // Khi admin duyệt báo cáo (RESOLVED): gỡ bài đăng bị báo cáo và thông báo
         if (request.getStatus() == ReportStatus.RESOLVED) {
+            Post post = report.getPost();
+            String roomTitle = post.getRoom().getTitle();
+
+            if (post.getStatus() != PostStatus.DELETED) {
+                post.setStatus(PostStatus.DELETED);
+                post.setEndDate(LocalDateTime.now());
+                postRepository.save(post);
+
+                notificationService.createAndSendNotification(
+                        post.getCreatedBy(),
+                        NotificationType.POST_REJECTED,
+                        "Bài đăng của bạn đã bị gỡ",
+                        "Bài đăng cho phòng '" + roomTitle + "' đã bị gỡ do vi phạm sau khi quản trị viên xử lý báo cáo. Lý do: " + report.getResolution(),
+                        "post",
+                        post.getId()
+                );
+            }
+
             notificationService.createAndSendNotification(
                     report.getReporter(),
                     NotificationType.REPORT_RESOLVED,
                     "Báo cáo của bạn đã được giải quyết",
-                    "Báo cáo của bạn về bài đăng '" + report.getPost().getRoom().getTitle() + "' đã được giải quyết. Kết quả: " + report.getResolution(),
+                    "Báo cáo của bạn về bài đăng '" + roomTitle + "' đã được giải quyết. Kết quả: " + report.getResolution(),
                     "report",
                     report.getId()
             );
