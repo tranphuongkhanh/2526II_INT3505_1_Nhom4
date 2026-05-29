@@ -10,6 +10,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -48,10 +49,35 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(ApiResponse.error(ex.getMessage()));
     }
 
+    /**
+     * Client đã đóng kết nối trước khi server kịp ghi xong response
+     * (Broken pipe / ClientAbortException). Không thể gửi response nữa nên
+     * chỉ log ở mức debug để tránh spam stacktrace và trả về null để
+     * Spring bỏ qua việc ghi body.
+     */
+    @ExceptionHandler(AsyncRequestNotUsableException.class)
+    public ResponseEntity<ApiResponse<?>> handleClientAbort(AsyncRequestNotUsableException ex) {
+        log.debug("Client closed the connection before response completed: {}", ex.getMessage());
+        return null;
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<?>> handleException(Exception ex) {
+        if (isClientAbort(ex)) {
+            log.debug("Client closed the connection before response completed: {}", ex.getMessage());
+            return null;
+        }
         log.error("Exception occurred", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
             .body(ApiResponse.error("Internal server error"));
+    }
+
+    private boolean isClientAbort(Throwable ex) {
+        for (Throwable t = ex; t != null; t = t.getCause()) {
+            String name = t.getClass().getName();
+            if (name.endsWith("ClientAbortException")) return true;
+            if (t instanceof java.io.IOException && "Broken pipe".equalsIgnoreCase(t.getMessage())) return true;
+        }
+        return false;
     }
 }
