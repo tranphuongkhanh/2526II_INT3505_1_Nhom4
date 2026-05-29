@@ -487,7 +487,7 @@ export default function ReportManagementPage() {
           setExpandedId(null);
           setStampIds((prev) => { const s = new Set(prev); s.delete(report.id); return s; });
         }, 1200);
-        toast.success('Đã đánh dấu đã xử lý');
+        toast.success('Đã xử lý báo cáo và gỡ bài đăng');
       } else {
         setReports((prev) => prev.map((r) => r.id === report.id ? { ...r, status: newStatus } : r));
         setExpandedId(null);
@@ -578,7 +578,7 @@ export default function ReportManagementPage() {
         title={confirmDialog?.type === 'resolve' ? 'Xác nhận xử lý báo cáo' : 'Từ chối báo cáo'}
         message={
           confirmDialog?.type === 'resolve'
-            ? `Xác nhận đánh dấu báo cáo về "${confirmDialog?.report?.post_title ?? confirmDialog?.report?.postTitle}" là đã xử lý?`
+            ? `Duyệt báo cáo về "${confirmDialog?.report?.post_title ?? confirmDialog?.report?.postTitle}" sẽ gỡ bài đăng khỏi hệ thống. Tiếp tục?`
             : `Từ chối báo cáo về "${confirmDialog?.report?.post_title ?? confirmDialog?.report?.postTitle}"?`
         }
         confirmLabel={confirmDialog?.type === 'resolve' ? 'Đã xử lý' : 'Từ chối'}
