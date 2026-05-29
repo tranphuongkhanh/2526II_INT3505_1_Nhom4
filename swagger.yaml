@@ -1,0 +1,3066 @@
+openapi: 3.0.3
+info:
+  title: Rental Management Platform API
+  description: >
+    REST API for a room rental platform supporting owners, renters, and admins.
+    Real-time messaging is delivered via WebSocket (STOMP over SockJS) at `ws://localhost:8080/ws`.
+  version: "1.0.0"
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development
+
+tags:
+  - name: Auth
+  - name: Users
+  - name: Rooms
+  - name: Room Images
+  - name: Posts
+  - name: Payments
+  - name: Contracts
+  - name: Bills
+  - name: Conversations
+  - name: Favorites
+  - name: Reviews
+  - name: Reports
+  - name: Vehicles
+  - name: Notifications
+  - name: Public
+  - name: Admin
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          nullable: true
+
+    PaginatedMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        last:
+          type: boolean
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+        fullName:
+          type: string
+        phone:
+          type: string
+        citizenId:
+          type: string
+        permanentAddress:
+          type: string
+        avatarUrl:
+          type: string
+        bankCode:
+          type: string
+        bankAccountNumber:
+          type: string
+        bankAccountName:
+          type: string
+        role:
+          type: string
+          enum: [OWNER, RENTER, ADMIN]
+        status:
+          type: string
+          enum: [ACTIVE, BANNED, PENDING]
+        createdAt:
+          type: string
+          format: date-time
+
+    Room:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        description:
+          type: string
+        price:
+          type: integer
+          format: int64
+        areaMq:
+          type: number
+          format: double
+        roomType:
+          type: string
+          enum: [ROOM, APARTMENT, STUDIO, HOUSE]
+        address:
+          type: string
+        ward:
+          type: string
+        district:
+          type: string
+        city:
+          type: string
+        hasAc:
+          type: boolean
+        hasFridge:
+          type: boolean
+        hasPrivateWc:
+          type: boolean
+        hasSecurity:
+          type: boolean
+        wifiFee:
+          type: integer
+          format: int64
+        waterPricePerUnit:
+          type: integer
+          format: int64
+        electricityPricePerUnit:
+          type: integer
+          format: int64
+        serviceFee:
+          type: integer
+          format: int64
+        bikeParkingFee:
+          type: integer
+          format: int64
+        deposit:
+          type: integer
+          format: int64
+        rentalStatus:
+          type: string
+          enum: [AVAILABLE, OCCUPIED, MAINTENANCE]
+        avgRating:
+          type: number
+          format: double
+        reviewCount:
+          type: integer
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoomImage'
+        createdAt:
+          type: string
+          format: date-time
+
+    RoomImage:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        imageUrl:
+          type: string
+        isThumbnail:
+          type: boolean
+        displayOrder:
+          type: integer
+
+    Post:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED, ACTIVE, EXPIRED]
+        durationType:
+          type: string
+          enum: [DAY, WEEK, MONTH, QUARTER, YEAR]
+        durationValue:
+          type: integer
+        listingFee:
+          type: integer
+          format: int64
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        rejectReason:
+          type: string
+          nullable: true
+        viewCount:
+          type: integer
+        favoriteCount:
+          type: integer
+        room:
+          $ref: '#/components/schemas/Room'
+        createdAt:
+          type: string
+          format: date-time
+
+    Contract:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        monthlyRent:
+          type: integer
+          format: int64
+        electricityPrice:
+          type: integer
+          format: int64
+        waterPrice:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum: [ACTIVE, SIGNED, ENDED]
+        room:
+          $ref: '#/components/schemas/Room'
+        createdAt:
+          type: string
+          format: date-time
+
+    Bill:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        billingMonth:
+          type: string
+          example: "2025-07"
+        elecPrev:
+          type: integer
+        elecCurr:
+          type: integer
+        elecUsage:
+          type: integer
+        elecUnitPrice:
+          type: integer
+          format: int64
+        elecAmount:
+          type: integer
+          format: int64
+        waterPrev:
+          type: integer
+        waterCurr:
+          type: integer
+        waterUsage:
+          type: integer
+        waterUnitPrice:
+          type: integer
+          format: int64
+        waterAmount:
+          type: integer
+          format: int64
+        rentAmount:
+          type: integer
+          format: int64
+        serviceFee:
+          type: integer
+          format: int64
+        wifiFee:
+          type: integer
+          format: int64
+        bikeParkingFee:
+          type: integer
+          format: int64
+        extraFee:
+          type: integer
+          format: int64
+        extraNote:
+          type: string
+          nullable: true
+        totalAmount:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum: [PENDING, PAID, OVERDUE]
+        paymentProofUrl:
+          type: string
+          nullable: true
+        rejectionReason:
+          type: string
+          nullable: true
+        paidAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    Payment:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        amount:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum: [PENDING, PAID, FAILED]
+        note:
+          type: string
+          nullable: true
+        paidAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        senderId:
+          type: integer
+          format: int64
+        messageText:
+          type: string
+        isRead:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        otherUser:
+          $ref: '#/components/schemas/User'
+        lastMessage:
+          $ref: '#/components/schemas/Message'
+        unreadCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        reviewType:
+          type: string
+          enum: [ROOM, RENTER]
+        ratingScore:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED]
+        reviewer:
+          $ref: '#/components/schemas/User'
+        createdAt:
+          type: string
+          format: date-time
+
+    Report:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        reason:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, RESOLVED, REJECTED]
+        reporter:
+          $ref: '#/components/schemas/User'
+        createdAt:
+          type: string
+          format: date-time
+
+    Vehicle:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        licensePlate:
+          type: string
+        vehicleType:
+          type: string
+          enum: [MOTORBIKE, CAR, BICYCLE]
+        imageUrl:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        type:
+          type: string
+          enum:
+            - CONTRACT_SIGNED
+            - CONTRACT_ENDED
+            - BILL_CREATED
+            - BILL_PAID
+            - PAYMENT_PROOF_SUBMITTED
+            - PAYMENT_PROOF_APPROVED
+            - PAYMENT_PROOF_REJECTED
+            - POST_APPROVED
+            - POST_REJECTED
+            - REVIEW_APPROVED
+            - REPORT_RESOLVED
+            - NEW_MESSAGE
+        title:
+          type: string
+        message:
+          type: string
+        relatedEntityId:
+          type: integer
+          format: int64
+          nullable: true
+        isRead:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+paths:
+
+  # ─── AUTH ────────────────────────────────────────────────────────────────────
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, fullName, phone, role]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 6
+                fullName:
+                  type: string
+                phone:
+                  type: string
+                role:
+                  type: string
+                  enum: [OWNER, RENTER]
+      responses:
+        "201":
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login and receive a JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          token:
+                            type: string
+                          user:
+                            $ref: '#/components/schemas/User'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Blacklist the current JWT token
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Request a password reset email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        "200":
+          description: Reset email sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Reset password using the token from email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, newPassword]
+              properties:
+                token:
+                  type: string
+                newPassword:
+                  type: string
+                  minLength: 6
+      responses:
+        "200":
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /auth/change-password:
+    post:
+      tags: [Auth]
+      summary: Change password for the authenticated user
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword:
+                  type: string
+                newPassword:
+                  type: string
+                  minLength: 6
+      responses:
+        "200":
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # ─── USERS ───────────────────────────────────────────────────────────────────
+
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get authenticated user profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+    put:
+      tags: [Users]
+      summary: Update authenticated user profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fullName:
+                  type: string
+                phone:
+                  type: string
+                citizenId:
+                  type: string
+                permanentAddress:
+                  type: string
+                bankCode:
+                  type: string
+                bankAccountNumber:
+                  type: string
+                bankAccountName:
+                  type: string
+      responses:
+        "200":
+          description: Updated user profile
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+
+  /users/me/avatar:
+    post:
+      tags: [Users]
+      summary: Upload user avatar
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Avatar uploaded
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          avatarUrl:
+                            type: string
+
+  /users/me/favorites:
+    get:
+      tags: [Favorites]
+      summary: Get authenticated user's favorite posts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Paginated favorite posts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /users/me/reviews:
+    get:
+      tags: [Reviews]
+      summary: Get reviews written by the authenticated user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Paginated reviews
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /users/me/renter-reviews:
+    get:
+      tags: [Reviews]
+      summary: Get reviews written about the authenticated renter
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Paginated renter reviews
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /users/me/reports:
+    get:
+      tags: [Reports]
+      summary: Get reports submitted by the authenticated user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Paginated reports
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /users/search:
+    get:
+      tags: [Users]
+      summary: Search users by keyword (Admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Paginated users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /users/lookup-renter:
+    get:
+      tags: [Users]
+      summary: Find a renter by exact email (Owner/Admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: email
+          in: query
+          required: true
+          schema:
+            type: string
+            format: email
+      responses:
+        "200":
+          description: Renter found
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+
+  /users:
+    get:
+      tags: [Users]
+      summary: List all users with filters (Admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [OWNER, RENTER, ADMIN]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ACTIVE, BANNED, PENDING]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Paginated users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /users/{userId}/status:
+    patch:
+      tags: [Users]
+      summary: Update user status (Admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [ACTIVE, BANNED, PENDING]
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+
+  /users/{userId}/renter-reviews:
+    get:
+      tags: [Reviews]
+      summary: Get reviews about a renter (Owner/Admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Paginated renter reviews
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # ─── ROOMS ───────────────────────────────────────────────────────────────────
+
+  /rooms:
+    get:
+      tags: [Rooms]
+      summary: List owner's rooms
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: rentalStatus
+          in: query
+          schema:
+            type: string
+            enum: [AVAILABLE, OCCUPIED, MAINTENANCE]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Paginated rooms
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    post:
+      tags: [Rooms]
+      summary: Create a new room
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, price, areaMq, roomType, address, ward, district, city]
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                price:
+                  type: integer
+                  format: int64
+                areaMq:
+                  type: number
+                  format: double
+                roomType:
+                  type: string
+                  enum: [ROOM, APARTMENT, STUDIO, HOUSE]
+                address:
+                  type: string
+                ward:
+                  type: string
+                district:
+                  type: string
+                city:
+                  type: string
+                hasAc:
+                  type: boolean
+                hasFridge:
+                  type: boolean
+                hasPrivateWc:
+                  type: boolean
+                hasSecurity:
+                  type: boolean
+                wifiFee:
+                  type: integer
+                  format: int64
+                waterPricePerUnit:
+                  type: integer
+                  format: int64
+                electricityPricePerUnit:
+                  type: integer
+                  format: int64
+                serviceFee:
+                  type: integer
+                  format: int64
+                bikeParkingFee:
+                  type: integer
+                  format: int64
+                deposit:
+                  type: integer
+                  format: int64
+      responses:
+        "201":
+          description: Room created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Room'
+
+  /rooms/{roomId}:
+    parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    get:
+      tags: [Rooms]
+      summary: Get room details
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Room details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Room'
+    put:
+      tags: [Rooms]
+      summary: Update a room
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Room'
+      responses:
+        "200":
+          description: Room updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Room'
+    delete:
+      tags: [Rooms]
+      summary: Delete a room
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Room deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /rooms/{roomId}/rental-status:
+    patch:
+      tags: [Rooms]
+      summary: Update room rental status
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rentalStatus]
+              properties:
+                rentalStatus:
+                  type: string
+                  enum: [AVAILABLE, OCCUPIED, MAINTENANCE]
+      responses:
+        "200":
+          description: Rental status updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Room'
+
+  # ─── ROOM IMAGES ─────────────────────────────────────────────────────────────
+
+  /rooms/{roomId}/images:
+    post:
+      tags: [Room Images]
+      summary: Upload a room image
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                isThumbnail:
+                  type: boolean
+                  default: false
+      responses:
+        "201":
+          description: Image uploaded
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/RoomImage'
+
+  /rooms/{roomId}/images/{imageId}:
+    parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: imageId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    delete:
+      tags: [Room Images]
+      summary: Delete a room image
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Image deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /rooms/{roomId}/images/{imageId}/thumbnail:
+    patch:
+      tags: [Room Images]
+      summary: Set image as room thumbnail
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Thumbnail updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/RoomImage'
+
+  # ─── POSTS ───────────────────────────────────────────────────────────────────
+
+  /posts:
+    get:
+      tags: [Posts]
+      summary: Search public posts
+      parameters:
+        - name: city
+          in: query
+          schema:
+            type: string
+        - name: district
+          in: query
+          schema:
+            type: string
+        - name: roomType
+          in: query
+          schema:
+            type: string
+            enum: [ROOM, APARTMENT, STUDIO, HOUSE]
+        - name: minPrice
+          in: query
+          schema:
+            type: integer
+            format: int64
+        - name: maxPrice
+          in: query
+          schema:
+            type: integer
+            format: int64
+        - name: minArea
+          in: query
+          schema:
+            type: number
+            format: double
+        - name: hasAc
+          in: query
+          schema:
+            type: boolean
+        - name: hasFridge
+          in: query
+          schema:
+            type: boolean
+        - name: hasPrivateWc
+          in: query
+          schema:
+            type: boolean
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [price, area, createdAt]
+        - name: sortDir
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Paginated posts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /posts/{postId}:
+    get:
+      tags: [Posts]
+      summary: Get post details (increments view count)
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Post details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Post'
+
+  /posts/{postId}/favorites:
+    post:
+      tags: [Favorites]
+      summary: Add post to favorites
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "201":
+          description: Added to favorites
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    delete:
+      tags: [Favorites]
+      summary: Remove post from favorites
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Removed from favorites
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /posts/{postId}/reports:
+    post:
+      tags: [Reports]
+      summary: Report a post
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+      responses:
+        "201":
+          description: Report submitted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Report'
+
+  /me/posts:
+    get:
+      tags: [Posts]
+      summary: List owner's own posts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, APPROVED, REJECTED, ACTIVE, EXPIRED]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Paginated posts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    post:
+      tags: [Posts]
+      summary: Create a post (returns VNPay payment URL)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roomId, durationType, durationValue]
+              properties:
+                roomId:
+                  type: integer
+                  format: int64
+                durationType:
+                  type: string
+                  enum: [DAY, WEEK, MONTH, QUARTER, YEAR]
+                durationValue:
+                  type: integer
+                  minimum: 1
+      responses:
+        "201":
+          description: Post created with payment URL
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          postId:
+                            type: integer
+                            format: int64
+                          listingFee:
+                            type: integer
+                            format: int64
+                          paymentUrl:
+                            type: string
+
+  /me/posts/{postId}:
+    delete:
+      tags: [Posts]
+      summary: Delete/hide a post
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Post deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /me/posts/{postId}/extend:
+    post:
+      tags: [Posts]
+      summary: Extend a post's duration (returns VNPay payment URL)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [durationType, durationValue]
+              properties:
+                durationType:
+                  type: string
+                  enum: [DAY, WEEK, MONTH, QUARTER, YEAR]
+                durationValue:
+                  type: integer
+                  minimum: 1
+      responses:
+        "200":
+          description: Post extended with payment URL
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          extensionId:
+                            type: integer
+                            format: int64
+                          newEndDate:
+                            type: string
+                            format: date
+                          listingFee:
+                            type: integer
+                            format: int64
+                          paymentUrl:
+                            type: string
+
+  /me/posts/{postId}/statistics:
+    get:
+      tags: [Posts]
+      summary: Get view statistics for a post
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Post statistics
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          totalViews:
+                            type: integer
+                          uniqueViews:
+                            type: integer
+                          viewsLast7Days:
+                            type: integer
+                          favoriteCount:
+                            type: integer
+
+  # ─── PAYMENTS ────────────────────────────────────────────────────────────────
+
+  /payments/vnpay-return:
+    get:
+      tags: [Payments]
+      summary: VNPay payment callback (called by VNPay)
+      parameters:
+        - name: vnp_ResponseCode
+          in: query
+          schema:
+            type: string
+        - name: vnp_TxnRef
+          in: query
+          schema:
+            type: string
+        - name: vnp_Amount
+          in: query
+          schema:
+            type: string
+        - name: vnp_SecureHash
+          in: query
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect to frontend with payment status
+
+  /me/payments:
+    get:
+      tags: [Payments]
+      summary: List authenticated user's payment history
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, PAID, FAILED]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Paginated payments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /me/payments/{paymentId}/retry:
+    post:
+      tags: [Payments]
+      summary: Retry a failed payment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: New VNPay payment URL
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          paymentUrl:
+                            type: string
+
+  # ─── CONTRACTS ───────────────────────────────────────────────────────────────
+
+  /rooms/{roomId}/contracts:
+    parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    get:
+      tags: [Contracts]
+      summary: List contracts for a room (Owner)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ACTIVE, SIGNED, ENDED]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Paginated contracts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    post:
+      tags: [Contracts]
+      summary: Create a rental contract
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [renterId, startDate, endDate, monthlyRent, electricityPrice, waterPrice]
+              properties:
+                renterId:
+                  type: integer
+                  format: int64
+                startDate:
+                  type: string
+                  format: date
+                endDate:
+                  type: string
+                  format: date
+                monthlyRent:
+                  type: integer
+                  format: int64
+                electricityPrice:
+                  type: integer
+                  format: int64
+                waterPrice:
+                  type: integer
+                  format: int64
+      responses:
+        "201":
+          description: Contract created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Contract'
+
+  /me/contracts:
+    get:
+      tags: [Contracts]
+      summary: List contracts for the authenticated renter
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ACTIVE, SIGNED, ENDED]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Paginated contracts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /me/current-rent:
+    get:
+      tags: [Contracts]
+      summary: Get the renter's current active contract
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Active contract with room and owner details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Contract'
+
+  /contracts/{contractId}/sign:
+    patch:
+      tags: [Contracts]
+      summary: Sign a contract (Renter)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: contractId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Contract signed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Contract'
+
+  /contracts/{contractId}/end:
+    patch:
+      tags: [Contracts]
+      summary: End a contract (Owner/Admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: contractId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Contract ended
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Contract'
+
+  /contracts/{contractId}/bills:
+    parameters:
+      - name: contractId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    get:
+      tags: [Bills]
+      summary: List bills for a contract
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Paginated bills
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    post:
+      tags: [Bills]
+      summary: Create a monthly utility bill (Owner)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [billingMonth, elecPrev, elecCurr, waterPrev, waterCurr]
+              properties:
+                billingMonth:
+                  type: string
+                  example: "2025-07"
+                elecPrev:
+                  type: integer
+                elecCurr:
+                  type: integer
+                waterPrev:
+                  type: integer
+                waterCurr:
+                  type: integer
+                extraFee:
+                  type: integer
+                  format: int64
+                extraNote:
+                  type: string
+      responses:
+        "201":
+          description: Bill created with calculated totals
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Bill'
+
+  /contracts/{contractId}/renter-review:
+    post:
+      tags: [Reviews]
+      summary: Submit a review about the renter (Owner)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: contractId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ratingScore, comment]
+              properties:
+                ratingScore:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                comment:
+                  type: string
+      responses:
+        "201":
+          description: Renter review submitted (pending approval)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Review'
+
+  # ─── BILLS ───────────────────────────────────────────────────────────────────
+
+  /bills/{billId}:
+    get:
+      tags: [Bills]
+      summary: Get bill details
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: billId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Bill details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Bill'
+
+  /bills/{billId}/paid:
+    patch:
+      tags: [Bills]
+      summary: Mark bill as paid without proof (Owner)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: billId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Bill marked as paid
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Bill'
+
+  /bills/{billId}/payment-proof:
+    post:
+      tags: [Bills]
+      summary: Upload payment proof image (Renter)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: billId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Payment proof uploaded
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          paymentProofUrl:
+                            type: string
+
+  /bills/{billId}/approve:
+    patch:
+      tags: [Bills]
+      summary: Approve payment proof and mark bill as paid (Owner)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: billId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Payment proof approved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Bill'
+
+  /bills/{billId}/reject:
+    patch:
+      tags: [Bills]
+      summary: Reject payment proof (Owner)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: billId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Payment proof rejected
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Bill'
+
+  # ─── CONVERSATIONS ────────────────────────────────────────────────────────────
+
+  /conversations:
+    get:
+      tags: [Conversations]
+      summary: List user's conversations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Paginated conversations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    post:
+      tags: [Conversations]
+      summary: Start or retrieve a conversation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [otherUserId]
+              properties:
+                otherUserId:
+                  type: integer
+                  format: int64
+      responses:
+        "200":
+          description: Conversation returned
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Conversation'
+
+  /conversations/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    get:
+      tags: [Conversations]
+      summary: Get conversation details
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Conversation details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Conversation'
+    delete:
+      tags: [Conversations]
+      summary: Delete an empty conversation
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Conversation deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /conversations/{id}/messages:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    get:
+      tags: [Conversations]
+      summary: Get messages in a conversation (cursor-based, newest first)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 30
+      responses:
+        "200":
+          description: Messages with cursor
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          messages:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Message'
+                          nextCursor:
+                            type: string
+                            nullable: true
+    post:
+      tags: [Conversations]
+      summary: Send a message (also delivered via WebSocket)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [messageText]
+              properties:
+                messageText:
+                  type: string
+      responses:
+        "201":
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Message'
+
+  /conversations/{id}/read:
+    put:
+      tags: [Conversations]
+      summary: Mark all messages in a conversation as read
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Messages marked as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # ─── REVIEWS ─────────────────────────────────────────────────────────────────
+
+  /reviews:
+    get:
+      tags: [Reviews]
+      summary: Browse the public reviews feed
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [ROOM, RENTER]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Paginated approved reviews
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /rooms/{roomId}/reviews:
+    parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    get:
+      tags: [Reviews]
+      summary: Get approved reviews for a room
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Paginated room reviews
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    post:
+      tags: [Reviews]
+      summary: Submit a room review (Renter, requires completed contract)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [contractId, ratingScore, comment]
+              properties:
+                contractId:
+                  type: integer
+                  format: int64
+                ratingScore:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                comment:
+                  type: string
+      responses:
+        "201":
+          description: Review submitted (pending approval)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Review'
+
+  /reviews/{reviewId}:
+    patch:
+      tags: [Reviews]
+      summary: Edit a review (resets to pending)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ratingScore:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                comment:
+                  type: string
+      responses:
+        "200":
+          description: Review updated (status reset to PENDING)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Review'
+
+  # ─── VEHICLES ────────────────────────────────────────────────────────────────
+
+  /rooms/{roomId}/vehicles:
+    parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    get:
+      tags: [Vehicles]
+      summary: List vehicles registered in a room
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of vehicles
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Vehicle'
+    post:
+      tags: [Vehicles]
+      summary: Register a vehicle (Renter)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [licensePlate, vehicleType]
+              properties:
+                licensePlate:
+                  type: string
+                vehicleType:
+                  type: string
+                  enum: [MOTORBIKE, CAR, BICYCLE]
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: Vehicle registered
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Vehicle'
+
+  /vehicles/{vehicleId}:
+    delete:
+      tags: [Vehicles]
+      summary: Delete a vehicle registration
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: vehicleId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Vehicle deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # ─── NOTIFICATIONS ────────────────────────────────────────────────────────────
+
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: Get user notifications (cursor-based)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Notifications with cursor
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          notifications:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Notification'
+                          nextCursor:
+                            type: string
+                            nullable: true
+
+  /notifications/unread-count:
+    get:
+      tags: [Notifications]
+      summary: Get unread notification count
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          count:
+                            type: integer
+
+  /notifications/read-all:
+    patch:
+      tags: [Notifications]
+      summary: Mark all notifications as read
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: All notifications marked as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /notifications/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    patch:
+      tags: [Notifications]
+      summary: Mark a single notification as read
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Notification marked as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    delete:
+      tags: [Notifications]
+      summary: Delete a notification
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Notification deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # ─── PUBLIC ───────────────────────────────────────────────────────────────────
+
+  /public/statistics:
+    get:
+      tags: [Public]
+      summary: Get public platform statistics
+      responses:
+        "200":
+          description: Platform statistics
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          totalRooms:
+                            type: integer
+                          totalOwners:
+                            type: integer
+                          totalRenters:
+                            type: integer
+                          activePostings:
+                            type: integer
+
+  # ─── ADMIN ───────────────────────────────────────────────────────────────────
+
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: List all users (Admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [OWNER, RENTER, ADMIN]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ACTIVE, BANNED, PENDING]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Paginated users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /admin/users/{id}/status:
+    patch:
+      tags: [Admin]
+      summary: Update user status (Admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [ACTIVE, BANNED, PENDING]
+      responses:
+        "200":
+          description: User status updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+
+  /admin/posts:
+    get:
+      tags: [Admin]
+      summary: List all posts with optional filter (Admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, APPROVED, REJECTED, ACTIVE, EXPIRED]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Paginated posts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /admin/posts/{postId}/status:
+    patch:
+      tags: [Admin]
+      summary: Approve or reject a post (Admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [APPROVED, REJECTED]
+                rejectReason:
+                  type: string
+                  nullable: true
+      responses:
+        "200":
+          description: Post status updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Post'
+
+  /admin/reviews:
+    get:
+      tags: [Admin]
+      summary: List reviews by status (Admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, APPROVED, REJECTED]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Paginated reviews
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /admin/reviews/{reviewId}/status:
+    patch:
+      tags: [Admin]
+      summary: Approve or reject a review (Admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [APPROVED, REJECTED]
+      responses:
+        "200":
+          description: Review status updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Review'
+
+  /admin/reports:
+    get:
+      tags: [Admin]
+      summary: List all user reports (Admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, RESOLVED, REJECTED]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Paginated reports
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /admin/reports/{reportId}:
+    get:
+      tags: [Admin]
+      summary: Get full details of a report (Admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Report details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Report'
+
+  /admin/reports/{reportId}/status:
+    patch:
+      tags: [Admin]
+      summary: Resolve or reject a report (Admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [RESOLVED, REJECTED]
+      responses:
+        "200":
+          description: Report status updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Report'
+
+  /admin/statistics:
+    get:
+      tags: [Admin]
+      summary: Get system-wide statistics (Admin only)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Admin statistics
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          totalUsers:
+                            type: integer
+                          totalOwners:
+                            type: integer
+                          totalRenters:
+                            type: integer
+                          totalRooms:
+                            type: integer
+                          activePosts:
+                            type: integer
+                          pendingPosts:
+                            type: integer
+                          totalContracts:
+                            type: integer
+                          activeContracts:
+                            type: integer
+                          totalRevenue:
+                            type: integer
+                            format: int64
+                          pendingReports:
+                            type: integer
+                          pendingReviews:
+                            type: integer
