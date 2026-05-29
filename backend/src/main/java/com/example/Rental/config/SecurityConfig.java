@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final RateLimitFilter rateLimitFilter;
     private final CorsConfig corsConfig;
 
     @Bean
@@ -25,6 +26,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .cors(cors -> cors.configurationSource(corsConfig.corsConfigurationSource()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
             .authorizeHttpRequests(authz -> authz
                 .requestMatchers(HttpMethod.POST,
