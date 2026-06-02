@@ -5,6 +5,7 @@ import com.example.Rental.dto.request.CreateContractRequest;
 import com.example.Rental.dto.response.ApiResponse;
 import com.example.Rental.dto.response.ContractListResponse;
 import com.example.Rental.dto.response.ContractResponse;
+import com.example.Rental.dto.response.CursorPageResponse;
 import com.example.Rental.service.ContractService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -31,6 +32,18 @@ public class ContractController {
 
 		ContractQueryRequest query = ContractQueryRequest.builder().page(page).limit(limit).build();
 		ContractListResponse response = contractService.listContracts(roomId, email, query);
+		return ResponseEntity.ok(ApiResponse.ok("Contracts retrieved", response));
+	}
+
+	@GetMapping("/cursor")
+	public ResponseEntity<ApiResponse<CursorPageResponse<ContractResponse>>> listContractsCursor(
+		@PathVariable Long roomId,
+		@RequestParam(required = false) Long cursor,
+		@RequestParam(defaultValue = "20") int limit,
+		Principal principal
+	) {
+		String email = principal.getName();
+		CursorPageResponse<ContractResponse> response = contractService.listContractsCursor(roomId, email, cursor, limit);
 		return ResponseEntity.ok(ApiResponse.ok("Contracts retrieved", response));
 	}
 

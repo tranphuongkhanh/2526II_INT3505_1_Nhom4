@@ -4,10 +4,12 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.Rental.dto.response.CursorPageResponse;
 import com.example.Rental.entity.Favorite;
 import com.example.Rental.entity.FavoriteId;
 import com.example.Rental.entity.Post;
@@ -80,5 +82,28 @@ public class FavoriteService {
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
         return favoriteRepository.findByUserId(user.getId(), pageable)
                 .map(Favorite::getPost);
+    }
+
+    // ── Cursor-based pagination ───────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public CursorPageResponse<Post> getUserFavoritesCursor(String email, Long cursor, int limit) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        limit = Math.min(Math.max(limit, 1), 100);
+        Pageable pageable = PageRequest.of(0, limit + 1);
+        List<Favorite> favorites = (cursor == null)
+                ? favoriteRepository.findByUserIdOrderByPostIdDesc(user.getId(), pageable)
+                : favoriteRepository.findByUserIdAndPostIdLessThanOrderByPostIdDesc(user.getId(), cursor, pageable);
+
+        Long nextCursor = null;
+        if (favorites.size() > limit) {
+            nextCursor = favorites.get(limit - 1).getPost().getId();
+            favorites = favorites.subList(0, limit);
+        }
+
+        List<Post> items = favorites.stream().map(Favorite::getPost).collect(Collectors.toList());
+        return new CursorPageResponse<>(items, nextCursor);
     }
 }

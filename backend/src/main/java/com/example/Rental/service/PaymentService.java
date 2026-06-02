@@ -1,6 +1,7 @@
 package com.example.Rental.service;
 
 import com.example.Rental.dto.request.PaymentQueryRequest;
+import com.example.Rental.dto.response.CursorPageResponse;
 import com.example.Rental.dto.response.PaginationMetaResponse;
 import com.example.Rental.dto.response.PaymentListResponse;
 import com.example.Rental.dto.response.PaymentResponse;
@@ -102,5 +103,55 @@ public class PaymentService {
                 .build())
             .build();
     }
-}
 
+    // ── Cursor-based pagination ───────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public CursorPageResponse<PaymentResponse> listPaymentsCursor(String email, String statusStr, Long cursor, int limit) {
+        User owner = userRepository.findByEmail(email).orElseThrow(() -> new EntityNotFoundException("User not found"));
+        if (owner.getRole() != UserRole.OWNER) throw new AccessDeniedException("Only owners can view payments");
+
+        limit = Math.min(Math.max(limit, 1), 100);
+        Pageable pageable = PageRequest.of(0, limit + 1);
+        List<Payment> payments;
+
+        boolean hasStatusFilter = (statusStr != null && !statusStr.isEmpty());
+        if (hasStatusFilter) {
+            PaymentStatus status = PaymentStatus.valueOf(statusStr.toUpperCase(Locale.ROOT));
+            payments = (cursor == null)
+                ? paymentRepository.findByOwnerIdAndStatusOrderByIdDesc(owner.getId(), status, pageable)
+                : paymentRepository.findByOwnerIdAndStatusAndIdLessThanOrderByIdDesc(owner.getId(), status, cursor, pageable);
+        } else {
+            payments = (cursor == null)
+                ? paymentRepository.findByOwnerIdOrderByIdDesc(owner.getId(), pageable)
+                : paymentRepository.findByOwnerIdAndIdLessThanOrderByIdDesc(owner.getId(), cursor, pageable);
+        }
+
+        Long nextCursor = null;
+        if (payments.size() > limit) {
+            nextCursor = payments.get(limit - 1).getId();
+            payments = payments.subList(0, limit);
+        }
+
+        List<PaymentResponse> items = payments.stream().map(p ->
+            PaymentResponse.builder()
+                .id(p.getId())
+                .ownerId(p.getOwner().getId())
+                .postId(p.getPost().getId())
+                .extensionId(p.getExtension() != null ? p.getExtension().getId() : null)
+                .amount(p.getAmount())
+                .status(p.getStatus().name().toLowerCase(Locale.ROOT))
+                .note(p.getNote())
+                .paidAt(p.getPaidAt())
+                .createdAt(p.getCreatedAt())
+                .post(PaymentResponse.PostDto.builder()
+                        .id(p.getPost().getId())
+                        .roomId(p.getPost().getRoom() != null ? p.getPost().getRoom().getId() : null)
+                        .status(p.getPost().getStatus().name())
+                        .build())
+                .build()
+        ).collect(Collectors.toList());
+
+        return new CursorPageResponse<>(items, nextCursor);
+    }
+}
