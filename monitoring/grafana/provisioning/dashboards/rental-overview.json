@@ -1,0 +1,260 @@
+{
+  "id": null,
+  "uid": "rental-overview",
+  "title": "Rental App — Overview",
+  "tags": ["spring-boot", "rental"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "application",
+        "type": "constant",
+        "query": "rental-backend",
+        "hide": 2
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "HTTP Requests / min",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus_ds" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{application=\"rental-backend\"}[1m])) * 60",
+          "legendFormat": "req/min"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Error Rate (5xx)",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus_ds" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "thresholds": {
+          "mode": "absolute",
+          "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 0.01 },
+            { "color": "red", "value": 0.05 }
+          ]
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{application=\"rental-backend\",status=~\"5..\"}[1m])) / sum(rate(http_server_requests_seconds_count{application=\"rental-backend\"}[1m]))",
+          "legendFormat": "error rate"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "JVM Heap Used",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus_ds" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "unit": "bytes"
+      },
+      "targets": [
+        {
+          "expr": "jvm_memory_used_bytes{application=\"rental-backend\",area=\"heap\"}",
+          "legendFormat": "heap used"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Active DB Connections",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus_ds" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "expr": "hikaricp_connections_active{application=\"rental-backend\"}",
+          "legendFormat": "active"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "HTTP Request Rate by Status",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus_ds" },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "targets": [
+        {
+          "expr": "sum by (status) (rate(http_server_requests_seconds_count{application=\"rental-backend\"}[1m]))",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "P50 / P95 / P99 Response Time",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus_ds" },
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(http_server_requests_seconds_bucket{application=\"rental-backend\"}[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{application=\"rental-backend\"}[5m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{application=\"rental-backend\"}[5m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "JVM Memory — Heap vs Non-Heap",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus_ds" },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "targets": [
+        {
+          "expr": "jvm_memory_used_bytes{application=\"rental-backend\",area=\"heap\"}",
+          "legendFormat": "Heap Used"
+        },
+        {
+          "expr": "jvm_memory_max_bytes{application=\"rental-backend\",area=\"heap\"}",
+          "legendFormat": "Heap Max"
+        },
+        {
+          "expr": "jvm_memory_used_bytes{application=\"rental-backend\",area=\"nonheap\"}",
+          "legendFormat": "Non-Heap Used"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "HikariCP Connection Pool",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus_ds" },
+      "targets": [
+        {
+          "expr": "hikaricp_connections_active{application=\"rental-backend\"}",
+          "legendFormat": "Active"
+        },
+        {
+          "expr": "hikaricp_connections_idle{application=\"rental-backend\"}",
+          "legendFormat": "Idle"
+        },
+        {
+          "expr": "hikaricp_connections_pending{application=\"rental-backend\"}",
+          "legendFormat": "Pending"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Rate Limiting — Blocked Requests (HTTP 429)",
+      "gridPos": { "x": 0, "y": 20, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus_ds" },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{application=\"rental-backend\",status=\"429\"}[1m]))",
+          "legendFormat": "Blocked/s"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "JVM Threads",
+      "gridPos": { "x": 12, "y": 20, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus_ds" },
+      "targets": [
+        {
+          "expr": "jvm_threads_live_threads{application=\"rental-backend\"}",
+          "legendFormat": "Live"
+        },
+        {
+          "expr": "jvm_threads_daemon_threads{application=\"rental-backend\"}",
+          "legendFormat": "Daemon"
+        },
+        {
+          "expr": "jvm_threads_peak_threads{application=\"rental-backend\"}",
+          "legendFormat": "Peak"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "logs",
+      "title": "Application Logs (Live)",
+      "gridPos": { "x": 0, "y": 28, "w": 24, "h": 10 },
+      "datasource": { "type": "loki", "uid": "loki_ds" },
+      "options": {
+        "showTime": true,
+        "showLabels": true,
+        "wrapLogMessage": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        {
+          "expr": "{job=\"rental-backend\"}",
+          "legendFormat": "logs"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "logs",
+      "title": "Error & Warning Logs",
+      "gridPos": { "x": 0, "y": 38, "w": 24, "h": 10 },
+      "datasource": { "type": "loki", "uid": "loki_ds" },
+      "options": {
+        "showTime": true,
+        "showLabels": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        {
+          "expr": "{job=\"rental-backend\"} |= \"ERROR\" or {job=\"rental-backend\"} |= \"WARN\"",
+          "legendFormat": "errors & warnings"
+        }
+      ]
+    }
+  ]
+}

@@ -47,7 +47,8 @@ public class SecurityConfig {
                     "/api/v1/rooms/*/reviews",
                     "/api/v1/users/*/renter-reviews",
                     "/api/v1/payments/vnpay-return",
-                    "/api/v1/public/**"
+                    "/api/v1/public/**",
+                    "/actuator/**"
                 ).permitAll()
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")

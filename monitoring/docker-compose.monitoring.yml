@@ -1,0 +1,89 @@
+version: "3.8"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Grafana Observability Stack
+#   • Prometheus  — scrapes metrics from Spring Boot /actuator/prometheus
+#   • Loki        — stores logs shipped by Promtail
+#   • Promtail    — tails the Spring Boot log file and pushes to Loki
+#   • Grafana     — visualises metrics & logs
+# ──────────────────────────────────────────────────────────────────────────────
+
+networks:
+  monitoring:
+    driver: bridge
+
+volumes:
+  prometheus_data:
+  loki_data:
+  grafana_data:
+
+services:
+  # ── Prometheus ─────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle"
+    ports:
+      - "9090:9090"
+    networks:
+      - monitoring
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # lets Prometheus reach the Spring Boot app on the host
+
+  # ── Loki ───────────────────────────────────────────────────────────────────
+  loki:
+    image: grafana/loki:2.9.4
+    container_name: loki
+    restart: unless-stopped
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+    networks:
+      - monitoring
+
+  # ── Promtail ───────────────────────────────────────────────────────────────
+  promtail:
+    image: grafana/promtail:2.9.4
+    container_name: promtail
+    restart: unless-stopped
+    volumes:
+      - ./promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      # Mount the host directory that contains the Spring Boot log file
+      - ../backend:/var/log/spring:ro
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - monitoring
+    depends_on:
+      - loki
+
+  # ── Grafana ────────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: "http://localhost:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    networks:
+      - monitoring
+    depends_on:
+      - prometheus
+      - loki

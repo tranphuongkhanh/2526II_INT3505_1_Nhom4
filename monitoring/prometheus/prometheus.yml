@@ -1,0 +1,15 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # ── Spring Boot Actuator (Micrometer Prometheus) ──────────────────────────
+  - job_name: "spring-boot-rental"
+    metrics_path: /actuator/prometheus
+    scrape_interval: 10s
+    static_configs:
+      - targets:
+          - "host.docker.internal:8080"   # Spring Boot running on host
+        labels:
+          application: "rental-backend"
+          environment: "development"
