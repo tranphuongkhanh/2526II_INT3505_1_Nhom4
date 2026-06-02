@@ -12,4 +12,10 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     Page<Payment> findByOwnerId(Long ownerId, Pageable pageable);
     Page<Payment> findByOwnerIdAndStatus(Long ownerId, com.example.Rental.enums.PaymentStatus status, Pageable pageable);
     java.util.Optional<Payment> findByPostIdAndExtensionIsNull(Long postId);
+
+    // Cursor-based pagination
+    List<Payment> findByOwnerIdOrderByIdDesc(Long ownerId, Pageable pageable);
+    List<Payment> findByOwnerIdAndIdLessThanOrderByIdDesc(Long ownerId, Long cursor, Pageable pageable);
+    List<Payment> findByOwnerIdAndStatusOrderByIdDesc(Long ownerId, com.example.Rental.enums.PaymentStatus status, Pageable pageable);
+    List<Payment> findByOwnerIdAndStatusAndIdLessThanOrderByIdDesc(Long ownerId, com.example.Rental.enums.PaymentStatus status, Long cursor, Pageable pageable);
 }

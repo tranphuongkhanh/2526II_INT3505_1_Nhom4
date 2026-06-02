@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.Rental.dto.response.ApiResponse;
+import com.example.Rental.dto.response.CursorPageResponse;
 import com.example.Rental.dto.response.FavoriteListResponse;
 import com.example.Rental.dto.response.PaginationMetaResponse;
 import com.example.Rental.dto.response.PostSummaryResponse;
@@ -71,6 +72,22 @@ public class FavoriteController {
                 .build();
                 
         return ResponseEntity.ok(ApiResponse.ok("Favorites retrieved", response));
+    }
+
+    @GetMapping("/users/me/favorites/cursor")
+    public ResponseEntity<ApiResponse<CursorPageResponse<PostSummaryResponse>>> getUserFavoritesCursor(
+            Principal principal,
+            @RequestParam(required = false) Long cursor,
+            @RequestParam(defaultValue = "10") int limit) {
+
+        CursorPageResponse<Post> cursorPage = favoriteService.getUserFavoritesCursor(principal.getName(), cursor, limit);
+
+        List<PostSummaryResponse> items = cursorPage.getItems().stream()
+                .map(this::mapToSummaryResponse)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(ApiResponse.ok("Favorites retrieved",
+                new CursorPageResponse<>(items, cursorPage.getNextCursor())));
     }
 
     private PostSummaryResponse mapToSummaryResponse(Post post) {

@@ -1,5 +1,7 @@
 package com.example.Rental.service;
 
+import com.example.Rental.dto.response.CursorPageResponse;
+
 import com.example.Rental.dto.request.ContractQueryRequest;
 import com.example.Rental.dto.response.ContractListResponse;
 import com.example.Rental.dto.response.ContractResponse;
@@ -74,6 +76,48 @@ public class ContractService {
 				.limit(limit)
 				.build())
 			.build();
+	}
+
+	// ── Cursor-based pagination ───────────────────────────────────────
+
+	@Transactional(readOnly = true)
+	public CursorPageResponse<ContractResponse> listContractsCursor(Long roomId, String ownerEmail, Long cursor, int limit) {
+		User owner = userRepository.findByEmail(ownerEmail).orElseThrow(() -> new EntityNotFoundException("User not found"));
+		if (owner.getRole() != UserRole.OWNER) throw new AccessDeniedException("Only owners can view contracts");
+		Room room = roomRepository.findById(roomId).orElseThrow(() -> new EntityNotFoundException("Room not found"));
+		if (room.getOwner() == null || !room.getOwner().getId().equals(owner.getId())) throw new AccessDeniedException("You are not the owner of this room");
+
+		limit = Math.min(Math.max(limit, 1), 100);
+		Pageable pageable = PageRequest.of(0, limit + 1);
+		List<RentalContract> contracts = (cursor == null)
+			? rentalContractRepository.findByRoomIdOrderByCreatedAtDesc(roomId, pageable)
+			: rentalContractRepository.findByRoomIdAndIdLessThanOrderByCreatedAtDesc(roomId, cursor, pageable);
+
+		return buildCursorResponse(contracts, limit);
+	}
+
+	@Transactional(readOnly = true)
+	public CursorPageResponse<ContractResponse> listContractsForRenterCursor(String renterEmail, Long cursor, int limit) {
+		User renter = userRepository.findByEmail(renterEmail).orElseThrow(() -> new EntityNotFoundException("User not found"));
+		if (renter.getRole() != UserRole.RENTER) throw new AccessDeniedException("Only renters can view renter contracts");
+
+		limit = Math.min(Math.max(limit, 1), 100);
+		Pageable pageable = PageRequest.of(0, limit + 1);
+		List<RentalContract> contracts = (cursor == null)
+			? rentalContractRepository.findByRenterIdOrderByCreatedAtDesc(renter.getId(), pageable)
+			: rentalContractRepository.findByRenterIdAndIdLessThanOrderByCreatedAtDesc(renter.getId(), cursor, pageable);
+
+		return buildCursorResponse(contracts, limit);
+	}
+
+	private CursorPageResponse<ContractResponse> buildCursorResponse(List<RentalContract> contracts, int limit) {
+		Long nextCursor = null;
+		if (contracts.size() > limit) {
+			nextCursor = contracts.get(limit - 1).getId();
+			contracts = contracts.subList(0, limit);
+		}
+		List<ContractResponse> items = contracts.stream().map(this::toResponse).collect(Collectors.toList());
+		return new CursorPageResponse<>(items, nextCursor);
 	}
 
 	@Transactional

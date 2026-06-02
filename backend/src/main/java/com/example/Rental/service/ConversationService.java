@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.Rental.dto.request.CreateConversationRequest;
 import com.example.Rental.dto.response.ConversationResponse;
+import com.example.Rental.dto.response.CursorPageResponse;
 import com.example.Rental.entity.Conversation;
 import com.example.Rental.entity.User;
 import com.example.Rental.exception.EntityNotFoundException;
@@ -136,5 +137,30 @@ public class ConversationService {
                 .lastMessageAt(conversation.getLastMessageAt())
                 .unreadCount(unread)
                 .build();
+    }
+
+    // ── Cursor-based pagination ───────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public CursorPageResponse<ConversationResponse> getUserConversationsCursor(String email, Long cursor, int limit) {
+        User currentUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        limit = Math.min(Math.max(limit, 1), 100);
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, limit + 1);
+        List<Conversation> conversations = (cursor == null)
+                ? conversationRepository.findByUser1IdOrUser2IdOrderByIdDesc(currentUser.getId(), currentUser.getId(), pageable)
+                : conversationRepository.findByUser1IdOrUser2IdAndIdLessThanOrderByIdDesc(currentUser.getId(), currentUser.getId(), cursor, pageable);
+
+        Long nextCursor = null;
+        if (conversations.size() > limit) {
+            nextCursor = conversations.get(limit - 1).getId();
+            conversations = conversations.subList(0, limit);
+        }
+
+        List<ConversationResponse> items = conversations.stream()
+                .map(conv -> mapToResponse(conv, currentUser))
+                .collect(Collectors.toList());
+        return new CursorPageResponse<>(items, nextCursor);
     }
 }
