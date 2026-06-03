@@ -1,217 +1,108 @@
-# Rental Management System — INT3505 Group 4
+# Hệ Thống Cho Thuê Phòng Trọ
 
-A full-stack property rental management platform built with **Spring Boot** (backend) and **React + Vite** (frontend).
+Đây là một nền tảng website hỗ trợ người dùng tìm kiếm, cho thuê phòng trọ và quản lý hợp đồng, hóa đơn một cách tiện lợi và minh bạch.
 
----
-
-## Table of Contents
-
-- [Tech Stack](#tech-stack)
-- [Prerequisites](#prerequisites)
-- [Environment Variables](#environment-variables)
-- [Running Locally](#running-locally)
-  - [Backend](#backend)
-  - [Frontend](#frontend)
-- [Running with Docker](#running-with-docker)
-- [Monitoring Stack](#monitoring-stack)
-- [API Testing](#api-testing)
-- [Project Structure](#project-structure)
+## Công nghệ sử dụng (Tech Stack)
+- **Frontend:** React, Vite, TailwindCSS
+- **Backend:** Java Spring Boot, Spring Security, Hibernate
+- **Database:** PostgreSQL (Neon Tech), Redis (Caching)
+- **Deployment:** AWS EC2, K3s (Kubernetes), Docker, GitHub Actions CI/CD
+- **Tích hợp:** VNPay (Thanh toán), Cloudinary (Upload ảnh), Google OAuth (Đăng nhập), WebSockets (Chat)
 
 ---
 
-## Tech Stack
+## Hướng dẫn cài đặt và chạy dự án (Local Development)
 
-| Layer      | Technology                                        |
-|------------|---------------------------------------------------|
-| Backend    | Java 21, Spring Boot 3.5, Spring Security, JWT   |
-| Database   | PostgreSQL (Neon), Redis (cache & rate-limiting)  |
-| Frontend   | React 19, Vite, Tailwind CSS, React Router v7     |
-| Payments   | VNPay sandbox                                     |
-| Storage    | Cloudinary                                        |
-| Monitoring | Prometheus, Grafana, Loki, Promtail               |
+### Yêu cầu môi trường (Prerequisites)
+- **Node.js** (Phiên bản >= 18)
+- **Java JDK** (Phiên bản >= 21)
+- **Maven** (Phiên bản >= 3.8)
+- **Git**
 
----
-
-## Prerequisites
-
-| Tool          | Version   | Notes                                      |
-|---------------|-----------|--------------------------------------------|
-| JDK           | 21+       | Maven Wrapper is bundled — no Maven needed |
-| Node.js       | 18+       | npm is included                            |
-| Redis         | any       | Must be running locally on port `6379`     |
-| Docker        | any       | Only needed for the monitoring stack       |
-
----
-
-## Environment Variables
-
-### Backend (`backend/.env`)
-
-Create the file `backend/.env` with the following content:
-
-```properties
-# PostgreSQL
-DB_HOST=<your-neon-host>
-DB_PORT=5432
-DB_NAME=neondb
-DB_USERNAME=<db-username>
-DB_PASSWORD=<db-password>
-DB_SSLMODE=require
-DB_CHANNEL_BINDING=require
-
-# JWT
-JWT_SECRET=<at-least-64-char-random-string>
-
-# Email (Gmail SMTP)
-MAIL_USERNAME=<your-gmail>
-MAIL_PASSWORD=<gmail-app-password>
-
-# Redis (optional — defaults to localhost:6379)
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_PASSWORD=
-
-# VNPay (sandbox defaults are pre-filled in application.properties)
-# VNPAY_TMN_CODE=
-# VNPAY_HASH_SECRET=
-
-# Cloudinary (defaults are pre-filled in application.properties)
-# CLOUDINARY_CLOUD_NAME=
-# CLOUDINARY_API_KEY=
-# CLOUDINARY_API_SECRET=
-```
-
-### Frontend (`frontend/.env`)
-
-Create `frontend/.env` if you need to override the backend URL:
-
-```properties
-VITE_API_BASE_URL=http://localhost:8080
-```
-
----
-
-## Running Locally
-
-### Backend
-
+### Bước 1: Clone dự án về máy
 ```bash
-cd backend
-
-# Linux / macOS
-./mvnw spring-boot:run
-
-# Windows PowerShell
-.\mvnw spring-boot:run
+git clone https://github.com/tranphuongkhanh/2526II_INT3505_1_Nhom4.git
+cd 2526II_INT3505_1_Nhom4
 ```
 
-The API will be available at `http://localhost:8080`.
+### Bước 2: Cài đặt và chạy Backend (Spring Boot)
+1. Di chuyển vào thư mục backend:
+   ```bash
+   cd backend
+   ```
+2. Cấu hình biến môi trường:
+   - Copy file mẫu `.env.example` thành file `.env`:
+     ```bash
+     cp .env.example .env
+     ```
+   - Mở file `.env` vừa tạo và điền các thông số kết nối Database (PostgreSQL), JWT Secret, cấu hình VNPay, Cloudinary và Google OAuth của bạn vào.
+3. Chạy project:
+   ```bash
+   ./mvnw spring-boot:run
+   ```
+   *Backend sẽ khởi chạy ở địa chỉ: `http://localhost:8080`*
 
-To run tests:
-
-```bash
-./mvnw test
-```
-
-To build a JAR:
-
-```bash
-./mvnw clean package -DskipTests
-```
-
-### Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-The app will be available at `http://localhost:5173`.
-
-To build for production:
-
-```bash
-npm run build
-```
+### Bước 3: Cài đặt và chạy Frontend (React + Vite)
+1. Mở một Terminal mới và di chuyển vào thư mục frontend:
+   ```bash
+   cd frontend
+   ```
+2. Cài đặt các thư viện phụ thuộc (Dependencies):
+   ```bash
+   npm install
+   ```
+3. Cấu hình biến môi trường:
+   - Copy file mẫu `.env.example` thành file `.env`:
+     ```bash
+     cp .env.example .env
+     ```
+   - Mở file `.env` vừa tạo và điền `VITE_GOOGLE_CLIENT_ID` của bạn vào.
+4. Chạy giao diện người dùng:
+   ```bash
+   npm run dev
+   ```
+   *Frontend sẽ khởi chạy ở địa chỉ: `http://localhost:5173`*
 
 ---
 
-## Running with Docker
+## Hướng dẫn Deploy (Dành cho Server K3s / AWS)
 
-Build and run the backend container:
+Dự án đã được tích hợp CI/CD tự động bằng **GitHub Actions**. Bất cứ khi nào bạn đẩy code lên nhánh `main` hệ thống sẽ tự động:
+1. Đóng gói Frontend và Backend thành các image Docker.
+2. Đẩy image lên GitHub Container Registry (GHCR).
+3. Đăng nhập vào Server AWS thông qua SSH.
+4. Triển khai cấu hình Kubernetes (file `.yaml` trong thư mục `k8s/`).
 
-```bash
-cd backend
-docker build -t rental-backend .
-docker run -p 8080:8080 --env-file .env rental-backend
-```
-
-> Make sure Redis is accessible from inside the container. If Redis is running on your host, set `REDIS_HOST=host.docker.internal` in your `.env`.
+**Lưu ý:** Cần cấu hình đầy đủ các **GitHub Secrets** (như `ENV_FILE`, `SERVER_HOST`, `SERVER_SSH_KEY`,...) trong phần Settings của Repository trước khi chạy luồng Deploy.
 
 ---
 
-## Monitoring Stack
+## 🔑 Phụ lục: Cách lấy các thông số cho file .env
 
-The monitoring stack includes **Prometheus**, **Grafana**, **Loki**, and **Promtail**.
+### 1. PostgreSQL (Neon Tech)
+- Truy cập [Neon.tech](https://neon.tech/) và tạo một Project mới.
+- Vào mục **Dashboard**, copy các thông số kết nối Database (Host, Database Name, User, Password) và điền vào các biến `DB_...` tương ứng trong file `.env`.
 
-```bash
-cd monitoring
-docker compose -f docker-compose.monitoring.yml up -d
-```
+### 2. VNPay (Cổng thanh toán)
+- Đăng ký tài khoản Sandbox tại [VNPAY Sandbox](https://sandbox.vnpayment.vn/devreg/).
+- Đăng nhập vào hệ thống quản lý của VNPAY Sandbox để lấy **TmnCode** và **HashSecret**.
 
-| Service    | URL                    | Default credentials |
-|------------|------------------------|---------------------|
-| Grafana    | http://localhost:3000  | admin / admin       |
-| Prometheus | http://localhost:9090  | —                   |
-| Loki       | http://localhost:3100  | —                   |
+### 3. Cloudinary (Lưu trữ hình ảnh)
+- Tạo tài khoản miễn phí tại [Cloudinary](https://cloudinary.com/).
+- Vào bảng điều khiển (Dashboard) của bạn, copy 3 thông số: `Cloud Name`, `API Key`, và `API Secret`.
 
-Metrics are exposed by the backend at `http://localhost:8080/actuator/prometheus`.
-
----
-
-## API Testing
-
-A full Postman collection is included at `backend/postman_full_collection.json`.
-
-1. Open Postman and click **Import**.
-2. Select `backend/postman_full_collection.json`.
-3. The collection uses `{{baseUrl}}` (default `http://localhost:8080`) and `{{token}}` (auto-saved on login).
-4. Run **Register** → **Login** → use any other endpoint. The login request's test script saves the JWT to `{{token}}` automatically.
-
-A Swagger/OpenAPI spec is available at `swagger.yaml` in the project root.
+### 4. Google OAuth (Đăng nhập bằng Google)
+- Vào [Google Cloud Console](https://console.cloud.google.com/).
+- Tạo một Project mới, vào mục **APIs & Services** > **Credentials**.
+- Tạo thông tin xác thực loại **OAuth client ID** (chọn loại Web application).
+- Thêm `http://localhost:5173` và địa chỉ domain của bạn vào phần **Authorized JavaScript origins**.
+- Copy **Client ID** được cấp và dán vào biến `GOOGLE_CLIENT_ID` (Backend) và `VITE_GOOGLE_CLIENT_ID` (Frontend).
 
 ---
 
-## Project Structure
-
-```
-.
-├── backend/                  # Spring Boot application
-│   ├── src/
-│   │   └── main/
-│   │       ├── java/com/example/Rental/
-│   │       │   ├── config/
-│   │       │   ├── controller/
-│   │       │   ├── dto/
-│   │       │   ├── entity/
-│   │       │   ├── repository/
-│   │       │   ├── service/
-│   │       │   └── RentalApplication.java
-│   │       └── resources/
-│   │           └── application.properties
-│   ├── Dockerfile
-│   └── pom.xml
-├── frontend/                 # React + Vite application
-│   ├── src/
-│   └── package.json
-├── monitoring/               # Grafana observability stack
-│   ├── docker-compose.monitoring.yml
-│   ├── prometheus/
-│   ├── loki/
-│   ├── promtail/
-│   └── grafana/
-├── k8s/                      # Kubernetes manifests
-├── docs/                     # Additional documentation
-└── swagger.yaml              # OpenAPI specification
-```
+## Thành viên nhóm
+- **Trần Phương Khánh**
+- **Hoàng Ngọc Nhi**
+- **Nguyễn Dương Việt Nga**
+- **Võ Văn Hải**
+- **Nguyễn Thị Huyền**
