@@ -1,0 +1,35 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # ── Spring Boot Log File ─────────────────────────────────────────────────
+  - job_name: "spring-boot-logs"
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: "rental-backend"
+          environment: "development"
+          __path__: "/var/log/spring/backend.log"
+
+    pipeline_stages:
+      # Parse the Spring Boot default log pattern:
+      #   2024-06-02T16:00:00.000+07:00  INFO 12345 --- [main] c.e.R.SomeClass : message
+      - regex:
+          expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+[+-]\d{2}:\d{2})\s+(?P<level>\w+)\s+\d+\s+---\s+\[(?P<thread>[^\]]+)\]\s+(?P<logger>\S+)\s+:\s+(?P<message>.*)$'
+
+      - labels:
+          level:
+          logger:
+          thread:
+
+      - timestamp:
+          source: timestamp
+          format: "2006-01-02T15:04:05.000-07:00"

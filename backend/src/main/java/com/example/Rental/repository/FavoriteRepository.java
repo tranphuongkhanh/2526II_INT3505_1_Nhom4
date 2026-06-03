@@ -15,4 +15,11 @@ public interface FavoriteRepository extends JpaRepository<Favorite, FavoriteId> 
     Page<Favorite> findByUserId(Long userId, Pageable pageable);
 
     boolean existsByUserIdAndPostId(Long userId, Long postId);
+
+    // Cursor-based pagination (uses post.id as cursor)
+    @EntityGraph(attributePaths = {"post", "post.room", "post.room.images"})
+    List<Favorite> findByUserIdOrderByPostIdDesc(Long userId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"post", "post.room", "post.room.images"})
+    List<Favorite> findByUserIdAndPostIdLessThanOrderByPostIdDesc(Long userId, Long cursor, Pageable pageable);
 }

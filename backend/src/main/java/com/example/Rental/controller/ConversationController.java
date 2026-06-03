@@ -44,6 +44,17 @@ public class ConversationController {
         return ResponseEntity.ok(ApiResponse.ok("Lấy danh sách hội thoại thành công", result));
     }
 
+    // 1b. Danh sách hội thoại (cursor-based)
+    @GetMapping("/cursor")
+    public ResponseEntity<ApiResponse<CursorPageResponse<ConversationResponse>>> getMyConversationsCursor(
+            @RequestParam(required = false) Long cursor,
+            @RequestParam(defaultValue = "20") int limit,
+            Principal principal) {
+        String email = principal.getName();
+        CursorPageResponse<ConversationResponse> result = conversationService.getUserConversationsCursor(email, cursor, limit);
+        return ResponseEntity.ok(ApiResponse.ok("Lấy danh sách hội thoại thành công", result));
+    }
+
     // 2. Tạo hoặc lấy lại hội thoại
     @PostMapping
     public ResponseEntity<ApiResponse<ConversationResponse>> getOrCreateConversation(

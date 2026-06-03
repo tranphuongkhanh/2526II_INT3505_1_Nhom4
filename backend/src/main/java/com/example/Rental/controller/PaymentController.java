@@ -2,7 +2,9 @@ package com.example.Rental.controller;
 
 import com.example.Rental.dto.request.PaymentQueryRequest;
 import com.example.Rental.dto.response.ApiResponse;
+import com.example.Rental.dto.response.CursorPageResponse;
 import com.example.Rental.dto.response.PaymentListResponse;
+import com.example.Rental.dto.response.PaymentResponse;
 import com.example.Rental.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -40,6 +42,18 @@ public class PaymentController {
                 .build();
 
         PaymentListResponse resp = paymentService.listPayments(email, query);
+        return ResponseEntity.ok(ApiResponse.ok("Payments retrieved successfully", resp));
+    }
+
+    @GetMapping("/cursor")
+    public ResponseEntity<ApiResponse<CursorPageResponse<PaymentResponse>>> getMyPaymentsCursor(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long cursor,
+            @RequestParam(defaultValue = "20") int limit,
+            Principal principal
+    ) {
+        String email = principal.getName();
+        CursorPageResponse<PaymentResponse> resp = paymentService.listPaymentsCursor(email, status, cursor, limit);
         return ResponseEntity.ok(ApiResponse.ok("Payments retrieved successfully", resp));
     }
 
